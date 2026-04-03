@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "variant": 0,
+
+  "display": {
+    "icon": "tq:default",
+    "group": "Group",
+    "notify_changed": true
+  },
+
+  "title": "Another quest, probably need to cut this title",
+  "description": "Descriptive description",
+
+  "background": true,
+  "tasks": {
+    "test": {
+      "title": "Title",
+      "description": "Description",
+      "load": "travelcore:undefined",
+      "tick": "travelcore:undefined",
+      "fail": "travelcore:undefined",
+      "condition": {
+        "type": "score",
+        "objective": "test",
+        "score": 5
+      }
+    }
+  },
+  "stages": [
+    ["test"]
+  ],
+
+  "dependencies": [],
+  "pin": "auto",
+
+  "fail": "travelcore:undefined"
+}

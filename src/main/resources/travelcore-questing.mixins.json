@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "k4k.travelcorequesting.infro.mixins",
+	"compatibilityLevel": "JAVA_17",
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	},
+	"mixins": [
+		"MinecraftServerMixin"
+	]
+}

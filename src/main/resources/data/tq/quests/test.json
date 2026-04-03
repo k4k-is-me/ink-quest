@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "variant": 0,
+
+  "title": "Title",
+  "description": "Description",
+  "dependencies": [],
+  "background": true,
+  "pin": false,
+
+  "tasks": {
+    "required": {
+      "title": "Title",
+      "description": "Description",
+
+      "success": {
+        "condition": {
+          "type": "score",
+          "objective": "successTest",
+          "target": 5
+        }
+      },
+      "failure": {
+        "condition": {
+          "type": "score",
+          "objective": "failureTest",
+          "target": 5
+        }
+      }
+    },
+    "optional": {
+      "title": "Optional task"
+    },
+    "optional2": {
+      "title": "Optional task"
+    },
+    "stage2": {
+      "title": "Second stage task"
+    },
+    "unused": {
+      "title": "Unused"
+    }
+  },
+  "stages": [
+    ["required", "optional", "optional2"],
+    ["stage2"]
+  ]
+}
