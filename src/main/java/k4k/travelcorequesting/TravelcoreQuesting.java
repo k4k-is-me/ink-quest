@@ -2,6 +2,8 @@ package k4k.travelcorequesting;
 
 import k4k.travelcorequesting.infro.command_argument_types.CompletionLevelArgumentType;
 import k4k.travelcorequesting.infro.command_argument_types.CompletionStatusArgumentType;
+import k4k.travelcorequesting.infro.command_argument_types.QuestGeneralStatusArgumentType;
+import k4k.travelcorequesting.infro.command_argument_types.TaskGeneralStatusArgumentType;
 import k4k.travelcorequesting.infro.commands.ExecuteCommandExtension;
 import k4k.travelcorequesting.infro.loaders.QuestingPersistentStateAdapter;
 import k4k.travelcorequesting.infro.networking.HudChangeTaskProgressS2CPacket;
@@ -64,6 +66,18 @@ public class TravelcoreQuesting implements ModInitializer {
 				Identifier.of(MOD_ID, "completion_level"),
 				CompletionLevelArgumentType.class,
 				ConstantArgumentSerializer.of(CompletionLevelArgumentType::completionLevel)
+		);
+
+		ArgumentTypeRegistry.registerArgumentType(
+				Identifier.of(MOD_ID, "quest_general_status"),
+				QuestGeneralStatusArgumentType.class,
+				ConstantArgumentSerializer.of(QuestGeneralStatusArgumentType::questGeneralStatus)
+		);
+
+		ArgumentTypeRegistry.registerArgumentType(
+				Identifier.of(MOD_ID, "task_general_status"),
+				TaskGeneralStatusArgumentType.class,
+				ConstantArgumentSerializer.of(TaskGeneralStatusArgumentType::taskGeneralStatus)
 		);
 
 		QuestEvents.QUEST_PINNED.register((questEntry, player) -> {
