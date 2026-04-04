@@ -107,4 +107,22 @@ public class Animator {
     public <T> T getParameterOrDefault(String parameterKey, long currentTime, T defaultValue, Class<T> expectedType) {
         return this.getParameter(parameterKey, currentTime, expectedType).orElse(defaultValue);
     }
+
+    /**
+     * Возвращает {@code true} если аниматор простаивает — либо ничего не играло,
+     * либо текущая анимация завершила своё время ({@code currentTime - startTime >= duration}).
+     *
+     * <p>Удобно для очистки: если аниматор простаивает — объект можно удалять.
+     * <pre>{@code
+     * if (outgoingAnimator.isIdle(t)) {
+     *     outgoingTaskWidgets.clear();
+     * }
+     * }</pre>
+     *
+     */
+    public boolean isIdle(long currentTime) {
+        if (animationQueue.isEmpty()) return true;
+        if (animationQueue.size() > 1) return false;
+        return currentTime - animationStartTime >= (long) animationQueue.peek().getDuration();
+    }
 }
