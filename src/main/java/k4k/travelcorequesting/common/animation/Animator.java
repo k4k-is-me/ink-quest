@@ -39,7 +39,7 @@ import java.util.Queue;
  *   <li>{@link #queue} добавляет анимацию после текущей.
  *   <li>Последняя анимация в очереди никогда не извлекается — она продолжает «играть» бесконечно.
  *       Для {@link Animation#ONE_TIME} параметры застывают на {@code t = 1.0}.
- *       Для {@link Animation#LOOP} и {@link Animation#SYNCED_LOOP} параметры продолжают циклиться.
+ *       Для {@link Animation#LOOP} и {@link Animation#ANIMATION_LOOP} параметры продолжают циклиться.
  * </ul>
  */
 public class Animator {

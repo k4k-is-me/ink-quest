@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <ul>
  *   <li>{@link #ONE_TIME} — анимация проигрывается один раз. После завершения {@code t = 1.0}.
  *   <li>{@link #LOOP} — анимация зацикливается. {@code t} постоянно идёт от 0 к 1.
- *   <li>{@link #SYNCED_LOOP} — то же что LOOP, но синхронизировано со временем мира
+ *   <li>{@link #ANIMATION_LOOP} — то же что LOOP, но синхронизировано со временем мира
  *       (все объекты с одинаковой длительностью будут в одной фазе).
  * </ul>
  */
@@ -55,7 +55,7 @@ public class Animation {
      * затем с началом нового цикла общей анимации — всё повторяется.
      * Полезно для синхронных пульсаций, где несколько параметров должны циклиться в одном ритме.
      */
-    public static final AnimationFillMode SYNCED_LOOP = (currentTime, sqDuration, anStartTime, anDuration) ->
+    public static final AnimationFillMode ANIMATION_LOOP = (currentTime, sqDuration, anStartTime, anDuration) ->
             clamp01((mod1(currentTime / sqDuration) * sqDuration - anStartTime) / anDuration);
 
     /**
@@ -120,7 +120,7 @@ public class Animation {
      *
      * @see Animation#ONE_TIME
      * @see Animation#LOOP
-     * @see Animation#SYNCED_LOOP
+     * @see Animation#ANIMATION_LOOP
      */
     @FunctionalInterface
     public interface AnimationFillMode {
@@ -168,7 +168,7 @@ public class Animation {
          *
          * @param parameterKey имя параметра (используется при вызове {@link Animator#getParameter})
          * @param animation    функция интерполяции
-         * @param fillMode     режим воспроизведения ({@link #ONE_TIME}, {@link #LOOP}, {@link #SYNCED_LOOP})
+         * @param fillMode     режим воспроизведения ({@link #ONE_TIME}, {@link #LOOP}, {@link #ANIMATION_LOOP})
          * @param duration     длительность в мс
          * @param type         класс типа значения (нужен для типобезопасного извлечения)
          */
@@ -194,7 +194,7 @@ public class Animation {
         /**
          * Задаёт общую длительность анимации вручную.
          * По умолчанию она равна максимуму {@code delay + duration} среди всех параметров.
-         * Актуально для {@link #SYNCED_LOOP}: длительность влияет на период синхронизации.
+         * Актуально для {@link #ANIMATION_LOOP}: длительность влияет на период синхронизации.
          */
         public Builder setDuration(long duration) {
             if (duration <= 0) throw new IllegalArgumentException("Duration must be greater than zero");

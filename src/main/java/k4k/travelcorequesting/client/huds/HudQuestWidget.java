@@ -12,6 +12,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Util;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2d;
 
 import java.util.LinkedHashMap;
@@ -28,7 +29,6 @@ public class HudQuestWidget {
             .addParameterAnimation("Opacity", FadeParameterAnimation.fadeIn(), Animation.ONE_TIME, 500, Float.class)
             .build();
 
-    // TODO: анимация fade-out при смене этапа
     // TODO: анимация fade-out при завершении/откреплении
 
     private final MinecraftClient client = MinecraftClient.getInstance();
@@ -36,29 +36,32 @@ public class HudQuestWidget {
     private QuestDisplay display;
     private final LinkedHashMap<String, HudTaskWidget> taskWidgets = new LinkedHashMap<>();
     private final Animator animator = new Animator();
+    private @Nullable Transition activeTransition = null;
+
+    private record Transition(
+            LinkedHashMap<String, HudTaskWidget> outgoingTasks,
+            long expiresAt
+    ) {}
 
     public HudQuestWidget(QuestDisplay display, Map<String, TaskDisplay> tasks) {
         this.display = display;
         populateTasks(tasks);
     }
 
-    public void introduce() {
+    public void playInAnimation() {
         animator.play(IN_ANIMATION, Util.getMeasuringTimeMs());
-
-        for (var taskWidget : taskWidgets.values()) {
-            taskWidget.playInAnimation();
-        }
+        taskWidgets.values().forEach(HudTaskWidget::playInAnimation);
     }
 
     public void changeStage(QuestDisplay display, Map<String, TaskDisplay> tasks) {
-        // TODO: анимация fade-out старого этапа → fade-in нового
-        this.display = display;
-        this.taskWidgets.clear();
-        populateTasks(tasks);
+        var outgoing = new LinkedHashMap<>(taskWidgets);
+        outgoing.values().forEach(HudTaskWidget::playOutAnimation);
+        activeTransition = new Transition(outgoing, Util.getMeasuringTimeMs() + HudTaskWidget.getOutAnimationDuration());
 
-        for (var taskWidget : taskWidgets.values()) {
-            taskWidget.playInAnimation();
-        }
+        this.display = display;
+        taskWidgets.clear();
+        populateTasks(tasks);
+        taskWidgets.values().forEach(HudTaskWidget::playInAnimation);
     }
 
     public void addTask(String taskId, TaskDisplay task) {
@@ -69,18 +72,22 @@ public class HudQuestWidget {
         taskWidgets.put(taskId, widget);
     }
 
+    public void update(long t) {
+        if (activeTransition != null && t >= activeTransition.expiresAt()) {
+            activeTransition = null;
+        }
+    }
+
     public void completeTask(String taskId, CompletionStatus status) {
         var widget = taskWidgets.get(taskId);
-        if (widget != null) {
-            widget.complete(status);
-        }
+        if (widget == null) return;
+        widget.complete(status);
     }
 
     public void setTaskProgress(String taskId, int value, boolean isSuccess) {
         var widget = taskWidgets.get(taskId);
-        if (widget != null) {
-            widget.setProgress(value, isSuccess);
-        }
+        if (widget == null) return;
+        widget.setProgress(value, isSuccess);
     }
 
     public int getSortIndex() {
@@ -88,22 +95,13 @@ public class HudQuestWidget {
     }
 
     public int getHeight(int hudWidth) {
-        int height = client.textRenderer.getWrappedLinesHeight(display.title(), hudWidth - 2);
+        int titleHeight = client.textRenderer.getWrappedLinesHeight(display.title(), hudWidth - 2);
+        int currentHeight = computeTasksHeight(taskWidgets, hudWidth);
 
-        if (!taskWidgets.isEmpty()) {
-            height += QUEST_TASKS_GAP;
-            int taskIndex = 0;
-            for (var widget : taskWidgets.values()) {
-                int taskWidth = getTaskAvailableWidth(taskIndex == 0, hudWidth);
-                height += widget.getHeight(taskWidth);
-                if (taskIndex == 0 && taskWidgets.size() > 1) {
-                    height += QUEST_TASKS_GAP;
-                }
-                taskIndex++;
-            }
-        }
+        if (activeTransition == null) return titleHeight + currentHeight;
 
-        return height;
+        int outgoingHeight = computeTasksHeight(activeTransition.outgoingTasks(), hudWidth);
+        return titleHeight + Math.max(currentHeight, outgoingHeight);
     }
 
     public int render(DrawContext context, long t, int x, int y, int hudWidth) {
@@ -115,26 +113,35 @@ public class HudQuestWidget {
         RenderSystem.setShaderColor(1, 1, 1, opacity);
 
         int drawX = x + offsetX;
-        int initialY = y;
+        int titleHeight = DrawContexts.drawTextWrapped(context, client.textRenderer, display.title(), drawX + 1, y + 1, hudWidth - 2, 0xFFFFFFFF, true);
+        int taskStartY = y + titleHeight + QUEST_TASKS_GAP + 1;
 
-        // Заголовок квеста
-        y += DrawContexts.drawTextWrapped(context, client.textRenderer, display.title(), drawX + 1, y + 1, hudWidth - 2, 0xFFFFFFFF, true);
+        int currentTasksHeight = renderTasks(context, t, drawX, taskStartY, hudWidth, taskWidgets);
 
-        if (taskWidgets.isEmpty()) {
-            return y - initialY;
+        int tasksHeight = currentTasksHeight;
+        if (activeTransition != null) {
+            int outgoingTasksHeight = renderTasks(context, t, drawX, taskStartY, hudWidth, activeTransition.outgoingTasks());
+            tasksHeight = Math.max(currentTasksHeight, outgoingTasksHeight);
         }
 
-        y += QUEST_TASKS_GAP + 1;
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        RenderSystem.disableBlend();
 
-        // Задачи
+        if (tasksHeight == 0) return titleHeight;
+        return titleHeight + QUEST_TASKS_GAP + 1 + tasksHeight;
+    }
+
+    private int renderTasks(DrawContext context, long t, int x, int y, int hudWidth, LinkedHashMap<String, HudTaskWidget> widgets) {
+        if (widgets.isEmpty()) return 0;
+
+        int initialY = y;
         int taskIndex = 0;
-        int taskCount = taskWidgets.size();
-        for (var entry : taskWidgets.entrySet()) {
+        int taskCount = widgets.size();
+
+        for (var entry : widgets.entrySet()) {
             boolean isRequired = taskIndex == 0;
             int taskPadding = TASKS_PADDING + (isRequired ? 0 : OPTIONAL_TASK_EXTRA_PADDING);
-            int taskWidth = hudWidth - taskPadding;
-
-            int taskHeight = entry.getValue().render(context, t, drawX + taskPadding, y, taskWidth);
+            int taskHeight = entry.getValue().render(context, t, x + taskPadding, y, hudWidth - taskPadding);
 
             y += taskHeight;
             if (isRequired && taskIndex < taskCount - 1) {
@@ -146,21 +153,32 @@ public class HudQuestWidget {
         return y - initialY;
     }
 
+    private int computeTasksHeight(LinkedHashMap<String, HudTaskWidget> widgets, int hudWidth) {
+        if (widgets.isEmpty()) return 0;
+
+        int height = QUEST_TASKS_GAP;
+        int taskIndex = 0;
+        for (var widget : widgets.values()) {
+            height += widget.getHeight(getTaskAvailableWidth(taskIndex == 0, hudWidth));
+            if (taskIndex == 0 && widgets.size() > 1) height += QUEST_TASKS_GAP;
+            taskIndex++;
+        }
+        return height;
+    }
+
     private void populateTasks(Map<String, TaskDisplay> tasks) {
         List<String> taskOrder = display.tasks();
         int index = 0;
         for (var taskId : taskOrder) {
             var taskDisplay = tasks.get(taskId);
             if (taskDisplay != null) {
-                boolean isRequired = index == 0;
-                taskWidgets.put(taskId, new HudTaskWidget(taskDisplay, isRequired));
+                taskWidgets.put(taskId, new HudTaskWidget(taskDisplay, index == 0));
             }
             index++;
         }
     }
 
     private int getTaskAvailableWidth(boolean isRequired, int hudWidth) {
-        int padding = TASKS_PADDING + (isRequired ? 0 : OPTIONAL_TASK_EXTRA_PADDING);
-        return hudWidth - padding;
+        return hudWidth - TASKS_PADDING - (isRequired ? 0 : OPTIONAL_TASK_EXTRA_PADDING);
     }
 }

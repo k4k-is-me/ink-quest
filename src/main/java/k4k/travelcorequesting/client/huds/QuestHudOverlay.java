@@ -32,7 +32,7 @@ public class QuestHudOverlay implements HudRenderCallback {
         }
 
         var widget = new HudQuestWidget(quest, tasks);
-        widget.introduce();
+        widget.playInAnimation();
 
         questWidgets.put(questId, widget);
 
@@ -97,8 +97,10 @@ public class QuestHudOverlay implements HudRenderCallback {
 
     private void renderHud(DrawContext drawContext) {
         long t = Util.getMeasuringTimeMs();
-        int y = 0;
 
+        for (var widget : questWidgets.values()) widget.update(t);
+
+        int y = 0;
         for (var questId : questOrder) {
             var widget = questWidgets.get(questId);
             if (widget == null) continue;

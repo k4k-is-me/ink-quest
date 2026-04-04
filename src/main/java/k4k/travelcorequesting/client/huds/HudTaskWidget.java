@@ -21,13 +21,15 @@ public class HudTaskWidget {
 
     private static final int ICON_SIZE = 8;
     private static final int ICON_GAP = 2;
-    private static final int PROGRESS_BAR_HEIGHT = 1;
     private static final int PROGRESS_BAR_GAP = 1;
 
     private static final Animation IN_ANIMATION = new Animation.Builder()
             .addParameterAnimation("IconU", SwitchValueParameterAnimation.switchTo(0), Animation.ONE_TIME, 1, 250, Integer.class)
-            .addParameterAnimation("Position", SlideParameterAnimation.slideIn(-10, 0), Animation.ONE_TIME, 500, Vector2d.class)
             .addParameterAnimation("Opacity", FadeParameterAnimation.fadeIn(), Animation.ONE_TIME, 500, Float.class)
+            .build();
+
+    private static final Animation OUT_ANIMATION = new Animation.Builder()
+            .addParameterAnimation("Opacity", FadeParameterAnimation.fadeOut(), Animation.ONE_TIME, 500, Float.class)
             .build();
 
     private static final Animation SUCCESS_ANIMATION = new Animation.Builder()
@@ -48,21 +50,31 @@ public class HudTaskWidget {
 
     private final MinecraftClient client = MinecraftClient.getInstance();
 
-    private TaskDisplay display;
+    private final TaskDisplay display;
     private final boolean isRequired;
     private final Animator animator = new Animator();
 
-    private int successProgress = 0;
-    private int failureProgress = 0;
+    private final @Nullable HudProgressBarWidget successBar;
+    private final @Nullable HudProgressBarWidget failureBar;
     private @Nullable CompletionStatus completionStatus = null;
 
     public HudTaskWidget(TaskDisplay display, boolean isRequired) {
         this.display = display;
         this.isRequired = isRequired;
+        this.successBar = display.successTarget() != null ? new HudProgressBarWidget(HudProgressBarWidget.SUCCESS_V) : null;
+        this.failureBar = display.failureTarget() != null ? new HudProgressBarWidget(HudProgressBarWidget.FAILURE_V) : null;
     }
 
     public void playInAnimation() {
         animator.play(IN_ANIMATION, Util.getMeasuringTimeMs());
+    }
+
+    public void playOutAnimation() {
+        animator.play(OUT_ANIMATION, Util.getMeasuringTimeMs());
+    }
+
+    public static long getOutAnimationDuration() {
+        return (long) OUT_ANIMATION.getDuration();
     }
 
     public void complete(CompletionStatus status) {
@@ -78,15 +90,11 @@ public class HudTaskWidget {
     public void setProgress(int value, boolean isSuccess) {
         if (completionStatus != null) return;
 
-        if (isSuccess) {
-            this.successProgress = value;
-        } else {
-            this.failureProgress = value;
+        if (isSuccess && successBar != null) {
+            successBar.setProgress(value, display.successTarget());
+        } else if (!isSuccess && failureBar != null) {
+            failureBar.setProgress(value, display.failureTarget());
         }
-    }
-
-    public void setDisplay(TaskDisplay display) {
-        this.display = display;
     }
 
     public int getHeight(int maxWidth) {
@@ -95,8 +103,8 @@ public class HudTaskWidget {
 
         int extraHeight = 0;
         if (completionStatus == null) {
-            if (display.successTarget() != null) extraHeight += PROGRESS_BAR_HEIGHT + PROGRESS_BAR_GAP;
-            if (display.failureTarget() != null) extraHeight += PROGRESS_BAR_HEIGHT + PROGRESS_BAR_GAP;
+            if (successBar != null) extraHeight += successBar.getHeight() + PROGRESS_BAR_GAP;
+            if (failureBar != null) extraHeight += failureBar.getHeight() + PROGRESS_BAR_GAP;
         }
 
         return textHeight + extraHeight;
@@ -135,15 +143,15 @@ public class HudTaskWidget {
         if (completionStatus == null) {
             int barY = y + textHeight + PROGRESS_BAR_GAP;
 
-            if (display.successTarget() != null) {
-                renderProgressBar(context, textX, barY, textWidth, successProgress, display.successTarget(), 0xAA00FF00);
-                barY += PROGRESS_BAR_HEIGHT + PROGRESS_BAR_GAP;
-                totalHeight += PROGRESS_BAR_HEIGHT + PROGRESS_BAR_GAP;
+            if (successBar != null) {
+                successBar.render(context, t, textX, barY, textWidth);
+                barY += successBar.getHeight() + PROGRESS_BAR_GAP;
+                totalHeight += successBar.getHeight() + PROGRESS_BAR_GAP;
             }
 
-            if (display.failureTarget() != null) {
-                renderProgressBar(context, textX, barY, textWidth, failureProgress, display.failureTarget(), 0xAAFF0000);
-                totalHeight += PROGRESS_BAR_HEIGHT + PROGRESS_BAR_GAP;
+            if (failureBar != null) {
+                failureBar.render(context, t, textX, barY, textWidth);
+                totalHeight += failureBar.getHeight() + PROGRESS_BAR_GAP;
             }
         }
 
@@ -151,13 +159,5 @@ public class HudTaskWidget {
         RenderSystem.disableBlend();
 
         return totalHeight;
-    }
-
-    private void renderProgressBar(DrawContext context, int x, int y, int maxWidth, int current, int target, int color) {
-        int clamped = Math.min(current, target);
-        int barWidth = (int) (maxWidth * ((float) clamped / target));
-        if (barWidth > 0) {
-            context.fill(x, y, x + barWidth, y + PROGRESS_BAR_HEIGHT, color);
-        }
     }
 }
