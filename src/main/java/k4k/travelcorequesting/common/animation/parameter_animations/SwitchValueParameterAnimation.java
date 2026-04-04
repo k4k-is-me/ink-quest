@@ -15,10 +15,10 @@ import k4k.travelcorequesting.common.animation.ParameterAnimation;
  * SwitchValueParameterAnimation.switchTo(value)
  *
  * // Значение null до t=0, value пока анимация идёт, null после
- * SwitchValueParameterAnimation.temporarilySwitchTo(value)
+ * SwitchValueParameterAnimation.flashTo(value)
  *
  * // Значение value до t=1, null после
- * SwitchValueParameterAnimation.switchToDefaultFrom(value)
+ * SwitchValueParameterAnimation.dropFrom(value)
  * }</pre>
  *
  * <h2>Пример: смена иконки при завершении задачи</h2>
@@ -60,7 +60,7 @@ public class SwitchValueParameterAnimation<T> implements ParameterAnimation<T> {
      * Значение появляется во время анимации и исчезает после.
      * Полезно для временных эффектов.
      */
-    public static <T> SwitchValueParameterAnimation<T> temporarilySwitchTo(T value) {
+    public static <T> SwitchValueParameterAnimation<T> flashTo(T value) {
         return new SwitchValueParameterAnimation<>(null, value, null);
     }
 
@@ -68,7 +68,7 @@ public class SwitchValueParameterAnimation<T> implements ParameterAnimation<T> {
      * {@code value → null → null}.
      * Значение есть «до» анимации и сбрасывается после.
      */
-    public static <T> SwitchValueParameterAnimation<T> switchToDefaultFrom(T value) {
+    public static <T> SwitchValueParameterAnimation<T> dropFrom(T value) {
         return new SwitchValueParameterAnimation<>(value, null, null);
     }
 
