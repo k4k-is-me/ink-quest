@@ -129,12 +129,9 @@ public class TravelcoreQuesting implements ModInitializer {
 			));
 		});
 
-		QuestProgressEvents.QUEST_COMPLETED.register((questEntry, status, player) -> {
-			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
-			if (!questManager.isQuestPinned(questEntry.questId(), player)) return;
-
-			ServerPlayNetworking.send(player, new HudRemoveQuestS2CPacket(questEntry.questId()));
-		});
+		QuestEvents.QUEST_PIN_REMOVED.register((questId, player) ->
+				ServerPlayNetworking.send(player, new HudRemoveQuestS2CPacket(questId))
+		);
 
 		QuestProgressEvents.TASK_SUCCESS_PROGRESS_CHANGED.register((taskEntry, player, newValue) -> {
 			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());

@@ -20,6 +20,7 @@ public class QuestHudOverlay implements HudRenderCallback {
 
     private final List<Identifier> questOrder = new ArrayList<>();
     private final Map<Identifier, HudQuestWidget> questWidgets = new HashMap<>();
+    private final Map<Identifier, Long> outgoingQuests = new HashMap<>();
 
     public QuestHudOverlay() {}
 
@@ -68,9 +69,11 @@ public class QuestHudOverlay implements HudRenderCallback {
     }
 
     public void removeQuest(Identifier questId) {
-        // TODO: анимация fade-out перед удалением
-        questWidgets.remove(questId);
-        questOrder.remove(questId);
+        var widget = questWidgets.get(questId);
+        if (widget == null) return;
+
+        widget.playOutAnimation();
+        outgoingQuests.put(questId, Util.getMeasuringTimeMs() + HudQuestWidget.getOutAnimationDuration());
     }
 
     @Override
@@ -103,6 +106,14 @@ public class QuestHudOverlay implements HudRenderCallback {
 
     private void renderHud(DrawContext drawContext) {
         long t = Util.getMeasuringTimeMs();
+
+        outgoingQuests.entrySet().removeIf(entry -> {
+            if (t < entry.getValue()) return false;
+
+            questWidgets.remove(entry.getKey());
+            questOrder.remove(entry.getKey());
+            return true;
+        });
 
         for (var widget : questWidgets.values()) widget.update(t);
 

@@ -29,7 +29,10 @@ public class HudQuestWidget {
             .addParameterAnimation("Opacity", FadeParameterAnimation.fadeIn(), Animation.ONE_TIME, 500, Float.class)
             .build();
 
-    // TODO: анимация fade-out при завершении/откреплении
+    private static final Animation OUT_ANIMATION = new Animation.Builder()
+            .addParameterAnimation("Position", SlideParameterAnimation.slideOut(-10, 0), Animation.ONE_TIME, 500, Vector2d.class)
+            .addParameterAnimation("Opacity", FadeParameterAnimation.fadeOut(), Animation.ONE_TIME, 500, Float.class)
+            .build();
 
     private final MinecraftClient client = MinecraftClient.getInstance();
 
@@ -52,6 +55,16 @@ public class HudQuestWidget {
     public void playInAnimation() {
         animator.play(IN_ANIMATION, Util.getMeasuringTimeMs());
         taskWidgets.values().forEach(HudTaskWidget::playInAnimation);
+    }
+
+    public void playOutAnimation() {
+        long now = Util.getMeasuringTimeMs();
+        animator.play(OUT_ANIMATION, now);
+        taskWidgets.values().forEach(HudTaskWidget::playOutAnimation);
+    }
+
+    public static long getOutAnimationDuration() {
+        return (long) OUT_ANIMATION.getDuration();
     }
 
     public void changeStage(QuestDisplay display, Map<String, TaskDisplay> tasks) {
