@@ -12,6 +12,8 @@
   "quest.command.error.complete": "Quest already complete",
   "quest.command.error.task.complete": "Task already complete",
   "quest.command.error.task.missing": "Task not found",
+  "quest.command.error.task.not_active": "Task is not in the active stage",
+  "quest.command.error.task.pinned": "Task is already pinned",
   "quest.command.error.no_active_stage": "Quest has no active stage",
   "quest.command.task_type.required": "REQUIRED",
   "quest.command.task_type.optional": "OPTIONAL",

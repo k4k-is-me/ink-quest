@@ -54,6 +54,8 @@ public class QuestCommand {
     public static final String ERR_QUEST_COMPLETE = "quest.command.error.complete";
     public static final String ERR_TASK_MISSING = "quest.command.error.task.missing";
     public static final String ERR_TASK_COMPLETE = "quest.command.error.task.complete";
+    public static final String ERR_TASK_NOT_ACTIVE = "quest.command.error.task.not_active";
+    public static final String ERR_TASK_PINNED = "quest.command.error.task.pinned";
     public static final String ERR_ACTIVE_STAGE_MISSING = "quest.command.error.no_active_stage";
 
     private static final String MSG_QUEST_NEW = "quest.command.new";
@@ -262,6 +264,15 @@ public class QuestCommand {
                                         getIdentifier(context, ARG_QUEST_ID),
                                         getPlayer(context, ARG_PLAYER)
                                 ))
+
+                                .then(argument(ARG_TASK_ID, word())
+                                        .executes(context -> pinTask(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                getString(context, ARG_TASK_ID),
+                                                getPlayer(context, ARG_PLAYER)
+                                        ))
+                                )
                         )
                 );
     }
@@ -551,6 +562,38 @@ public class QuestCommand {
         }
 
         questManager.pinRequiredTask(questId, player);
+        source.sendFeedback(() -> Text.translatable(MSG_QUEST_PIN_ADD_QUEST, QuestTexts.getQuestText(entry), player.getName()), false);
+        return 1;
+    }
+
+    private static int pinTask(CommandContext<ServerCommandSource> context, Identifier questId, String taskId, ServerPlayerEntity player) {
+        var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
+        var questResolver = questManager.getQuestResolver();
+        var source = context.getSource();
+
+        var entry = questResolver.getQuestEntry(questId);
+
+        if (!questManager.isQuestExists(questId) || entry == null) {
+            source.sendError(Text.translatable(ERR_QUEST_MISSING));
+            return 0;
+        }
+
+        if (!questManager.isQuestTracked(questId, player)) {
+            source.sendError(Text.translatable(ERR_QUEST_NO_TRACKER, player.getName()));
+            return 0;
+        }
+
+        if (!questManager.isTaskActive(questId, taskId, player)) {
+            source.sendError(Text.translatable(ERR_TASK_NOT_ACTIVE));
+            return 0;
+        }
+
+        if (questManager.isTaskPinned(questId, taskId, player)) {
+            source.sendError(Text.translatable(ERR_TASK_PINNED));
+            return 0;
+        }
+
+        questManager.pinTask(questId, taskId, player);
         source.sendFeedback(() -> Text.translatable(MSG_QUEST_PIN_ADD_QUEST, QuestTexts.getQuestText(entry), player.getName()), false);
         return 1;
     }
