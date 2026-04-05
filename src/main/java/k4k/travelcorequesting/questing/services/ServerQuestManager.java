@@ -125,13 +125,14 @@ public class ServerQuestManager {
 
         var playerTracker = this.trackedPlayers.get(player.getUuid());
         if (playerTracker == null) return;
+        if (!playerTracker.has(questId)) return;
 
-        if (playerTracker.has(questId)) {
-            playerTracker.stopTracking(questId);
-            this.isDirty = true;
+        this.unpinIfPinned(questId, player, playerTracker);
 
-            QuestProgressEvents.QUEST_DROPPED.invoker().onQuestDrop(entry, player);
-        }
+        playerTracker.stopTracking(questId);
+        this.isDirty = true;
+
+        QuestProgressEvents.QUEST_DROPPED.invoker().onQuestDrop(entry, player);
     }
 
     /**
@@ -761,7 +762,12 @@ public class ServerQuestManager {
             }
         }
 
+        boolean wasPinned = questTracker.isPinned();
+
         playerTracker.checkCompletion(questId, status -> {
+            if (wasPinned) {
+                QuestEvents.QUEST_PIN_REMOVED.invoker().onQuestPinRemove(questId, player);
+            }
             QuestProgressEvents.QUEST_COMPLETED.invoker().onQuestCompletion(entry, status, player);
             this.unlockDependentQuests(player, playerTracker, questId);
             this.isDirty = true;
@@ -819,6 +825,14 @@ public class ServerQuestManager {
                 }
             }
         }
+    }
+
+    private void unpinIfPinned(Identifier questId, ServerPlayerEntity player, PlayerProgressTracker playerTracker) {
+        var questTracker = playerTracker.getQuestTracker(questId).orElse(null);
+        if (questTracker == null || !questTracker.isPinned()) return;
+
+        questTracker.resetTaskPin();
+        QuestEvents.QUEST_PIN_REMOVED.invoker().onQuestPinRemove(questId, player);
     }
 
     private Optional<PlayerProgressTracker> getPlayerTracker(ServerPlayerEntity player) {
