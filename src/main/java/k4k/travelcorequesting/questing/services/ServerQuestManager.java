@@ -696,53 +696,9 @@ public class ServerQuestManager {
         questTracker.recomputeActiveStage(newStage ->
                 QuestProgressEvents.STAGE_CHANGED.invoker().onStageChange(entry, newStage, player));
 
-        var activeStage = questTracker.getActiveStage().orElse(null);
-        if (activeStage == null) return;
-
-        this.ensureActiveStageLoaded(player, questTracker);
-
-        // Process each active task
-        for (var taskId : questTracker.getActiveTasks()) {
-            var taskEntry = this.questRepository.getTaskEntry(questId, taskId);
-            if (taskEntry == null) continue;
-
-            var task = taskEntry.task();
-
-            // Tick each task
-            this.conditionDispatcher.tick(task.successCondition(), player);
-            this.conditionDispatcher.tick(task.failureCondition(), player);
-            QuestProgressEvents.TASK_TICKED.invoker().onTaskTick(taskEntry, player);
-
-            // Update progress
-            var successValue = this.conditionDispatcher.getCurrentValue(task.successCondition(), player);
-            var failureValue = this.conditionDispatcher.getCurrentValue(task.failureCondition(), player);
-
-            var successChanged = questTracker.updateSuccessValue(taskId, successValue);
-
-            if (successChanged) {
-                QuestProgressEvents.TASK_SUCCESS_PROGRESS_CHANGED.invoker()
-                        .onTaskProgressChange(taskEntry, player, successValue);
-                this.isDirty = true;
-            }
-
-            // Update progress
-            var failureChanged = questTracker.updateFailureValue(taskId, failureValue);
-
-            if (failureChanged) {
-                QuestProgressEvents.TASK_FAILURE_PROGRESS_CHANGED.invoker()
-                        .onTaskProgressChange(taskEntry, player, failureValue);
-                this.isDirty = true;
-            }
-
-            // Check if complete
-            if (successChanged && this.conditionDispatcher.test(task.successCondition(), player)) {
-                this.completeTask(questId, taskId, player, CompletionStatus.SUCCESS);
-            }
-
-            // Check if complete
-            else if (failureChanged && this.conditionDispatcher.test(task.failureCondition(), player)) {
-                this.completeTask(questId, taskId, player, CompletionStatus.FAILURE);
-            }
+        if (questTracker.getActiveStage().isPresent()) {
+            this.ensureActiveStageLoaded(player, questTracker);
+            this.processActiveTasks(player, questId, questTracker);
         }
 
         boolean wasPinned = questTracker.isPinned();
@@ -755,6 +711,52 @@ public class ServerQuestManager {
             this.unlockDependentQuests(player, playerTracker, questId);
             this.isDirty = true;
         });
+    }
+
+    /**
+     * Тикает условия, обновляет прогресс и проверяет завершение каждой активной задачи квеста.
+     *
+     * <p>Вызывается только когда у квеста есть активный этап. Не вызывается если активного
+     * этапа нет — например после ручного завершения последней задачи командой между тиками.
+     * В этом случае завершение квеста обнаружится через {@link PlayerProgressTracker#checkCompletion}
+     * на том же тике.
+     */
+    private void processActiveTasks(ServerPlayerEntity player, Identifier questId, QuestProgressTracker questTracker) {
+        for (var taskId : questTracker.getActiveTasks()) {
+            var taskEntry = this.questRepository.getTaskEntry(questId, taskId);
+            if (taskEntry == null) continue;
+
+            var task = taskEntry.task();
+
+            this.conditionDispatcher.tick(task.successCondition(), player);
+            this.conditionDispatcher.tick(task.failureCondition(), player);
+            QuestProgressEvents.TASK_TICKED.invoker().onTaskTick(taskEntry, player);
+
+            var successValue = this.conditionDispatcher.getCurrentValue(task.successCondition(), player);
+            var failureValue = this.conditionDispatcher.getCurrentValue(task.failureCondition(), player);
+
+            var successChanged = questTracker.updateSuccessValue(taskId, successValue);
+
+            if (successChanged) {
+                QuestProgressEvents.TASK_SUCCESS_PROGRESS_CHANGED.invoker()
+                        .onTaskProgressChange(taskEntry, player, successValue);
+                this.isDirty = true;
+            }
+
+            var failureChanged = questTracker.updateFailureValue(taskId, failureValue);
+
+            if (failureChanged) {
+                QuestProgressEvents.TASK_FAILURE_PROGRESS_CHANGED.invoker()
+                        .onTaskProgressChange(taskEntry, player, failureValue);
+                this.isDirty = true;
+            }
+
+            if (successChanged && this.conditionDispatcher.test(task.successCondition(), player)) {
+                this.completeTask(questId, taskId, player, CompletionStatus.SUCCESS);
+            } else if (failureChanged && this.conditionDispatcher.test(task.failureCondition(), player)) {
+                this.completeTask(questId, taskId, player, CompletionStatus.FAILURE);
+            }
+        }
     }
 
     /**
