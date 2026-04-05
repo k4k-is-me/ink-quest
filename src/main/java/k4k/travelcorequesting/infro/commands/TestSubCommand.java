@@ -27,7 +27,7 @@ import static net.minecraft.server.command.CommandManager.literal;
 public class TestSubCommand {
     // Common args
     private static final String ARG_QUEST_ID = "questId";
-    private static final String ARG_TASK_ID = "questId";
+    private static final String ARG_TASK_ID = "taskId";
     private static final String ARG_PLAYER = "player";
     private static final String ARG_QUEST_STATUS = "status";
     private static final String ARG_TASK_STATUS = "status";
