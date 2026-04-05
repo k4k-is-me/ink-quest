@@ -37,6 +37,7 @@ public class HudQuestWidget {
     private final LinkedHashMap<String, HudTaskWidget> taskWidgets = new LinkedHashMap<>();
     private final Animator animator = new Animator();
     private @Nullable Transition activeTransition = null;
+    private @Nullable String pinnedTaskId = null;
 
     private record Transition(
             LinkedHashMap<String, HudTaskWidget> outgoingTasks,
@@ -60,6 +61,7 @@ public class HudQuestWidget {
 
         this.display = display;
         taskWidgets.clear();
+        pinnedTaskId = null;
         populateTasks(tasks);
         taskWidgets.values().forEach(HudTaskWidget::playInAnimation);
     }
@@ -70,6 +72,11 @@ public class HudQuestWidget {
         var widget = new HudTaskWidget(task, isRequired);
         widget.playInAnimation();
         taskWidgets.put(taskId, widget);
+    }
+
+    public void setTaskPin(String taskId) {
+        String firstTaskId = taskWidgets.isEmpty() ? null : taskWidgets.keySet().iterator().next();
+        pinnedTaskId = taskId.equals(firstTaskId) ? null : taskId;
     }
 
     public void update(long t) {
@@ -96,11 +103,11 @@ public class HudQuestWidget {
 
     public int getHeight(int hudWidth) {
         int titleHeight = client.textRenderer.getWrappedLinesHeight(display.title(), hudWidth - 2);
-        int currentHeight = computeTasksHeight(taskWidgets, hudWidth);
+        int currentHeight = computeCurrentTasksHeight(taskWidgets, hudWidth);
 
         if (activeTransition == null) return titleHeight + currentHeight;
 
-        int outgoingHeight = computeTasksHeight(activeTransition.outgoingTasks(), hudWidth);
+        int outgoingHeight = computeTasksHeight(activeTransition.outgoingTasks(), hudWidth, null);
         return titleHeight + Math.max(currentHeight, outgoingHeight);
     }
 
@@ -116,11 +123,20 @@ public class HudQuestWidget {
         int titleHeight = DrawContexts.drawTextWrapped(context, client.textRenderer, display.title(), drawX + 1, y + 1, hudWidth - 2, 0xFFFFFFFF, true);
         int taskStartY = y + titleHeight + QUEST_TASKS_GAP + 1;
 
-        int currentTasksHeight = renderTasks(context, t, drawX, taskStartY, hudWidth, taskWidgets);
+        int currentTasksHeight;
+        if (isPinnedOptional()) {
+            var pinnedWidget = taskWidgets.get(pinnedTaskId);
+            int pinnedHeight = pinnedWidget.render(context, t, drawX + TASKS_PADDING, taskStartY, hudWidth - TASKS_PADDING);
+            int mainStartY = taskStartY + pinnedHeight + QUEST_TASKS_GAP;
+            int mainHeight = renderTasks(context, t, drawX, mainStartY, hudWidth, taskWidgets, pinnedTaskId);
+            currentTasksHeight = pinnedHeight + QUEST_TASKS_GAP + mainHeight;
+        } else {
+            currentTasksHeight = renderTasks(context, t, drawX, taskStartY, hudWidth, taskWidgets, null);
+        }
 
         int tasksHeight = currentTasksHeight;
         if (activeTransition != null) {
-            int outgoingTasksHeight = renderTasks(context, t, drawX, taskStartY, hudWidth, activeTransition.outgoingTasks());
+            int outgoingTasksHeight = renderTasks(context, t, drawX, taskStartY, hudWidth, activeTransition.outgoingTasks(), null);
             tasksHeight = Math.max(currentTasksHeight, outgoingTasksHeight);
         }
 
@@ -131,14 +147,15 @@ public class HudQuestWidget {
         return titleHeight + QUEST_TASKS_GAP + 1 + tasksHeight;
     }
 
-    private int renderTasks(DrawContext context, long t, int x, int y, int hudWidth, LinkedHashMap<String, HudTaskWidget> widgets) {
-        if (widgets.isEmpty()) return 0;
+    private int renderTasks(DrawContext context, long t, int x, int y, int hudWidth, LinkedHashMap<String, HudTaskWidget> widgets, @Nullable String skipTaskId) {
+        int taskCount = countTasks(widgets, skipTaskId);
+        if (taskCount == 0) return 0;
 
         int initialY = y;
         int taskIndex = 0;
-        int taskCount = widgets.size();
 
         for (var entry : widgets.entrySet()) {
+            if (entry.getKey().equals(skipTaskId)) continue;
             boolean isRequired = taskIndex == 0;
             int taskPadding = TASKS_PADDING + (isRequired ? 0 : OPTIONAL_TASK_EXTRA_PADDING);
             int taskHeight = entry.getValue().render(context, t, x + taskPadding, y, hudWidth - taskPadding);
@@ -153,17 +170,38 @@ public class HudQuestWidget {
         return y - initialY;
     }
 
-    private int computeTasksHeight(LinkedHashMap<String, HudTaskWidget> widgets, int hudWidth) {
-        if (widgets.isEmpty()) return 0;
+    private int computeCurrentTasksHeight(LinkedHashMap<String, HudTaskWidget> widgets, int hudWidth) {
+        if (!isPinnedOptional()) return computeTasksHeight(widgets, hudWidth, null);
+        var pinnedWidget = widgets.get(pinnedTaskId);
+        int pinnedHeight = QUEST_TASKS_GAP + pinnedWidget.getHeight(getTaskAvailableWidth(true, hudWidth));
+        int mainHeight = computeTasksHeight(widgets, hudWidth, pinnedTaskId);
+        return pinnedHeight + mainHeight;
+    }
+
+    private int computeTasksHeight(LinkedHashMap<String, HudTaskWidget> widgets, int hudWidth, @Nullable String skipTaskId) {
+        int taskCount = countTasks(widgets, skipTaskId);
+        if (taskCount == 0) return 0;
 
         int height = QUEST_TASKS_GAP;
         int taskIndex = 0;
-        for (var widget : widgets.values()) {
-            height += widget.getHeight(getTaskAvailableWidth(taskIndex == 0, hudWidth));
-            if (taskIndex == 0 && widgets.size() > 1) height += QUEST_TASKS_GAP;
+
+        for (var entry : widgets.entrySet()) {
+            if (entry.getKey().equals(skipTaskId)) continue;
+            height += entry.getValue().getHeight(getTaskAvailableWidth(taskIndex == 0, hudWidth));
+            if (taskIndex == 0 && taskCount > 1) height += QUEST_TASKS_GAP;
             taskIndex++;
         }
         return height;
+    }
+
+    private int countTasks(LinkedHashMap<String, HudTaskWidget> widgets, @Nullable String skipTaskId) {
+        if (skipTaskId == null) return widgets.size();
+        return (int) widgets.keySet().stream().filter(k -> !k.equals(skipTaskId)).count();
+    }
+
+    private boolean isPinnedOptional() {
+        if (pinnedTaskId == null || !taskWidgets.containsKey(pinnedTaskId)) return false;
+        return !pinnedTaskId.equals(taskWidgets.keySet().iterator().next());
     }
 
     private void populateTasks(Map<String, TaskDisplay> tasks) {

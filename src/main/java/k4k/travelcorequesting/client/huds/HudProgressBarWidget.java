@@ -14,6 +14,7 @@ public class HudProgressBarWidget {
     private static final Identifier PROGRESS_BAR_TEXTURE = Identifier.of("tq", "textures/icons/default.png");
 
     private static final int BAR_HEIGHT = 1;
+    public static final int BAR_WIDTH = 32;
     public static final int BG_V = 32;
     public static final int SUCCESS_V = 33;
     public static final int FAILURE_V = 34;

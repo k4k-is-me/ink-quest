@@ -61,6 +61,12 @@ public class QuestHudOverlay implements HudRenderCallback {
         widget.setTaskProgress(taskId, value, isSuccessProgress);
     }
 
+    public void setTaskPin(Identifier questId, String taskId) {
+        var widget = questWidgets.get(questId);
+        if (widget == null) return;
+        widget.setTaskPin(taskId);
+    }
+
     public void removeQuest(Identifier questId) {
         // TODO: анимация fade-out перед удалением
         questWidgets.remove(questId);

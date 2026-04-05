@@ -10,6 +10,7 @@ import k4k.travelcorequesting.infro.networking.HudChangeTaskProgressS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudRemoveQuestS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudSetQuestStageS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudTaskCompleteS2CPacket;
+import k4k.travelcorequesting.infro.networking.HudTaskPinS2CPacket;
 import k4k.travelcorequesting.infro.utils.QuestDisplays;
 import k4k.travelcorequesting.infro.utils.TaskDisplays;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
@@ -148,6 +149,10 @@ public class TravelcoreQuesting implements ModInitializer {
 
 			ServerPlayNetworking.send(player, new HudChangeTaskProgressS2CPacket(taskEntry.questId(), taskEntry.taskId(), newValue, false));
 		});
+
+		QuestEvents.TASK_PIN_CHANGED.register((questId, taskId, player) ->
+				ServerPlayNetworking.send(player, new HudTaskPinS2CPacket(questId, taskId))
+		);
 	}
 
 	private void registerQuestResourceLoader() {

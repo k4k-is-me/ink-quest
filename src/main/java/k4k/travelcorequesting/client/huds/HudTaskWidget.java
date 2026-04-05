@@ -144,13 +144,13 @@ public class HudTaskWidget {
             int barY = y + textHeight + PROGRESS_BAR_GAP;
 
             if (successBar != null) {
-                successBar.render(context, t, textX, barY, textWidth);
+                successBar.render(context, t, textX, barY, HudProgressBarWidget.BAR_WIDTH);
                 barY += successBar.getHeight() + PROGRESS_BAR_GAP;
                 totalHeight += successBar.getHeight() + PROGRESS_BAR_GAP;
             }
 
             if (failureBar != null) {
-                failureBar.render(context, t, textX, barY, textWidth);
+                failureBar.render(context, t, textX, barY, HudProgressBarWidget.BAR_WIDTH);
                 totalHeight += failureBar.getHeight() + PROGRESS_BAR_GAP;
             }
         }
