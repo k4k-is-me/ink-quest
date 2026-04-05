@@ -1,7 +1,9 @@
 package k4k.travelcorequesting.common.animation;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -97,6 +99,13 @@ public class Animation {
 
     public float getDuration() {
         return (float) this.duration;
+    }
+
+    /**
+     * Возвращает имена всех параметров, определённых в этой анимации.
+     */
+    public Set<String> getParameterKeys() {
+        return Collections.unmodifiableSet(animations.keySet());
     }
 
     private static double mod1(double a) {

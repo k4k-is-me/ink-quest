@@ -1,6 +1,8 @@
 package k4k.travelcorequesting.common.animation;
 
 import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
@@ -30,8 +32,9 @@ import java.util.Queue;
  * int iconU       = animator.getParameterOrDefault("IconU", t, 0, Integer.class);
  * }</pre>
  *
- * <p>Если параметр с таким именем не задан в текущей анимации — возвращается {@code empty}/default.
- * Это нормально: просто используй default-значение как «статичное» состояние.
+ * <p>Если параметр с таким именем не задан в текущей анимации — возвращается значение из снимка
+ * предыдущих анимаций. Снимок обновляется при каждом переходе между анимациями.
+ * Если параметра нет ни в анимации, ни в снимке — возвращается {@code empty}/default.
  *
  * <h2>Поведение очереди</h2>
  * <ul>
@@ -45,14 +48,19 @@ import java.util.Queue;
 public class Animator {
     private final Queue<Animation> animationQueue = new ArrayDeque<>();
     private long animationStartTime;
+    private final Map<String, Object> snapshot = new HashMap<>();
 
     /**
      * Немедленно запускает анимацию, сбрасывая текущую и очередь.
+     * Текущие значения параметров сохраняются в снимок перед заменой.
      *
      * @param animation анимация для воспроизведения
      * @param startTime абсолютное время начала (обычно {@code Util.getMeasuringTimeMs()})
      */
     public void play(Animation animation, long startTime) {
+        if (!animationQueue.isEmpty()) {
+            mergeIntoSnapshot(animationQueue.peek(), startTime - animationStartTime);
+        }
         this.animationQueue.clear();
         this.animationQueue.add(animation);
         this.animationStartTime = startTime;
@@ -67,18 +75,34 @@ public class Animator {
     }
 
     /**
-     * Останавливает воспроизведение и очищает очередь.
+     * Останавливает воспроизведение, сохраняя текущие значения параметров в снимок.
+     * После вызова {@link #getParameter} будет возвращать значения из снимка.
+     *
+     * @param currentTime абсолютное текущее время (мс)
+     */
+    public void stop(long currentTime) {
+        if (!animationQueue.isEmpty()) {
+            mergeIntoSnapshot(animationQueue.peek(), currentTime - animationStartTime);
+        }
+        this.animationQueue.clear();
+    }
+
+    /**
+     * Полностью сбрасывает аниматор, включая снимок.
      * После вызова все {@link #getParameter} будут возвращать {@code empty}.
      */
-    public void stop() {
+    public void clear() {
         this.animationQueue.clear();
+        this.snapshot.clear();
     }
 
     private Optional<Animation> getPlayedAnimation(long currentTime) {
         // Переходим к следующей анимации в очереди, если текущая завершилась.
         // Последнюю анимацию не извлекаем.
         while (animationQueue.size() > 1 && currentTime > this.animationStartTime + (long) this.animationQueue.peek().getDuration()) {
-            this.animationStartTime += (long) Objects.requireNonNull(this.animationQueue.poll()).getDuration();
+            Animation completed = Objects.requireNonNull(this.animationQueue.poll());
+            mergeIntoSnapshot(completed, (long) completed.getDuration());
+            this.animationStartTime += (long) completed.getDuration();
         }
 
         if (animationQueue.isEmpty())
@@ -89,16 +113,25 @@ public class Animator {
 
     /**
      * Возвращает текущее значение именованного параметра из играющей анимации.
+     * Если параметр не определён в текущей анимации — возвращает значение из снимка предыдущих.
      *
      * @param parameterKey имя параметра, заданное в {@link Animation.Builder#addParameterAnimation}
      * @param currentTime  абсолютное текущее время (мс), обычно {@code Util.getMeasuringTimeMs()}
      * @param expectedType класс ожидаемого типа
-     * @return значение параметра, или {@code empty} если нет играющей анимации или параметр не найден
+     * @return значение параметра, или {@code empty} если нет играющей анимации и параметра нет в снимке
      */
     public <T> Optional<T> getParameter(String parameterKey, long currentTime, Class<T> expectedType) {
-        return this.getPlayedAnimation(currentTime)
+        Optional<T> result = this.getPlayedAnimation(currentTime)
                 .flatMap(animation -> animation
                         .getParameter(parameterKey, currentTime - animationStartTime, expectedType));
+
+        if (result.isPresent()) return result;
+
+        Object snapshotValue = snapshot.get(parameterKey);
+        if (expectedType.isInstance(snapshotValue)) {
+            return Optional.of(expectedType.cast(snapshotValue));
+        }
+        return Optional.empty();
     }
 
     /**
@@ -124,5 +157,11 @@ public class Animator {
         if (animationQueue.isEmpty()) return true;
         if (animationQueue.size() > 1) return false;
         return currentTime - animationStartTime >= (long) animationQueue.peek().getDuration();
+    }
+
+    private void mergeIntoSnapshot(Animation animation, long elapsed) {
+        for (String key : animation.getParameterKeys()) {
+            animation.getParameter(key, elapsed, Object.class).ifPresent(v -> snapshot.put(key, v));
+        }
     }
 }
