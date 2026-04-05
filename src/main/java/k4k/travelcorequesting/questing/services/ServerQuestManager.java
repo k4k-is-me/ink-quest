@@ -24,23 +24,38 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// Трекеры должны хранить идентификаторы и ресолвить их только при необходимости из общего реестра
-// Иначе трекер сможет работать только с загруженными квестами и из-за этого весь прогресс по не загруженным
-// квестам будет потерян при сохранении
-
-// Так и так придётся держать общий реестр загруженных задач (если не придумать чего-то лучше), тк. квесты
-// могут быть загружены из датапака, в уже выданном квесте в активном этапе может появиться задача, которая не
-// будет загружена.
-// РЕШЕНИЕ: Добавить в QuestProgress активный этап. Если активный этап не соответствует рассчитанному - разгрузить
-//   все загруженные задачи и загрузить задачи рассчитанного этапа, установить этап на рассчитанный.
-//   При обновлении проверять появились ли в активном этапе квеста загруженные задачи, если появились - загрузить.
-//   Для оптимизации можно как-то трекать изменения квестов
-// ОТМЕНА: Загрузка из датапака будет работать напрямую с ServerQuestManager-ом и он сможет отследить изменения
-
-// Я готов смириться с задержкой в 1 тик между изменением квеста и загрузкой задачи. Борьба с этой проблемой всё сильно
-//   усложняет, плюс, если задача появилась в активном этапе квеста для игрока, которого пока нет на сервере,
-//   загрузку для него нужно будет совершить как он зайдёт. Ре
-
+/**
+ * Центральный менеджер квестов на сервере.
+ *
+ * <p>Координирует весь жизненный цикл квестов: создание, выдачу игрокам,
+ * отслеживание прогресса, проверку условий, закрепление в HUD и завершение.
+ * Является единственной точкой входа для модификации состояния квестов —
+ * все команды и внешние системы работают через него.
+ *
+ * <h2>Архитектура</h2>
+ * <ul>
+ *   <li>{@link QuestRepository} — хранилище квестов (static из датапаков + dynamic через команды)</li>
+ *   <li>{@link PlayerProgressTracker} — трекер прогресса игрока (один на игрока)</li>
+ *   <li>{@link QuestProgressTracker} — трекер прогресса конкретного квеста</li>
+ *   <li>{@link TaskConditionDispatcher} — диспетчер проверки условий задач</li>
+ * </ul>
+ *
+ * <h2>Тик</h2>
+ * Каждый тик {@link #update(List)} вызывает {@link #updatePlayerQuest} для каждого
+ * pinned и background квеста. Внутри: пересчёт этапа → загрузка/выгрузка задач →
+ * тик условий → обновление прогресса → проверка завершения задач → проверка завершения квеста.
+ *
+ * <h2>События</h2>
+ * Все мутации файрят события через {@link QuestEvents} и {@link QuestProgressEvents}.
+ * Порядок событий задокументирован в {@code docs/СОБЫТИЯ.md}.
+ *
+ * <h2>Персистентность</h2>
+ * Состояние сериализуется в NBT через {@link #saveState()} / {@link #loadState}.
+ * Флаг {@link #isDirty} отслеживает наличие несохранённых изменений.
+ *
+ * @see QuestEvents
+ * @see QuestProgressEvents
+ */
 public class ServerQuestManager {
     private final QuestRepository questRepository = new QuestRepository();
     private final ITaskConditionHandler<ITaskCondition> conditionDispatcher;  // TODO: extract instantiation
@@ -57,8 +72,12 @@ public class ServerQuestManager {
     }
 
     /**
-     * Создаёт новый квест. Ошибка, если квест уже существует
-     * @param questId Идентификатор
+     * Создаёт новый динамический квест (не из датапака).
+     *
+     * <p>События: {@link QuestEvents#QUEST_CREATED}
+     *
+     * @param questId идентификатор квеста
+     * @throws IllegalArgumentException если квест с таким идентификатором уже существует
      */
     public void createDynamicQuest(Identifier questId) {
         var entry = this.questRepository.createDynamicQuest(questId);
@@ -69,6 +88,15 @@ public class ServerQuestManager {
 
     // <editor-fold desc="Модификация квестов">
 
+    /**
+     * Модифицирует квест через {@link QuestModifier}. Если модификатор изменил
+     * хотя бы одно поле, файрит событие.
+     *
+     * <p>События: {@link QuestEvents#QUEST_MODIFIED} (если были изменения)
+     *
+     * @param questId  идентификатор квеста
+     * @param consumer операция модификации
+     */
     public void modifyQuest(Identifier questId, Consumer<QuestModifier> consumer) {
         var modifier = this.questRepository.getQuestModifier(questId);
         consumer.accept(modifier);
@@ -78,6 +106,7 @@ public class ServerQuestManager {
         }
     }
 
+    /** Есть ли несохранённые изменения с момента последнего {@link #saveState()}. */
     public boolean modifiedSinceLastSave() {
         return this.isDirty;
     }
@@ -87,16 +116,23 @@ public class ServerQuestManager {
     // <editor-fold desc="Работа с квестами">
 
     /**
-     * Начинает отслеживание прогресса по квесту для игрока. Ошибка, если квеста не существует
-     * @param questId Идентификатор квеста
-     * @param player Игрок
+     * Выдаёт квест игроку — начинает отслеживание прогресса.
+     *
+     * <p>Рассчитывает первый активный этап. Игнорируется, если квест уже выдан
+     * или был завершён ранее.
+     *
+     * <p>События: {@link QuestProgressEvents#QUEST_GIVEN} →
+     * {@link QuestProgressEvents#STAGE_CHANGED}
+     *
+     * @param questId идентификатор квеста
+     * @param player  игрок
+     * @throws IllegalArgumentException если квест не существует
      */
     public void giveQuest(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
 
-        var entry = this.questRepository.requireQuestEntry(questId);  // Квест трекер может отслеживать выполнение и не существующих квестов, но при
-            // выдаче квеста такая возможность не особо имеет смысл
+        var entry = this.questRepository.requireQuestEntry(questId);
 
         var playerTracker = this.trackedPlayers.computeIfAbsent(
                 player.getUuid(), item -> new PlayerProgressTracker(this.questRepository));
@@ -113,9 +149,17 @@ public class ServerQuestManager {
     }
 
     /**
-     * Прекращает отслеживание квеста для игрока. Ошибка, если квеста не существует
-     * @param questId Идентификатор квеста
-     * @param player Игрок
+     * Снимает квест с игрока — прекращает отслеживание и удаляет весь прогресс.
+     *
+     * <p>Если квест был закреплён, сначала открепляет его.
+     * Игнорируется, если квест не был выдан.
+     *
+     * <p>События: [{@link QuestEvents#QUEST_PIN_REMOVED}] →
+     * {@link QuestProgressEvents#QUEST_DROPPED}
+     *
+     * @param questId идентификатор квеста
+     * @param player  игрок
+     * @throws IllegalArgumentException если квест не существует
      */
     public void dropQuest(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
@@ -124,10 +168,9 @@ public class ServerQuestManager {
         var entry = this.questRepository.requireQuestEntry(questId);
 
         var playerTracker = this.trackedPlayers.get(player.getUuid());
-        if (playerTracker == null) return;
-        if (!playerTracker.has(questId)) return;
+        if (playerTracker == null || !playerTracker.isTracked(questId)) return;
 
-        this.unpinIfPinned(questId, player, playerTracker);
+        this.pinRemove(questId, player);
 
         playerTracker.stopTracking(questId);
         this.isDirty = true;
@@ -136,11 +179,18 @@ public class ServerQuestManager {
     }
 
     /**
-     * Выполняет указанную задачу. Ошибка, если квеста или задачи не существует
-     * @param questId Идентификатор квеста
-     * @param taskId Идентификатор задачи
-     * @param player Игрок
-     * @param status Статус выполнения
+     * Завершает задачу вручную с указанным статусом.
+     *
+     * <p>Не проверяет условия — просто помечает задачу как завершённую.
+     * Смена этапа и проверка завершения квеста произойдут на следующем тике
+     * в {@link #updatePlayerQuest}.
+     *
+     * <p>События: {@link QuestProgressEvents#TASK_COMPLETED}
+     *
+     * @param questId идентификатор квеста
+     * @param taskId  идентификатор задачи
+     * @param player  игрок
+     * @param status  статус завершения
      */
     public void completeTask(Identifier questId, String taskId, ServerPlayerEntity player, CompletionStatus status) {
         Objects.requireNonNull(questId);
@@ -159,9 +209,16 @@ public class ServerQuestManager {
     }
 
     /**
-     * Закрепляет обязательную задачу активного этапа квеста. Ошибка, если квеста не существует или выполнен
-     * @param questId Идентификатор квеста
-     * @param player Игрок
+     * Закрепляет обязательную задачу активного этапа квеста.
+     *
+     * <p>Игнорируется, если у игрока нет этого квеста или квест уже завершён.
+     *
+     * <p>События: {@link QuestEvents#QUEST_PINNED} если квест не был закреплён,
+     * {@link QuestEvents#TASK_PIN_CHANGED} если был.
+     *
+     * @param questId идентификатор квеста
+     * @param player  игрок
+     * @throws IllegalArgumentException если квест не существует
      */
     public void pinRequiredTask(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
@@ -175,18 +232,22 @@ public class ServerQuestManager {
         var activeStage = tracker.getActiveStage().orElse(null);
         if (activeStage == null) return;
 
-        tracker.setTaskPin(questEntry.quest().getRequiredTask(activeStage));
-
-        QuestEvents.QUEST_PINNED.invoker().onQuestPin(questEntry, player);
-        this.isDirty = true;
+        this.pinTaskInternal(questEntry, tracker, questEntry.quest().getRequiredTask(activeStage), player);
     }
 
     /**
-     * Закрепляет задачу активного этапа квеста. Ошибка, если квеста не существует, выполнен или не существует,
-     * выполнена или не является частью активного этапа задача
-     * @param questId Идентификатор квеста
-     * @param taskId Идентификатор задачи
-     * @param player Игрок
+     * Закрепляет конкретную задачу квеста.
+     *
+     * <p>Задача должна существовать в квесте. Игнорируется, если у игрока
+     * нет этого квеста.
+     *
+     * <p>События: {@link QuestEvents#QUEST_PINNED} если квест не был закреплён,
+     * {@link QuestEvents#TASK_PIN_CHANGED} если был.
+     *
+     * @param questId идентификатор квеста
+     * @param taskId  идентификатор задачи
+     * @param player  игрок
+     * @throws IllegalArgumentException если квест не существует
      */
     public void pinTask(Identifier questId, String taskId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
@@ -198,22 +259,42 @@ public class ServerQuestManager {
         var tracker = this.getQuestTracker(player, questId).orElse(null);
         if (tracker == null) return;
 
-        tracker.setTaskPin(taskId);
-
-        QuestEvents.QUEST_PINNED.invoker().onQuestPin(questEntry, player);
-        this.isDirty = true;
+        this.pinTaskInternal(questEntry, tracker, taskId, player);
     }
 
     /**
-     * Открепить активный пин
-     * @param player Игрок
+     * Общая логика закрепления задачи. Если квест уже закреплён — файрит
+     * {@link QuestEvents#TASK_PIN_CHANGED}, иначе — {@link QuestEvents#QUEST_PINNED}.
+     */
+    private void pinTaskInternal(QuestEntry questEntry, QuestProgressTracker tracker, String taskId, ServerPlayerEntity player) {
+        boolean wasPinned = tracker.isPinned();
+
+        tracker.setTaskPin(taskId);
+        this.isDirty = true;
+
+        if (wasPinned) {
+            QuestEvents.TASK_PIN_CHANGED.invoker().onTaskPinChange(questEntry.questId(), taskId, player);
+        } else {
+            QuestEvents.QUEST_PINNED.invoker().onQuestPin(questEntry, player);
+        }
+    }
+
+    /**
+     * Открепляет квест — убирает его из HUD игрока.
+     *
+     * <p>Игнорируется, если квест не закреплён или не выдан.
+     *
+     * <p>События: {@link QuestEvents#QUEST_PIN_REMOVED}
+     *
+     * @param questId идентификатор квеста
+     * @param player  игрок
      */
     public void pinRemove(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
 
         var tracker = this.getQuestTracker(player, questId).orElse(null);
-        if (tracker == null) return;
+        if (tracker == null || !tracker.isPinned()) return;
 
         tracker.resetTaskPin();
 
@@ -225,51 +306,42 @@ public class ServerQuestManager {
 
     // <editor-fold desc="Получение информации о квестах">
 
-    /**
-     * Возвращает true если квест с таким идентификатором зарегистрирован и загружен
-     */
+    /** Зарегистрирован ли квест (static или dynamic). */
     public boolean isQuestExists(Identifier questId) {
         Objects.requireNonNull(questId);
 
         return this.questRepository.getQuest(questId) != null;
     }
 
-    /**
-     * Возвращает true если квест статический (загружен из датапака)
-     */
+    /** Загружен ли квест из датапака (а не создан динамически). */
     public boolean isQuestStatic(Identifier questId) {
         Objects.requireNonNull(questId);
 
         return this.questRepository.isQuestStatic(questId);
     }
 
-    /**
-     * Получить список всех зарегистрированных квестов
-     */
+    /** Все зарегистрированные квесты (static + dynamic). */
     public List<QuestEntry> getRegisteredQuests() {
         return this.questRepository.getQuestIds().stream()
                 .map(this.questRepository::getQuestEntry)
                 .toList();
     }
 
-    /**
-     * Получить список всех квестов загруженных из датапаков
-     */
+    /** Квесты, загруженные из датапаков. */
     public List<QuestEntry> getStaticQuests() {
         return this.questRepository.getStaticQuestIds().stream()
                 .map(this.questRepository::getQuestEntry)
                 .toList();
     }
 
-    /**
-     * Получить список всех динамически созданных квестов
-     */
+    /** Квесты, созданные динамически через {@link #createDynamicQuest}. */
     public List<QuestEntry> getDynamicQuests() {
         return this.questRepository.getDynamicQuestIds().stream()
                 .map(this.questRepository::getQuestEntry)
                 .toList();
     }
 
+    /** Все квесты игрока — активные и завершённые. */
     public List<QuestEntry> getTrackedQuests(ServerPlayerEntity player) {
         Objects.requireNonNull(player);
         return this.getPlayerTracker(player)
@@ -279,6 +351,7 @@ public class ServerQuestManager {
                 .orElseGet(ArrayList::new);
     }
 
+    /** Идентификаторы всех квестов игрока — активных и завершённых. */
     public List<Identifier> getTrackedQuestIds(ServerPlayerEntity player) {
         Objects.requireNonNull(player);
         return this.getPlayerTracker(player)
@@ -286,15 +359,12 @@ public class ServerQuestManager {
                 .orElseGet(ArrayList::new);
     }
 
+    /** Резолвер для чтения квестов и задач по идентификатору. */
     public QuestResolver getQuestResolver() {
         return this.questRepository;
     }
 
-    /**
-     * Получить список активных квестов игрока
-     * @param player Игрок
-     * @return Список квестов
-     */
+    /** Активные (ещё не завершённые) квесты игрока. */
     public List<Quest> getActiveQuests(ServerPlayerEntity player) {
         Objects.requireNonNull(player);
 
@@ -307,11 +377,7 @@ public class ServerQuestManager {
                 .toList();
     }
 
-    /**
-     * Получить список всех выполненных квестов игрока
-     * @param player Игрок
-     * @return Список квестов
-     */
+    /** Все завершённые квесты игрока (любой статус). */
     public List<QuestEntry> getCompleteQuests(ServerPlayerEntity player) {
         Objects.requireNonNull(player);
 
@@ -324,12 +390,7 @@ public class ServerQuestManager {
                 .toList();
     }
 
-    /**
-     * Получить список успешно или не успешно выполненных квестов игрока
-     * @param player Игрок
-     * @param status Статус
-     * @return Список квестов
-     */
+    /** Завершённые квесты игрока с указанным статусом. */
     public List<Quest> getCompleteQuests(ServerPlayerEntity player, CompletionStatus status) {
         Objects.requireNonNull(player);
         Objects.requireNonNull(status);
@@ -344,12 +405,7 @@ public class ServerQuestManager {
                 .toList();
     }
 
-    /**
-     * Проверить, отслеживается ли квест для игрока
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @return Отслеживается ли квест
-     */
+    /** Выдан ли квест игроку (активный или завершённый). */
     public boolean isQuestTracked(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -359,12 +415,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
-    /**
-     * Проверить, активен ли квест для игрока
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @return Отслеживается ли квест
-     */
+    /** Активен ли квест (выдан и ещё не завершён). */
     public boolean isQuestActive(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -374,12 +425,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
-    /**
-     * Проверить, выполнен ли квест игроком
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @return Выполнен ли квест
-     */
+    /** Завершён ли квест (любой статус). */
     public boolean isQuestComplete(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -389,13 +435,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
-    /**
-     * Проверить, выполнен ли квест с определённым результатом игроком
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @param status Статус
-     * @return Выполнен ли квест
-     */
+    /** Завершён ли квест с указанным статусом. */
     public boolean isQuestComplete(Identifier questId, ServerPlayerEntity player, CompletionStatus status) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -407,9 +447,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
-    /**
-     * Проверить выполнен ли квест успешно
-     */
+    /** Завершён ли квест успешно. */
     public boolean isQuestSucceeded(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -417,9 +455,7 @@ public class ServerQuestManager {
         return this.isQuestComplete(questId, player, CompletionStatus.SUCCESS);
     }
 
-    /**
-     * Проверить выполнен ли квест неудачно
-     */
+    /** Завершён ли квест провалом. */
     public boolean isQuestFailed(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -427,9 +463,7 @@ public class ServerQuestManager {
         return this.isQuestComplete(questId, player, CompletionStatus.FAILURE);
     }
 
-    /**
-     * Проверить выполнен ли квест неудачно
-     */
+    /** Завершён ли квест пропуском. */
     public boolean isQuestSkipped(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -437,12 +471,7 @@ public class ServerQuestManager {
         return this.isQuestComplete(questId, player, CompletionStatus.SKIPPED);
     }
 
-    /**
-     * Проверить, закреплён ли квест игроком
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @return Закреплён ли квест
-     */
+    /** Закреплён ли квест (имеет pinned задачу). */
     public boolean isQuestPinned(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -452,6 +481,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
+    /** Есть ли квест у игрока (активный или завершённый). Аналог {@link #isQuestTracked}. */
     public boolean hasQuest(ServerPlayerEntity player, Identifier questId) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -459,16 +489,10 @@ public class ServerQuestManager {
         var playerTracker = this.trackedPlayers.get(player.getUuid());
         if (playerTracker == null) return false;
 
-        return playerTracker.has(questId);
+        return playerTracker.isTracked(questId);
     }
 
-    /**
-     * Проверить, отслеживается ли задача для игрока
-     * @param questId Идентификатор квеста
-     * @param taskId Идентификатор задачи
-     * @param player Игрок
-     * @return Отслеживается ли квест
-     */
+    /** Активна ли задача (находится в активном этапе и не завершена). */
     public boolean isTaskActive(Identifier questId, String taskId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(taskId);
@@ -479,13 +503,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
-    /**
-     * Проверить, выполнена ли задача игроком
-     * @param questId Идентификатор квеста
-     * @param taskId Идентификатор задачи
-     * @param player Игрок
-     * @return Выполнена ли задача
-     */
+    /** Завершена ли задача (любой статус). */
     public boolean isTaskComplete(Identifier questId, String taskId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(taskId);
@@ -496,14 +514,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
-    /**
-     * Проверить, выполнена ли задача с определённым статусом игроком
-     * @param questId Идентификатор квеста
-     * @param taskId Идентификатор задачи
-     * @param player Игрок
-     * @param status Статус
-     * @return Выполнена ли задача
-     */
+    /** Завершена ли задача с указанным статусом. */
     public boolean isTaskComplete(Identifier questId, String taskId, ServerPlayerEntity player, CompletionStatus status) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(taskId);
@@ -516,6 +527,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
+    /** Завершена ли задача успешно. */
     public boolean isTaskSucceeded(Identifier questId, String taskId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(taskId);
@@ -524,6 +536,7 @@ public class ServerQuestManager {
         return this.isTaskComplete(questId, taskId, player, CompletionStatus.SUCCESS);
     }
 
+    /** Завершена ли задача провалом. */
     public boolean isTaskFailed(Identifier questId, String taskId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(taskId);
@@ -532,6 +545,7 @@ public class ServerQuestManager {
         return this.isTaskComplete(questId, taskId, player, CompletionStatus.FAILURE);
     }
 
+    /** Завершена ли задача пропуском. */
     public boolean isTaskSkipped(Identifier questId, String taskId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(taskId);
@@ -540,13 +554,7 @@ public class ServerQuestManager {
         return this.isTaskComplete(questId, taskId, player, CompletionStatus.SKIPPED);
     }
 
-    /**
-     * Проверить, закреплена ли задача игроком
-     * @param questId Идентификатор квеста
-     * @param taskId Идентификатор задачи
-     * @param player Игрок
-     * @return Выполнена ли задача
-     */
+    /** Закреплена ли конкретная задача. */
     public boolean isTaskPinned(Identifier questId, String taskId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(taskId);
@@ -557,12 +565,7 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
-    /**
-     * Получить число выполненных этапов игроком. Возвращает -1 если не найден
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @return Число этапов
-     */
+    /** Номер активного этапа (по сути — число пройдённых этапов). 0 если квест не выдан. */
     public int getStagesComplete(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -572,6 +575,7 @@ public class ServerQuestManager {
                 .orElse(0);
     }
 
+    /** Активный этап квеста. Пуст если квест не выдан или завершён. */
     public Optional<Integer> getActiveStage(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -580,13 +584,7 @@ public class ServerQuestManager {
                 .flatMap(QuestProgressTracker::getActiveStage);
     }
 
-    /**
-     * Получить число выполненных задач в определённом этапе
-     * @param questId Идентификатор квеста
-     * @param stage Этап
-     * @param player Игрок
-     * @return Число задач
-     */
+    /** Число завершённых задач в указанном этапе. -1 если квест не выдан или не существует. */
     public int getTasksComplete(Identifier questId, int stage, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -603,12 +601,7 @@ public class ServerQuestManager {
                 .count();
     }
 
-    /**
-     * Получить число выполненных задач в активном этапе
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @return Число задач
-     */
+    /** Число завершённых задач в активном этапе. 0 если квест не выдан или завершён. */
     public int getTasksComplete(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
@@ -628,23 +621,14 @@ public class ServerQuestManager {
                 .count();
     }
 
-    /**
-     * Получить уровень успешного выполнения задачи
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @return Уровень выполнения
-     */
+    /** Текущее значение прогресса условия успеха задачи. 0 если задача не найдена. */
     public int getTaskSuccessCompletion(Identifier questId, String taskId, ServerPlayerEntity player) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 0;
         return this.conditionDispatcher.getCurrentValue(task.successCondition(), player);
     }
 
-    /**
-     * Получить целевое значение для успешного выполнения задачи
-     * @param questId Идентификатор квеста
-     * @return Целевое значение выполнения
-     */
+    /** Целевое значение условия успеха задачи. 1 если задача или условие не найдены. */
     public int getTaskSuccessTarget(Identifier questId, String taskId) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 1;
@@ -653,23 +637,14 @@ public class ServerQuestManager {
         return condition.getTargetValue();
     }
 
-    /**
-     * Получить уровень провала задачи
-     * @param questId Идентификатор квеста
-     * @param player Игрок
-     * @return Уровень провала
-     */
+    /** Текущее значение прогресса условия провала задачи. 0 если задача не найдена. */
     public int getTaskFailureCompletion(Identifier questId, String taskId, ServerPlayerEntity player) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 0;
         return this.conditionDispatcher.getCurrentValue(task.failureCondition(), player);
     }
 
-    /**
-     * Получить целевое значение для провала задачи
-     * @param questId Идентификатор квеста
-     * @return Целевое значение провала
-     */
+    /** Целевое значение условия провала задачи. 1 если задача или условие не найдены. */
     public int getTaskFailureTarget(Identifier questId, String taskId) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 1;
@@ -680,6 +655,10 @@ public class ServerQuestManager {
 
     // </editor-fold>
 
+    /**
+     * Тик менеджера — обновляет прогресс всех pinned и background квестов для каждого игрока.
+     * Должен вызываться каждый серверный тик.
+     */
     public void update(List<ServerPlayerEntity> players) {
         for (var player : players) {
             this.updatePlayer(player);
@@ -696,9 +675,13 @@ public class ServerQuestManager {
     }
 
     /**
-     * Должен вызываться только на незавершённых квестах!
-     * @param player Игрок
-     * @param questId Идентификатор квеста
+     * Обновляет один квест одного игрока за тик.
+     *
+     * <p>Полный цикл: пересчёт этапа → загрузка/выгрузка задач → тик условий →
+     * обновление прогресса → завершение задач → проверка завершения квеста.
+     * Порядок событий описан в {@code docs/СОБЫТИЯ.md}.
+     *
+     * <p>Вызывается только для активных (незавершённых) квестов.
      */
     private void updatePlayerQuest(ServerPlayerEntity player, Identifier questId) {
         var playerTracker = this.getPlayerTracker(player).orElse(null);
@@ -810,6 +793,10 @@ public class ServerQuestManager {
 
     }
 
+    /**
+     * Проверяет и выдаёт квесты, зависящие от завершённого квеста.
+     * Квест выдаётся, если все квесты хотя бы в одной группе зависимостей завершены успешно.
+     */
     private void unlockDependentQuests(ServerPlayerEntity player, PlayerProgressTracker playerTracker, Identifier questId) {
         for (var dependentQuestId : this.questRepository.getDependentQuests(questId)) {
             var dependentQuest = this.questRepository.getQuest(dependentQuestId);
@@ -827,23 +814,21 @@ public class ServerQuestManager {
         }
     }
 
-    private void unpinIfPinned(Identifier questId, ServerPlayerEntity player, PlayerProgressTracker playerTracker) {
-        var questTracker = playerTracker.getQuestTracker(questId).orElse(null);
-        if (questTracker == null || !questTracker.isPinned()) return;
-
-        questTracker.resetTaskPin();
-        QuestEvents.QUEST_PIN_REMOVED.invoker().onQuestPinRemove(questId, player);
-    }
-
+    /** Трекер прогресса игрока. Пуст если игрок не отслеживается. */
     private Optional<PlayerProgressTracker> getPlayerTracker(ServerPlayerEntity player) {
         return Optional.ofNullable(this.trackedPlayers.get(player.getUuid()));
     }
 
+    /** Трекер прогресса квеста для игрока. Пуст если квест не выдан или уже завершён. */
     private Optional<QuestProgressTracker> getQuestTracker(ServerPlayerEntity player, Identifier questId) {
         return this.getPlayerTracker(player)
                 .flatMap(tracker -> tracker.getQuestTracker(questId));
     }
 
+    /**
+     * Восстанавливает состояние менеджера из NBT (при загрузке мира).
+     * Полностью заменяет динамические квесты и трекеры игроков.
+     */
     public void loadState(ServerQuestManagerState state) {
         this.trackedPlayers.clear();
 
@@ -855,6 +840,7 @@ public class ServerQuestManager {
         }
     }
 
+    /** Сериализует текущее состояние для сохранения в NBT. Сбрасывает {@link #isDirty}. */
     public ServerQuestManagerState saveState() {
         this.isDirty = false;
 
@@ -870,6 +856,11 @@ public class ServerQuestManager {
         );
     }
 
+    /**
+     * Загружает квесты из датапаков. Полностью заменяет все статические квесты.
+     *
+     * <p>События: {@link QuestEvents#QUESTS_RELOADED}
+     */
     public void loadQuests(Map<Identifier, Quest> quests) {
         this.questRepository.replaceStaticQuests(quests);
         QuestEvents.QUESTS_RELOADED.invoker().onReload();
