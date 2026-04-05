@@ -175,11 +175,6 @@ public class PlayerProgressTracker {
         return this.completedQuests.get(questId) == status;
     }
 
-    public boolean has(Identifier questId) {
-        return this.activeQuests.containsKey(questId)
-                || this.completedQuests.containsKey(questId);
-    }
-
     /**
      * Проверяет выполненность квеста. Если в результате проверки квест оказался выполненным -
      * помечает квест как таковой и вызывает переданный обработчик, в противном случае ничего не делает.
