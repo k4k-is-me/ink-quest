@@ -39,6 +39,13 @@ public class QuestEvents {
         }
     });
 
+    /// Закреплённая задача квеста сменилась (квест уже был закреплён, этап не менялся)
+    public static final Event<TaskPinChanged> TASK_PIN_CHANGED = EventFactory.createArrayBacked(TaskPinChanged.class, callbacks -> (questId, taskId, player) -> {
+        for (var event : callbacks) {
+            event.onTaskPinChange(questId, taskId, player);
+        }
+    });
+
 
     @FunctionalInterface
     public interface QuestsReloaded {
@@ -63,5 +70,10 @@ public class QuestEvents {
     @FunctionalInterface
     public interface QuestPinRemoved {
         void onQuestPinRemove(Identifier questId, ServerPlayerEntity player);
+    }
+
+    @FunctionalInterface
+    public interface TaskPinChanged {
+        void onTaskPinChange(Identifier questId, String taskId, ServerPlayerEntity player);
     }
 }
