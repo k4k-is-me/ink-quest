@@ -76,7 +76,7 @@ public class TestSubCommand {
             return 0;
         }
 
-        if (!questManager.hasQuest(player, questId)) {
+        if (!questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(QuestCommand.ERR_QUEST_NO_TRACKER, player.getName()));
             return 0;
         }
@@ -106,7 +106,7 @@ public class TestSubCommand {
             return 0;
         }
 
-        if (!questManager.hasQuest(player, questId)) {
+        if (!questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(QuestCommand.ERR_QUEST_NO_TRACKER, player.getName()));
             return 0;
         }

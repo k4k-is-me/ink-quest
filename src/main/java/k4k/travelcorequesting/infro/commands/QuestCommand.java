@@ -355,7 +355,7 @@ public class QuestCommand {
             return 0;
         }
 
-        if (questManager.hasQuest(player, questId)) {
+        if (questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(ERR_QUEST_TRACKING, player.getName()));
             return 0;
         }
@@ -377,7 +377,7 @@ public class QuestCommand {
             return 0;
         }
 
-        if (!questManager.hasQuest(player, questId)) {
+        if (!questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(ERR_QUEST_NO_TRACKER, player.getName()));
             return 0;
         }
@@ -400,7 +400,7 @@ public class QuestCommand {
             return 0;
         }
 
-        if (!questManager.hasQuest(player, questId)) {
+        if (!questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(ERR_QUEST_NO_TRACKER, player.getName()));
             return 0;
         }
@@ -432,7 +432,7 @@ public class QuestCommand {
             return 0;
         }
 
-        if (!questManager.hasQuest(player, questId)) {
+        if (!questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(ERR_QUEST_NO_TRACKER, player.getName()));
             return 0;
         }
@@ -487,7 +487,7 @@ public class QuestCommand {
             return 0;
         }
 
-        if (!questManager.hasQuest(player, questId)) {
+        if (!questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(ERR_QUEST_NO_TRACKER, player.getName()));
             return 0;
         }
@@ -540,7 +540,7 @@ public class QuestCommand {
             return 0;
         }
 
-        if (!questManager.hasQuest(player, questId)) {
+        if (!questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(ERR_QUEST_NO_TRACKER, player.getName()));
             return 0;
         }
@@ -564,7 +564,7 @@ public class QuestCommand {
             return 0;
         }
 
-        if (!questManager.hasQuest(player, questId)) {
+        if (!questManager.isQuestTracked(questId, player)) {
             source.sendError(Text.translatable(ERR_QUEST_NO_TRACKER, player.getName()));
             return 0;
         }
