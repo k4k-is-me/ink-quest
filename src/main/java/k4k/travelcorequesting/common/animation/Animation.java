@@ -15,9 +15,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <h2>Создание анимации</h2>
  * <pre>{@code
+ * static final ParameterKey<Float>   OPACITY  = new ParameterKey<>(Float.class,   0f);
+ * static final ParameterKey<Integer> POSITION = new ParameterKey<>(Integer.class, 0);
+ *
  * Animation myAnimation = new Animation.Builder()
- *     .addParameterAnimation("Opacity", FadeParameterAnimation.fadeIn(), Animation.ONE_TIME, 500, Float.class)
- *     .addParameterAnimation("Position", SlideParameterAnimation.slideIn(-10, 0), Animation.ONE_TIME, 300, Vector2d.class)
+ *     .addParameter(OPACITY,  ParameterAnimations.fadeIn(),    0,   500)
+ *     .addParameter(POSITION, ParameterAnimations.slideIn(-10), 0,  300)
  *     .build();
  * }</pre>
  *
@@ -27,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <h2>Получение значения параметра</h2>
  * <pre>{@code
- * Optional<Float> opacity = animation.getParameter("Opacity", relativeTime, Float.class);
+ * Optional<Float> opacity = animation.getParameter(OPACITY, relativeTime);
  * }</pre>
  * Обратите внимание: {@code time} здесь — время относительно начала анимации (не абсолютное).
  * Абсолютное время переводит в относительное {@link Animator}.
@@ -68,10 +71,10 @@ public class Animation {
     public static final AnimationFillMode LOOP = (currentTime, sqDuration, anStartTime, anDuration) ->
             mod1((currentTime - anStartTime) / anDuration);
 
-    private final Map<String, AnimationDefinition<?>> animations;
+    private final Map<ParameterKey<?>, ParameterDefinition<?>> animations;
     private final double duration;
 
-    private Animation(Map<String, AnimationDefinition<?>> animations, double duration) {
+    private Animation(Map<ParameterKey<?>, ParameterDefinition<?>> animations, double duration) {
         this.animations = animations;
         this.duration = duration;
     }
@@ -79,22 +82,20 @@ public class Animation {
     /**
      * Возвращает текущее значение именованного параметра.
      *
-     * @param parameterKey имя параметра, заданное при создании через {@link Builder}
-     * @param time         время относительно начала анимации (мс)
-     * @param expectedType ожидаемый тип значения
-     * @return значение параметра, или {@code empty} если параметр не найден или тип не совпадает
+     * @param key     ключ параметра, заданный при создании через {@link Builder}
+     * @param initial значение параметра в момент начала анимации (из снимка или дефолт ключа)
+     * @param time    время относительно начала анимации (мс)
+     * @return значение параметра, или {@code empty} если параметр не найден
      */
-    public <T> Optional<T> getParameter(String parameterKey, long time, Class<T> expectedType) {
-        AnimationDefinition<?> def = animations.get(parameterKey);
-        if (def == null || !expectedType.isAssignableFrom(def.type)) {
-            return Optional.empty();
-        }
+    public <T> Optional<T> getParameter(ParameterKey<T> key, T initial, long time) {
+        ParameterDefinition<?> def = animations.get(key);
+        if (def == null) return Optional.empty();
 
         @SuppressWarnings("unchecked")
-        AnimationDefinition<T> typedDef = (AnimationDefinition<T>) def;
+        ParameterDefinition<T> typedDef = (ParameterDefinition<T>) def;
 
         var t = typedDef.fillMode.apply(time, this.duration, typedDef.delay, typedDef.duration);
-        return Optional.ofNullable(typedDef.animation.animate(t));
+        return Optional.ofNullable(typedDef.animation.animate(initial, t));
     }
 
     public float getDuration() {
@@ -104,7 +105,7 @@ public class Animation {
     /**
      * Возвращает имена всех параметров, определённых в этой анимации.
      */
-    public Set<String> getParameterKeys() {
+    public Set<ParameterKey<?>> getParameterKeys() {
         return Collections.unmodifiableSet(animations.keySet());
     }
 
@@ -116,12 +117,11 @@ public class Animation {
         return Math.max(0, Math.min(a, 1));
     }
 
-    private record AnimationDefinition<T>(
+    private record ParameterDefinition<T>(
         ParameterAnimation<T> animation,
         AnimationFillMode fillMode,
         long duration,
-        long delay,
-        Class<T> type
+        long delay
     ) {}
 
     /**
@@ -146,57 +146,49 @@ public class Animation {
     /**
      * Строитель анимации.
      *
-     * <h2>Сигнатуры addParameterAnimation</h2>
+     * <h2>Сигнатура addParameter</h2>
      * <pre>{@code
-     * // Без задержки:
-     * .addParameterAnimation("Key", animation, fillMode, durationMs, ValueType.class)
-     *
-     * // С задержкой (параметр начнёт анимироваться через delayMs после старта анимации):
-     * .addParameterAnimation("Key", animation, fillMode, durationMs, delayMs, ValueType.class)
+     * // ONE_TIME по умолчанию:
+     * .addParameter(KEY, animation, delayMs, durationMs)
+     * // Явный fill mode (в конце):
+     * .addParameter(KEY, animation, delayMs, durationMs, fillMode)
      * }</pre>
      *
      * <h2>Пример с задержкой</h2>
      * <pre>{@code
+     * static final ParameterKey<Integer> ICON_U   = new ParameterKey<>(Integer.class, 0);
+     * static final ParameterKey<Integer> POSITION = new ParameterKey<>(Integer.class, 0);
+     *
      * new Animation.Builder()
-     *     // Иконка переключается в момент t=250мс
-     *     .addParameterAnimation("IconU", SwitchValueParameterAnimation.switchTo(16),
-     *         Animation.ONE_TIME, 1, 250, Integer.class)
-     *     // Позиция анимируется сразу, 500мс
-     *     .addParameterAnimation("Position", SlideParameterAnimation.slideIn(-10, 0),
-     *         Animation.ONE_TIME, 500, Vector2d.class)
+     *     // Иконка переключается в момент t=250мс (delay=250, duration=1)
+     *     .addParameter(ICON_U,   ParameterAnimations.switchTo(16), 250, 1)
+     *     // Позиция анимируется сразу 500мс (delay=0, duration=500)
+     *     .addParameter(POSITION, ParameterAnimations.slideIn(-10),  0,  500)
      *     .build();
      * }</pre>
      */
     public static class Builder {
-        private final Map<String, AnimationDefinition<?>> animations = new ConcurrentHashMap<>();
+        private final Map<ParameterKey<?>, ParameterDefinition<?>> animations = new ConcurrentHashMap<>();
         private double duration = 1;
         private boolean isExplicitDuration = false;
 
         /**
-         * Добавляет параметр анимации без задержки.
-         *
-         * @param parameterKey имя параметра (используется при вызове {@link Animator#getParameter})
-         * @param animation    функция интерполяции
-         * @param fillMode     режим воспроизведения ({@link #ONE_TIME}, {@link #LOOP}, {@link #ANIMATION_LOOP})
-         * @param duration     длительность в мс
-         * @param type         класс типа значения (нужен для типобезопасного извлечения)
+         * Добавляет параметр анимации.
          */
-        public <T> Builder addParameterAnimation(String parameterKey, ParameterAnimation<T> animation, AnimationFillMode fillMode, long duration, Class<T> type) {
+        public <T> Builder addParameter(ParameterKey<T> key, ParameterAnimation<T> animation, long delay, long duration, AnimationFillMode fillMode) {
             if (duration <= 0) throw new IllegalArgumentException("Duration must be greater than zero");
-            animations.put(parameterKey, new AnimationDefinition<>(animation, fillMode, duration, 0, type));
+            animations.put(key, new ParameterDefinition<>(animation, fillMode, duration, delay));
             if (!this.isExplicitDuration && duration > this.duration) this.duration = duration;
             return this;
         }
 
         /**
-         * Добавляет параметр анимации с задержкой.
-         *
-         * @param delay задержка в мс — через сколько после старта анимации начнёт анимироваться этот параметр
+         * Добавляет параметр анимации.
          */
-        public <T> Builder addParameterAnimation(String parameterKey, ParameterAnimation<T> animation, AnimationFillMode fillMode, long duration, long delay, Class<T> type) {
+        public <T> Builder addParameter(ParameterKey<T> key, ParameterAnimation<T> animation, long delay, long duration) {
             if (duration <= 0) throw new IllegalArgumentException("Duration must be greater than zero");
-            animations.put(parameterKey, new AnimationDefinition<>(animation, fillMode, duration, delay, type));
-            if (!this.isExplicitDuration && delay + duration > this.duration) this.duration = delay + duration;
+            animations.put(key, new ParameterDefinition<>(animation, ONE_TIME, duration, delay));
+            if (!this.isExplicitDuration && duration > this.duration) this.duration = duration;
             return this;
         }
 

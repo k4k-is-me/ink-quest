@@ -1,35 +1,38 @@
 package k4k.travelcorequesting.common.animation;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.function.LongSupplier;
 
 /**
  * Проигрыватель анимаций. Хранит текущую анимацию и очередь следующих.
  *
  * <p>Каждый объект с анимацией (виджет, иконка и т.д.) должен иметь свой {@code Animator}.
+ * Время получает из {@link LongSupplier}, переданного при создании.
  *
  * <h2>Запуск анимации</h2>
  * <pre>{@code
- * Animator animator = new Animator();
+ * Animator animator = new Animator(Util::getMeasuringTimeMs);
  *
  * // Запустить немедленно, сбросив текущую
- * animator.play(myAnimation, Util.getMeasuringTimeMs());
+ * animator.play(myAnimation);
  *
- * // Поставить следующей после текущей
+ * // Поставить следующей после текущей (если аниматор idle — ведёт себя как play)
  * animator.queue(idleAnimation);
  * }</pre>
  *
  * <h2>Чтение параметров при рендере</h2>
  * <pre>{@code
- * long t = Util.getMeasuringTimeMs();
+ * animator.tick(); // один раз в начале render(), захватывает t
  *
- * float opacity   = animator.getParameter("Opacity", t, Float.class).orElse(1f);
- * Vector2d offset = animator.getParameter("Position", t, Vector2d.class).orElseGet(Vector2d::new);
- * int iconU       = animator.getParameterOrDefault("IconU", t, 0, Integer.class);
+ * float opacity = animator.getParameter(OPACITY);
+ * int   offsetX = animator.getParameter(POSITION);
+ * int   iconU   = animator.getParameter(ICON_U);
  * }</pre>
  *
  * <p>Если параметр с таким именем не задан в текущей анимации — возвращается значение из снимка
@@ -38,53 +41,77 @@ import java.util.Queue;
  *
  * <h2>Поведение очереди</h2>
  * <ul>
- *   <li>{@link #play} немедленно сбрасывает очередь и начинает новую анимацию.
- *   <li>{@link #queue} добавляет анимацию после текущей.
- *   <li>Последняя анимация в очереди никогда не извлекается — она продолжает «играть» бесконечно.
- *       Для {@link Animation#ONE_TIME} параметры застывают на {@code t = 1.0}.
+ *   <li>{@link #play} немедленно заменяет текущую анимацию, сбрасывая очередь.
+ *   <li>{@link #queue} добавляет анимацию в очередь ожидания. Если аниматор простаивает —
+ *       начинает немедленно (как {@link #play}).
+ *   <li>Завершённая анимация остаётся «замороженной» на {@code t = 1.0} пока не придёт следующая.
  *       Для {@link Animation#LOOP} и {@link Animation#ANIMATION_LOOP} параметры продолжают циклиться.
  * </ul>
  */
 public class Animator {
-    private final Queue<Animation> animationQueue = new ArrayDeque<>();
+    private final LongSupplier timeSupplier;
+    private @Nullable Animation current = null;
+    private final Queue<Animation> pending = new ArrayDeque<>();
+    private final Map<ParameterKey<?>, Object> snapshot = new HashMap<>();
     private long animationStartTime;
-    private final Map<String, Object> snapshot = new HashMap<>();
+    private long tickedTime;
+
+    public Animator(LongSupplier timeSupplier) {
+        this.timeSupplier = timeSupplier;
+    }
 
     /**
-     * Немедленно запускает анимацию, сбрасывая текущую и очередь.
-     * Текущие значения параметров сохраняются в снимок перед заменой.
-     *
-     * @param animation анимация для воспроизведения
-     * @param startTime абсолютное время начала (обычно {@code Util.getMeasuringTimeMs()})
+     * Захватывает текущее время и продвигает очередь анимаций.
+     * Должен вызываться один раз в начале каждого кадра (перед первым {@link #getParameter}).
+     * Гарантирует, что все параметры в одном кадре читаются в одной точке времени.
      */
-    public void play(Animation animation, long startTime) {
-        if (!animationQueue.isEmpty()) {
-            mergeIntoSnapshot(animationQueue.peek(), startTime - animationStartTime);
+    public void tick() {
+        long now = timeSupplier.getAsLong();
+        while (current != null && !pending.isEmpty() && now > animationStartTime + (long) current.getDuration()) {
+            mergeIntoSnapshot(current, (long) current.getDuration());
+            animationStartTime += (long) current.getDuration();
+            current = pending.poll();
         }
-        this.animationQueue.clear();
-        this.animationQueue.add(animation);
-        this.animationStartTime = startTime;
+        this.tickedTime = now;
+    }
+
+    /**
+     * Немедленно запускает анимацию, заменяя текущую и сбрасывая очередь.
+     * Текущие значения параметров сохраняются в снимок перед заменой.
+     */
+    public void play(Animation animation) {
+        long now = timeSupplier.getAsLong();
+        if (current != null) {
+            mergeIntoSnapshot(current, now - animationStartTime);
+        }
+        this.current = animation;
+        this.pending.clear();
+        this.animationStartTime = now;
     }
 
     /**
      * Добавляет анимацию в очередь — она начнётся после завершения текущих.
-     * Если очередь пуста, анимация начнётся немедленно при следующем тике.
+     * Если аниматор простаивает ({@link #isIdle}), начинает анимацию немедленно.
      */
     public void queue(Animation animation) {
-        this.animationQueue.add(animation);
+        if (isIdle()) {
+            play(animation);
+        } else {
+            this.pending.add(animation);
+        }
     }
 
     /**
      * Останавливает воспроизведение, сохраняя текущие значения параметров в снимок.
      * После вызова {@link #getParameter} будет возвращать значения из снимка.
-     *
-     * @param currentTime абсолютное текущее время (мс)
      */
-    public void stop(long currentTime) {
-        if (!animationQueue.isEmpty()) {
-            mergeIntoSnapshot(animationQueue.peek(), currentTime - animationStartTime);
+    public void stop() {
+        long now = timeSupplier.getAsLong();
+        if (current != null) {
+            mergeIntoSnapshot(current, now - animationStartTime);
         }
-        this.animationQueue.clear();
+        this.current = null;
+        this.pending.clear();
     }
 
     /**
@@ -92,76 +119,58 @@ public class Animator {
      * После вызова все {@link #getParameter} будут возвращать {@code empty}.
      */
     public void clear() {
-        this.animationQueue.clear();
+        this.current = null;
+        this.pending.clear();
         this.snapshot.clear();
     }
 
-    private Optional<Animation> getPlayedAnimation(long currentTime) {
-        // Переходим к следующей анимации в очереди, если текущая завершилась.
-        // Последнюю анимацию не извлекаем.
-        while (animationQueue.size() > 1 && currentTime > this.animationStartTime + (long) this.animationQueue.peek().getDuration()) {
-            Animation completed = Objects.requireNonNull(this.animationQueue.poll());
-            mergeIntoSnapshot(completed, (long) completed.getDuration());
-            this.animationStartTime += (long) completed.getDuration();
-        }
-
-        if (animationQueue.isEmpty())
-            return Optional.empty();
-
-        return Optional.of(animationQueue.peek());
-    }
-
     /**
-     * Возвращает текущее значение именованного параметра из играющей анимации.
-     * Если параметр не определён в текущей анимации — возвращает значение из снимка предыдущих.
+     * Возвращает текущее значение именованного параметра.
+     * Приоритет: текущая анимация → снимок предыдущих → дефолт из {@link ParameterKey}.
      *
-     * @param parameterKey имя параметра, заданное в {@link Animation.Builder#addParameterAnimation}
-     * @param currentTime  абсолютное текущее время (мс), обычно {@code Util.getMeasuringTimeMs()}
-     * @param expectedType класс ожидаемого типа
-     * @return значение параметра, или {@code empty} если нет играющей анимации и параметра нет в снимке
+     * @param key ключ параметра, заданный в {@link Animation.Builder#addParameter}
+     * @return значение параметра
      */
-    public <T> Optional<T> getParameter(String parameterKey, long currentTime, Class<T> expectedType) {
-        Optional<T> result = this.getPlayedAnimation(currentTime)
-                .flatMap(animation -> animation
-                        .getParameter(parameterKey, currentTime - animationStartTime, expectedType));
-
-        if (result.isPresent()) return result;
-
-        Object snapshotValue = snapshot.get(parameterKey);
-        if (expectedType.isInstance(snapshotValue)) {
-            return Optional.of(expectedType.cast(snapshotValue));
+    public <T> T getParameter(ParameterKey<T> key) {
+        if (current != null) {
+            Optional<T> result = current.getParameter(key, getInitial(key), tickedTime - animationStartTime);
+            if (result.isPresent()) return result.get();
         }
-        return Optional.empty();
+        return getInitial(key);
     }
 
-    /**
-     * То же что {@link #getParameter}, но возвращает {@code defaultValue} вместо {@code empty}.
-     */
-    public <T> T getParameterOrDefault(String parameterKey, long currentTime, T defaultValue, Class<T> expectedType) {
-        return this.getParameter(parameterKey, currentTime, expectedType).orElse(defaultValue);
+    private <T> T getInitial(ParameterKey<T> key) {
+        Object snapshotValue = snapshot.get(key);
+        if (key.getType().isInstance(snapshotValue)) {
+            return key.getType().cast(snapshotValue);
+        }
+        return key.getDefault();
     }
 
     /**
      * Возвращает {@code true} если аниматор простаивает — либо ничего не играло,
-     * либо текущая анимация завершила своё время ({@code currentTime - startTime >= duration}).
+     * либо текущая анимация завершила своё время и очередь пуста.
      *
      * <p>Удобно для очистки: если аниматор простаивает — объект можно удалять.
      * <pre>{@code
-     * if (outgoingAnimator.isIdle(t)) {
+     * if (animator.isIdle()) {
      *     outgoingTaskWidgets.clear();
      * }
      * }</pre>
-     *
      */
-    public boolean isIdle(long currentTime) {
-        if (animationQueue.isEmpty()) return true;
-        if (animationQueue.size() > 1) return false;
-        return currentTime - animationStartTime >= (long) animationQueue.peek().getDuration();
+    public boolean isIdle() {
+        if (current == null) return true;
+        if (!pending.isEmpty()) return false;
+        return timeSupplier.getAsLong() - animationStartTime >= (long) current.getDuration();
     }
 
     private void mergeIntoSnapshot(Animation animation, long elapsed) {
-        for (String key : animation.getParameterKeys()) {
-            animation.getParameter(key, elapsed, Object.class).ifPresent(v -> snapshot.put(key, v));
+        for (ParameterKey<?> key : animation.getParameterKeys()) {
+            mergeKeyIntoSnapshot(animation, key, elapsed);
         }
+    }
+
+    private <T> void mergeKeyIntoSnapshot(Animation animation, ParameterKey<T> key, long elapsed) {
+        animation.getParameter(key, getInitial(key), elapsed).ifPresent(v -> snapshot.put(key, v));
     }
 }

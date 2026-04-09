@@ -3,8 +3,8 @@ package k4k.travelcorequesting.client.huds;
 import k4k.travelcorequesting.client.utils.DrawContexts;
 import k4k.travelcorequesting.common.animation.Animation;
 import k4k.travelcorequesting.common.animation.Animator;
-import k4k.travelcorequesting.common.animation.parameter_animations.FadeParameterAnimation;
-import k4k.travelcorequesting.common.animation.parameter_animations.SlideParameterAnimation;
+import k4k.travelcorequesting.common.animation.ParameterKey;
+import static k4k.travelcorequesting.common.animation.ParameterAnimations.*;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.questing.models.QuestDisplay;
 import k4k.travelcorequesting.questing.models.TaskDisplay;
@@ -13,7 +13,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector2d;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,28 +23,26 @@ public class HudQuestWidget {
     private static final int TASKS_PADDING = 4;
     private static final int OPTIONAL_TASK_EXTRA_PADDING = 6;
 
+    private static final ParameterKey<Integer> POSITION = new ParameterKey<>(Integer.class, 0);
+    private static final ParameterKey<Float> OPACITY = new ParameterKey<>(Float.class, 0f);
+
     private static final Animation IN_ANIMATION = new Animation.Builder()
-            .addParameterAnimation("Position", SlideParameterAnimation.slideIn(-10, 0), Animation.ONE_TIME, 500, Vector2d.class)
-            .addParameterAnimation("Opacity", FadeParameterAnimation.fadeIn(), Animation.ONE_TIME, 500, Float.class)
+            .addParameter(POSITION, slideIn(-10), 0, 5000)
+            .addParameter(OPACITY, fadeIn(), 0, 5000)
             .build();
 
     private static final Animation OUT_ANIMATION = new Animation.Builder()
-            .addParameterAnimation("Position", SlideParameterAnimation.slideOut(-10, 0), Animation.ONE_TIME, 500, Vector2d.class)
-            .addParameterAnimation("Opacity", FadeParameterAnimation.fadeOut(), Animation.ONE_TIME, 500, Float.class)
+            .addParameter(POSITION, slideOut(-10), 0, 5000)
+            .addParameter(OPACITY, fadeOut(), 0, 5000)
             .build();
 
     private final MinecraftClient client = MinecraftClient.getInstance();
 
     private QuestDisplay display;
     private final LinkedHashMap<String, HudTaskWidget> taskWidgets = new LinkedHashMap<>();
-    private final Animator animator = new Animator();
-    private @Nullable Transition activeTransition = null;
+    private final Animator animator = new Animator(Util::getMeasuringTimeMs);
+    private @Nullable LinkedHashMap<String, HudTaskWidget> outgoingTasks = null;
     private @Nullable String pinnedTaskId = null;
-
-    private record Transition(
-            LinkedHashMap<String, HudTaskWidget> outgoingTasks,
-            long expiresAt
-    ) {}
 
     public HudQuestWidget(QuestDisplay display, Map<String, TaskDisplay> tasks) {
         this.display = display;
@@ -53,30 +50,27 @@ public class HudQuestWidget {
     }
 
     public void playInAnimation() {
-        animator.play(IN_ANIMATION, Util.getMeasuringTimeMs());
+        animator.play(IN_ANIMATION);
         taskWidgets.values().forEach(HudTaskWidget::playInAnimation);
     }
 
     public void playOutAnimation() {
-        long now = Util.getMeasuringTimeMs();
-        animator.play(OUT_ANIMATION, now);
+        animator.play(OUT_ANIMATION);
         taskWidgets.values().forEach(HudTaskWidget::playOutAnimation);
     }
 
-    public static long getOutAnimationDuration() {
-        return (long) OUT_ANIMATION.getDuration();
+    public boolean isAnimatorIdle() {
+        return animator.isIdle() && taskWidgets.values().stream().allMatch(HudTaskWidget::isAnimatorIdle);
     }
 
     public void changeStage(QuestDisplay display, Map<String, TaskDisplay> tasks) {
-        var outgoing = new LinkedHashMap<>(taskWidgets);
-        outgoing.values().forEach(HudTaskWidget::playOutAnimation);
-        activeTransition = new Transition(outgoing, Util.getMeasuringTimeMs() + HudTaskWidget.getOutAnimationDuration());
+        outgoingTasks = new LinkedHashMap<>(taskWidgets);
+        outgoingTasks.values().forEach(HudTaskWidget::playSwitchOutAnimation);
 
         this.display = display;
         taskWidgets.clear();
         pinnedTaskId = null;
         populateTasks(tasks);
-        taskWidgets.values().forEach(HudTaskWidget::playInAnimation);
     }
 
     public void addTask(String taskId, TaskDisplay task) {
@@ -92,9 +86,10 @@ public class HudQuestWidget {
         pinnedTaskId = taskId.equals(firstTaskId) ? null : taskId;
     }
 
-    public void update(long t) {
-        if (activeTransition != null && t >= activeTransition.expiresAt()) {
-            activeTransition = null;
+    public void update() {
+        if (outgoingTasks != null && outgoingTasks.values().stream().allMatch(HudTaskWidget::isAnimatorIdle)) {
+            outgoingTasks = null;
+            taskWidgets.values().forEach(HudTaskWidget::playSwitchInAnimation);
         }
     }
 
@@ -118,38 +113,40 @@ public class HudQuestWidget {
         int titleHeight = client.textRenderer.getWrappedLinesHeight(display.title(), hudWidth - 2);
         int currentHeight = computeCurrentTasksHeight(taskWidgets, hudWidth);
 
-        if (activeTransition == null) return titleHeight + currentHeight;
+        if (outgoingTasks == null) return titleHeight + currentHeight;
 
-        int outgoingHeight = computeTasksHeight(activeTransition.outgoingTasks(), hudWidth, null);
+        int outgoingHeight = computeTasksHeight(outgoingTasks, hudWidth, null);
         return titleHeight + Math.max(currentHeight, outgoingHeight);
     }
 
-    public int render(DrawContext context, long t, int x, int y, int hudWidth) {
-        float opacity = animator.getParameter("Opacity", t, Float.class).orElse(1f);
-        int offsetX = (int) animator.getParameter("Position", t, Vector2d.class).orElseGet(Vector2d::new).x;
+    public int render(DrawContext context, int x, int y, int hudWidth) {
+        animator.tick();
+        float opacity = animator.getParameter(OPACITY);
+        int offsetX = animator.getParameter(POSITION);
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1, 1, 1, opacity);
 
         int drawX = x + offsetX;
-        int titleHeight = DrawContexts.drawTextWrapped(context, client.textRenderer, display.title(), drawX + 1, y + 1, hudWidth - 2, 0xFFFFFFFF, true);
+        int titleColor = ((int) (opacity * 255) << 24) | 0x00FFFFFF;
+        int titleHeight = DrawContexts.drawTextWrapped(context, client.textRenderer, display.title(), drawX + 1, y + 1, hudWidth - 2, titleColor, true);
         int taskStartY = y + titleHeight + QUEST_TASKS_GAP + 1;
 
         int currentTasksHeight;
         if (isPinnedOptional()) {
             var pinnedWidget = taskWidgets.get(pinnedTaskId);
-            int pinnedHeight = pinnedWidget.render(context, t, drawX + TASKS_PADDING, taskStartY, hudWidth - TASKS_PADDING);
+            int pinnedHeight = pinnedWidget.render(context, drawX + TASKS_PADDING, taskStartY, hudWidth - TASKS_PADDING);
             int mainStartY = taskStartY + pinnedHeight + QUEST_TASKS_GAP;
-            int mainHeight = renderTasks(context, t, drawX, mainStartY, hudWidth, taskWidgets, pinnedTaskId);
+            int mainHeight = renderTasks(context, drawX, mainStartY, hudWidth, taskWidgets, pinnedTaskId);
             currentTasksHeight = pinnedHeight + QUEST_TASKS_GAP + mainHeight;
         } else {
-            currentTasksHeight = renderTasks(context, t, drawX, taskStartY, hudWidth, taskWidgets, null);
+            currentTasksHeight = renderTasks(context, drawX, taskStartY, hudWidth, taskWidgets, null);
         }
 
         int tasksHeight = currentTasksHeight;
-        if (activeTransition != null) {
-            int outgoingTasksHeight = renderTasks(context, t, drawX, taskStartY, hudWidth, activeTransition.outgoingTasks(), null);
+        if (outgoingTasks != null) {
+            int outgoingTasksHeight = renderTasks(context, drawX, taskStartY, hudWidth, outgoingTasks, null);
             tasksHeight = Math.max(currentTasksHeight, outgoingTasksHeight);
         }
 
@@ -160,7 +157,7 @@ public class HudQuestWidget {
         return titleHeight + QUEST_TASKS_GAP + 1 + tasksHeight;
     }
 
-    private int renderTasks(DrawContext context, long t, int x, int y, int hudWidth, LinkedHashMap<String, HudTaskWidget> widgets, @Nullable String skipTaskId) {
+    private int renderTasks(DrawContext context, int x, int y, int hudWidth, LinkedHashMap<String, HudTaskWidget> widgets, @Nullable String skipTaskId) {
         int taskCount = countTasks(widgets, skipTaskId);
         if (taskCount == 0) return 0;
 
@@ -171,7 +168,7 @@ public class HudQuestWidget {
             if (entry.getKey().equals(skipTaskId)) continue;
             boolean isRequired = taskIndex == 0;
             int taskPadding = TASKS_PADDING + (isRequired ? 0 : OPTIONAL_TASK_EXTRA_PADDING);
-            int taskHeight = entry.getValue().render(context, t, x + taskPadding, y, hudWidth - taskPadding);
+            int taskHeight = entry.getValue().render(context, x + taskPadding, y, hudWidth - taskPadding);
 
             y += taskHeight;
             if (isRequired && taskIndex < taskCount - 1) {

@@ -144,32 +144,32 @@ public class ListSubCommand {
                                         ))
                                 )
 
-                                .then(literal("trackedby")
-                                        .then(argument(ARG_PLAYER, player())
-                                                .executes(context -> listTaskTrackersAll(
-                                                        context,
-                                                        getIdentifier(context, ARG_QUEST_ID),
-                                                        getPlayer(context, ARG_PLAYER)
-                                                ))
-
-                                                .then(literal("all")
-                                                        .executes(context -> listTaskTrackersAll(
-                                                                context,
-                                                                getIdentifier(context, ARG_QUEST_ID),
-                                                                getPlayer(context, ARG_PLAYER)
-                                                        ))
-                                                )
-
-                                                .then(argument(ARG_TASK_STATUS, taskGeneralStatus())
-                                                        .executes(context -> listTaskTrackers(
-                                                                context,
-                                                                getIdentifier(context, ARG_QUEST_ID),
-                                                                getPlayer(context, ARG_PLAYER),
-                                                                getTaskGeneralStatus(context, ARG_TASK_STATUS)
-                                                        ))
-                                                )
-                                        )
-                                )
+//                                .then(literal("trackedby")
+//                                        .then(argument(ARG_PLAYER, player())
+//                                                .executes(context -> listTaskTrackersAll(
+//                                                        context,
+//                                                        getIdentifier(context, ARG_QUEST_ID),
+//                                                        getPlayer(context, ARG_PLAYER)
+//                                                ))
+//
+//                                                .then(literal("all")
+//                                                        .executes(context -> listTaskTrackersAll(
+//                                                                context,
+//                                                                getIdentifier(context, ARG_QUEST_ID),
+//                                                                getPlayer(context, ARG_PLAYER)
+//                                                        ))
+//                                                )
+//
+//                                                .then(argument(ARG_TASK_STATUS, taskGeneralStatus())
+//                                                        .executes(context -> listTaskTrackers(
+//                                                                context,
+//                                                                getIdentifier(context, ARG_QUEST_ID),
+//                                                                getPlayer(context, ARG_PLAYER),
+//                                                                getTaskGeneralStatus(context, ARG_TASK_STATUS)
+//                                                        ))
+//                                                )
+//                                        )
+//                                )
                         )
                 );
     }

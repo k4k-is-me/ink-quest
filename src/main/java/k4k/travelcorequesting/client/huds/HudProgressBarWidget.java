@@ -3,11 +3,12 @@ package k4k.travelcorequesting.client.huds;
 import com.mojang.blaze3d.systems.RenderSystem;
 import k4k.travelcorequesting.common.animation.Animation;
 import k4k.travelcorequesting.common.animation.Animator;
+import k4k.travelcorequesting.common.animation.ParameterKey;
+import static k4k.travelcorequesting.common.animation.ParameterAnimations.*;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
-
 import java.util.function.Function;
 
 public class HudProgressBarWidget {
@@ -19,34 +20,31 @@ public class HudProgressBarWidget {
     public static final int SUCCESS_V = 33;
     public static final int FAILURE_V = 34;
 
-    private static final Function<Float, Animation> FILL_ANIMATION = delta -> new Animation.Builder()
-            .addParameterAnimation("FillDelta", progress -> delta * (float) (1.0 - progress), Animation.ONE_TIME, 300, Float.class)
+    private static final ParameterKey<Float> FILL = new ParameterKey<>(Float.class, 0f);
+
+    private static final Function<Float, Animation> FILL_ANIMATION = target -> new Animation.Builder()
+            .addParameter(FILL, slideTo(target), 0, 300)
             .build();
 
     private final int textureV;
-    private final Animator animator = new Animator();
-    private float currentFill = 0f;
+    private final Animator animator = new Animator(Util::getMeasuringTimeMs);
 
     public HudProgressBarWidget(int textureV) {
         this.textureV = textureV;
     }
 
     public void setProgress(int value, int target) {
-        long now = Util.getMeasuringTimeMs();
         float newFill = MathHelper.clamp((float) value / target, 0f, 1f);
-        float animDelta = animator.getParameter("FillDelta", now, Float.class).orElse(0f);
-        float delta = (currentFill + animDelta) - newFill;
-        currentFill = newFill;
-        if (delta != 0f) animator.play(FILL_ANIMATION.apply(delta), now);
+        animator.play(FILL_ANIMATION.apply(newFill));
     }
 
     public int getHeight() {
         return BAR_HEIGHT + 1; // 1px бар + 1px тень
     }
 
-    public void render(DrawContext context, long t, int x, int y, int width) {
-        float fillDelta = animator.getParameter("FillDelta", t, Float.class).orElse(0f);
-        int fillWidth = (int) (MathHelper.clamp(currentFill + fillDelta, 0f, 1f) * width);
+    public void render(DrawContext context, int x, int y, int width) {
+        animator.tick();
+        int fillWidth = (int) (animator.getParameter(FILL) * width);
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();

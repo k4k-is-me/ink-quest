@@ -8,7 +8,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 
 import java.util.*;
 
@@ -20,7 +19,7 @@ public class QuestHudOverlay implements HudRenderCallback {
 
     private final List<Identifier> questOrder = new ArrayList<>();
     private final Map<Identifier, HudQuestWidget> questWidgets = new HashMap<>();
-    private final Map<Identifier, Long> outgoingQuests = new HashMap<>();
+    private final Set<Identifier> outgoingQuests = new HashSet<>();
 
     public QuestHudOverlay() {}
 
@@ -73,7 +72,7 @@ public class QuestHudOverlay implements HudRenderCallback {
         if (widget == null) return;
 
         widget.playOutAnimation();
-        outgoingQuests.put(questId, Util.getMeasuringTimeMs() + HudQuestWidget.getOutAnimationDuration());
+        outgoingQuests.add(questId);
     }
 
     @Override
@@ -105,24 +104,23 @@ public class QuestHudOverlay implements HudRenderCallback {
     }
 
     private void renderHud(DrawContext drawContext) {
-        long t = Util.getMeasuringTimeMs();
+        outgoingQuests.removeIf(questId -> {
+            var widget = questWidgets.get(questId);
+            if (widget != null && !widget.isAnimatorIdle()) return false;
 
-        outgoingQuests.entrySet().removeIf(entry -> {
-            if (t < entry.getValue()) return false;
-
-            questWidgets.remove(entry.getKey());
-            questOrder.remove(entry.getKey());
+            questWidgets.remove(questId);
+            questOrder.remove(questId);
             return true;
         });
 
-        for (var widget : questWidgets.values()) widget.update(t);
+        for (var widget : questWidgets.values()) widget.update();
 
         int y = 0;
         for (var questId : questOrder) {
             var widget = questWidgets.get(questId);
             if (widget == null) continue;
 
-            y += widget.render(drawContext, t, 0, y, HUD_WIDTH) + QUESTS_GAP;
+            y += widget.render(drawContext, 0, y, HUD_WIDTH) + QUESTS_GAP;
         }
     }
 }
