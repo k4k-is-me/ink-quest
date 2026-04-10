@@ -1,6 +1,5 @@
 package k4k.travelcorequesting.common.animation;
 
-@SuppressWarnings("ClassCanBeRecord")
 public final class ParameterKey<T> {
     private final Class<T> type;
     private final T defaultValue;

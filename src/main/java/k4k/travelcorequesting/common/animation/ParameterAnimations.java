@@ -1,5 +1,6 @@
 package k4k.travelcorequesting.common.animation;
 
+@SuppressWarnings("unused")
 public class ParameterAnimations {
     /** Въезжает из смещения {@code dv} к 0. Игнорирует initial. */
     public static ParameterAnimation<Integer> slideIn(int dv) {

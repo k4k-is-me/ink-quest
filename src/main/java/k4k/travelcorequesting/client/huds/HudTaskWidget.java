@@ -69,14 +69,20 @@ public class HudTaskWidget {
     private final Animator animator = new Animator(Util::getMeasuringTimeMs);
 
     private final @Nullable HudProgressBarWidget successBar;
+    private final int successTarget;
     private final @Nullable HudProgressBarWidget failureBar;
+    private final int failureTarget;
     private @Nullable CompletionStatus completionStatus = null;
 
     public HudTaskWidget(TaskDisplay display, boolean isRequired) {
         this.display = display;
         this.isRequired = isRequired;
-        this.successBar = display.successTarget() != null ? new HudProgressBarWidget(HudProgressBarWidget.SUCCESS_V) : null;
-        this.failureBar = display.failureTarget() != null ? new HudProgressBarWidget(HudProgressBarWidget.FAILURE_V) : null;
+        Integer st = display.successTarget();
+        Integer ft = display.failureTarget();
+        this.successBar = st != null ? new HudProgressBarWidget(HudProgressBarWidget.SUCCESS_V) : null;
+        this.successTarget = st != null ? st : 0;
+        this.failureBar = ft != null ? new HudProgressBarWidget(HudProgressBarWidget.FAILURE_V) : null;
+        this.failureTarget = ft != null ? ft : 0;
     }
 
     public void playInAnimation() {
@@ -126,9 +132,9 @@ public class HudTaskWidget {
         if (completionStatus != null) return;
 
         if (isSuccess && successBar != null) {
-            successBar.setProgress(value, display.successTarget());
+            successBar.setProgress(value, successTarget);
         } else if (!isSuccess && failureBar != null) {
-            failureBar.setProgress(value, display.failureTarget());
+            failureBar.setProgress(value, failureTarget);
         }
     }
 
