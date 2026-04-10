@@ -13,7 +13,7 @@ import java.util.*;
 
 public class QuestHudOverlay implements HudRenderCallback {
     private static final int HUD_WIDTH = 120;
-    private static final int QUESTS_GAP = 4;
+    private static final int QUESTS_GAP = 10;
 
     private final MinecraftClient client = MinecraftClient.getInstance();
 
