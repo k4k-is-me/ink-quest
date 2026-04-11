@@ -58,9 +58,13 @@ public class QuestCommand {
     public static final String ERR_TASK_PINNED = "quest.command.error.task.pinned";
     public static final String ERR_ACTIVE_STAGE_MISSING = "quest.command.error.no_active_stage";
 
+    private static final String ERR_TASK_EXISTS = "quest.command.error.task.exists";
+    private static final String ERR_NO_STAGES = "quest.command.error.no_stages";
+
     private static final String MSG_QUEST_NEW = "quest.command.new";
     private static final String MSG_QUEST_MODIFY_TITLE = "quest.command.modify.title";
     private static final String MSG_QUEST_MODIFY_DESCRIPTION = "quest.command.modify.description";
+    private static final String MSG_QUEST_MODIFY_TASK_ADD = "quest.command.modify.task.add";
     private static final String MSG_QUEST_GIVE = "quest.command.give";
     private static final String MSG_QUEST_DROP = "quest.command.drop";
     private static final String MSG_QUEST_PIN_ADD_QUEST = "quest.command.pin.add.quest";
@@ -169,6 +173,44 @@ public class QuestCommand {
                                                 context,
                                                 getIdentifier(context, ARG_QUEST_ID)
                                         ))
+                                )
+                        )
+
+                        // ... task add required|optional <taskId: word>[ <title: Text>[ <description: Text>]]
+                        .then(literal("tasks")
+                                .then(literal("add")
+                                        .then(literal("required")
+                                                .then(argument(ARG_TASK_ID, word())
+                                                        .executes(ctx -> modifyQuestAddTask(ctx,
+                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), true, null, null))
+                                                        .then(argument(ARG_TITLE, text())
+                                                                .executes(ctx -> modifyQuestAddTask(ctx,
+                                                                        getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), true,
+                                                                        getTextArgument(ctx, ARG_TITLE), null))
+                                                                .then(argument(ARG_DESCRIPTION, text())
+                                                                        .executes(ctx -> modifyQuestAddTask(ctx,
+                                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), true,
+                                                                                getTextArgument(ctx, ARG_TITLE), getTextArgument(ctx, ARG_DESCRIPTION)))
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                        .then(literal("optional")
+                                                .then(argument(ARG_TASK_ID, word())
+                                                        .executes(ctx -> modifyQuestAddTask(ctx,
+                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), false, null, null))
+                                                        .then(argument(ARG_TITLE, text())
+                                                                .executes(ctx -> modifyQuestAddTask(ctx,
+                                                                        getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), false,
+                                                                        getTextArgument(ctx, ARG_TITLE), null))
+                                                                .then(argument(ARG_DESCRIPTION, text())
+                                                                        .executes(ctx -> modifyQuestAddTask(ctx,
+                                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), false,
+                                                                                getTextArgument(ctx, ARG_TITLE), getTextArgument(ctx, ARG_DESCRIPTION)))
+                                                                )
+                                                        )
+                                                )
+                                        )
                                 )
                         )
 
@@ -328,6 +370,35 @@ public class QuestCommand {
             var description = getTextArgument(context, ARG_DESCRIPTION);
             questManager.modifyQuest(questId, quest -> quest.setDescription(description));
             source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_DESCRIPTION), true);
+            return 1;
+        });
+    }
+
+    private static int modifyQuestAddTask(CommandContext<ServerCommandSource> context,
+            Identifier questId, String taskId, boolean required,
+            @Nullable Text title, @Nullable Text description) {
+        return modifyQuestInternal(context, questId, (questManager, source) -> {
+            var quest = questManager.getQuestResolver().getQuestEntry(questId).quest();
+
+            if (quest.containsTask(taskId)) {
+                source.sendError(Text.translatable(ERR_TASK_EXISTS));
+                return 0;
+            }
+
+            if (!required && quest.getStageCount() == 0) {
+                source.sendError(Text.translatable(ERR_NO_STAGES));
+                return 0;
+            }
+
+            questManager.modifyQuest(questId, modifier -> {
+                if (required) modifier.addTaskRequired(taskId);
+                else modifier.addTaskOptional(taskId);
+
+                if (title != null) modifier.setTaskTitle(taskId, title);
+                if (description != null) modifier.setTaskDescription(taskId, description);
+            });
+
+            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_TASK_ADD), true);
             return 1;
         });
     }
