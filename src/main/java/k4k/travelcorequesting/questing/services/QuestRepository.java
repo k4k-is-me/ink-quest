@@ -426,6 +426,15 @@ public final class QuestRepository implements QuestResolver {
             return quest;
         }
 
+        @Override
+        public Quest removeTask(String taskId) {
+            Objects.requireNonNull(taskId);
+
+            quest.removeTask(taskId);
+            this.isDirty = true;
+            return quest;
+        }
+
         /**
          * Устанавливает заголовок задачи квеста. Ошибка, если квеста не существует или задача с таким идентификатором уже
          * существует в квесте

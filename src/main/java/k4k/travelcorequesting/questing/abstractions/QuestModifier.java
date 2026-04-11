@@ -18,6 +18,7 @@ public interface QuestModifier {
     Quest removeDependencies();
     Quest addTaskRequired(String taskId);
     Quest addTaskOptional(String taskId);
+    Quest removeTask(String taskId);
     Quest setTaskTitle(String taskId, Text title);
     Quest setTaskDescription(String taskId, @Nullable Text description);
     Quest setTaskLoadFunction(String taskId, @Nullable Identifier function);

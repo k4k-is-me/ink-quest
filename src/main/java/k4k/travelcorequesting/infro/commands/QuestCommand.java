@@ -11,6 +11,7 @@ import k4k.travelcorequesting.infro.enums.CompletionLevel;
 import k4k.travelcorequesting.infro.suggestion_providers.*;
 import k4k.travelcorequesting.infro.utils.QuestTexts;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
+import k4k.travelcorequesting.questing.models.QuestEntry;
 import k4k.travelcorequesting.questing.services.ServerQuestManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -60,11 +61,13 @@ public class QuestCommand {
 
     private static final String ERR_TASK_EXISTS = "quest.command.error.task.exists";
     private static final String ERR_NO_STAGES = "quest.command.error.no_stages";
+    private static final String ERR_QUEST_TRACKED = "quest.command.error.tracked";
 
     private static final String MSG_QUEST_NEW = "quest.command.new";
     private static final String MSG_QUEST_MODIFY_TITLE = "quest.command.modify.title";
     private static final String MSG_QUEST_MODIFY_DESCRIPTION = "quest.command.modify.description";
     private static final String MSG_QUEST_MODIFY_TASK_ADD = "quest.command.modify.task.add";
+    private static final String MSG_QUEST_MODIFY_TASK_REMOVE = "quest.command.modify.task.remove";
     private static final String MSG_QUEST_GIVE = "quest.command.give";
     private static final String MSG_QUEST_DROP = "quest.command.drop";
     private static final String MSG_QUEST_PIN_ADD_QUEST = "quest.command.pin.add.quest";
@@ -176,7 +179,8 @@ public class QuestCommand {
                                 )
                         )
 
-                        // ... task add required|optional <taskId: word>[ <title: Text>[ <description: Text>]]
+                        // ... tasks add required|optional <taskId: word>[ <title: Text>[ <description: Text>]]
+                        // ... tasks remove <taskId: word>
                         .then(literal("tasks")
                                 .then(literal("add")
                                         .then(literal("required")
@@ -210,6 +214,12 @@ public class QuestCommand {
                                                                 )
                                                         )
                                                 )
+                                        )
+                                )
+                                .then(literal("remove")
+                                        .then(argument(ARG_TASK_ID, word())
+                                                .executes(ctx -> modifyQuestRemoveTask(ctx,
+                                                        getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID)))
                                         )
                                 )
                         )
@@ -357,7 +367,7 @@ public class QuestCommand {
     }
 
     public static int modifyQuestTitle(CommandContext<ServerCommandSource> context, Identifier questId) {
-        return modifyQuestInternal(context, questId, (questManager, source) -> {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
             var title = getTextArgument(context, ARG_TITLE);
             questManager.modifyQuest(questId, quest -> quest.setTitle(title));
             source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_TITLE), true);
@@ -366,7 +376,7 @@ public class QuestCommand {
     }
 
     public static int modifyQuestDescription(CommandContext<ServerCommandSource> context, Identifier questId) {
-        return modifyQuestInternal(context, questId, (questManager, source) -> {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
             var description = getTextArgument(context, ARG_DESCRIPTION);
             questManager.modifyQuest(questId, quest -> quest.setDescription(description));
             source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_DESCRIPTION), true);
@@ -377,8 +387,8 @@ public class QuestCommand {
     private static int modifyQuestAddTask(CommandContext<ServerCommandSource> context,
             Identifier questId, String taskId, boolean required,
             @Nullable Text title, @Nullable Text description) {
-        return modifyQuestInternal(context, questId, (questManager, source) -> {
-            var quest = questManager.getQuestResolver().getQuestEntry(questId).quest();
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
+            var quest = entry.quest();
 
             if (quest.containsTask(taskId)) {
                 source.sendError(Text.translatable(ERR_TASK_EXISTS));
@@ -403,11 +413,35 @@ public class QuestCommand {
         });
     }
 
+    private static int modifyQuestRemoveTask(CommandContext<ServerCommandSource> context,
+            Identifier questId, String taskId) {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
+            var quest = entry.quest();
+
+            if (!quest.containsTask(taskId)) {
+                source.sendError(Text.translatable(ERR_TASK_MISSING));
+                return 0;
+            }
+
+            if (questManager.isQuestTrackedByAnyone(questId)) {
+                source.sendError(Text.translatable(ERR_QUEST_TRACKED));
+                return 0;
+            }
+
+            questManager.modifyQuest(questId, modifier -> modifier.removeTask(taskId));
+
+            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_TASK_REMOVE), true);
+            return 1;
+        });
+    }
+
     private static int modifyQuestInternal(CommandContext<ServerCommandSource> context, Identifier questId, QuestModificationStrategy modifier) {
         var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
         var source = context.getSource();
 
-        if (!questManager.isQuestExists(questId)) {
+        var entry = questManager.getQuestResolver().getQuestEntry(questId);
+
+        if (!questManager.isQuestExists(questId) || entry == null) {
             source.sendError(Text.translatable(ERR_QUEST_MISSING));
             return 0;
         }
@@ -417,12 +451,12 @@ public class QuestCommand {
             return 0;
         }
 
-        return modifier.apply(questManager, source);
+        return modifier.apply(questManager, source, entry);
     }
 
     @FunctionalInterface
     private interface QuestModificationStrategy {
-        int apply(ServerQuestManager questManager, ServerCommandSource source);
+        int apply(ServerQuestManager questManager, ServerCommandSource source, QuestEntry entry);
     }
 
     public static int giveQuest(CommandContext<ServerCommandSource> context, Identifier questId, ServerPlayerEntity player) {

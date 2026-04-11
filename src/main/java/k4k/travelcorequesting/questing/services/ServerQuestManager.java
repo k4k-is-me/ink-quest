@@ -405,6 +405,12 @@ public class ServerQuestManager {
                 .toList();
     }
 
+    /** Выдан ли квест хотя бы одному игроку (активный или завершённый). */
+    public boolean isQuestTrackedByAnyone(Identifier questId) {
+        return this.trackedPlayers.values().stream()
+                .anyMatch(tracker -> tracker.isTracked(questId));
+    }
+
     /** Выдан ли квест игроку (активный или завершённый). */
     public boolean isQuestTracked(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
