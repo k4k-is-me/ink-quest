@@ -158,10 +158,10 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         quest.setBackground(background);
         quest.setPin(pin);
         quest.setDependencies(dependencies);
-        quest.setStages(stages);
-
         // Добавляем задачи
         tasks.forEach(quest::setTask);
+
+        quest.setStages(stages);
 
         return quest;
     }
