@@ -74,5 +74,6 @@
   "quest.command.pin.remove": "Pin removed",
   "quest.command.complete.task": "Completed task for %s",
   "quest.command.complete.stage": "Completed %s/%s tasks in active stage for %s",
-  "quest.command.complete.quest": "Completed %s/%s tasks in quest for %s"
+  "quest.command.complete.quest": "Completed %s/%s tasks in quest for %s",
+  "quest.command.uhoh.drop_for_all": "[!] Force-dropped quest for %s player(s) (%s online + %s offline)"
 }

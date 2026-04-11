@@ -411,6 +411,26 @@ public class ServerQuestManager {
                 .anyMatch(tracker -> tracker.isTracked(questId));
     }
 
+    /**
+     * Silently drops quest from all player trackers without firing any events.
+     * Use this for bulk offline cleanup — proper online drops should be done
+     * beforehand via {@link #dropQuest}.
+     *
+     * @return number of trackers cleaned up
+     */
+    public int dropQuestFromAllTrackers(Identifier questId) {
+        Objects.requireNonNull(questId);
+
+        var count = 0;
+        for (var tracker : this.trackedPlayers.values()) {
+            if (!tracker.isTracked(questId)) continue;
+            tracker.stopTracking(questId);
+            this.isDirty = true;
+            count++;
+        }
+        return count;
+    }
+
     /** Выдан ли квест игроку (активный или завершённый). */
     public boolean isQuestTracked(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);

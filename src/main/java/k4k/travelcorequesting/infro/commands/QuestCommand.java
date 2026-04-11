@@ -75,6 +75,7 @@ public class QuestCommand {
     private static final String MSG_TASK_COMPLETE = "quest.command.complete.task";
     private static final String MSG_STAGE_COMPLETE = "quest.command.complete.stage";
     private static final String MSG_QUEST_COMPLETE = "quest.command.complete.quest";
+    private static final String MSG_QUEST_UHOH_DROP_FOR_ALL = "quest.command.uhoh.drop_for_all";
 
     public static final List<QuestGeneralStatus> QUEST_STATUSES = Arrays.stream(QuestGeneralStatus.values()).toList();
 
@@ -119,6 +120,7 @@ public class QuestCommand {
                 .then(addPinSubCommand())
                 .then(addUnPinSubCommand())
                 .then(addCompleteSubCommand())
+                .then(addUhohSubCommand())
         );
     }
 
@@ -727,14 +729,46 @@ public class QuestCommand {
         return 1;
     }
 
-    // Utility components
+    /// quest uhoh dropForAll <questId: Identifier>
+    private static ArgumentBuilder<ServerCommandSource, ?> addUhohSubCommand() {
+        return literal("uhoh")
+                .then(literal("dropForAll")
+                        .then(argument(ARG_QUEST_ID, identifier())
+                                .suggests(new RegisteredQuestSuggestionProvider())
+                                .executes(context -> dropQuestForAll(
+                                        context,
+                                        getIdentifier(context, ARG_QUEST_ID)
+                                ))
+                        )
+                );
+    }
 
-    /**
-     * Для каждого элемента коллекции вызывает функцию и ожидает получить ArgumentBuilder, цепляет полученный ArgumentBuilder
-     * к переданной ноде с помощью .then
-     */
-    public static <T> ArgumentBuilder<ServerCommandSource, ?> addForEach(ArgumentBuilder<ServerCommandSource, ?> node, List<T> collection, Function<T, ArgumentBuilder<ServerCommandSource, ?>> builder) {
-        collection.forEach(item -> node.then(builder.apply(item)));
-        return node;
+    private static int dropQuestForAll(CommandContext<ServerCommandSource> context, Identifier questId) {
+        var server = context.getSource().getServer();
+        var questManager = ServerQuestManagerContainer.getQuestManager(server);
+        var source = context.getSource();
+
+        if (!questManager.isQuestExists(questId)) {
+            source.sendError(Text.translatable(ERR_QUEST_MISSING));
+            return 0;
+        }
+
+        // Online players — proper drop with events and HUD updates
+        var onlineDropped = 0;
+        for (var player : server.getPlayerManager().getPlayerList()) {
+            if (!questManager.isQuestTracked(questId, player)) continue;
+            questManager.dropQuest(questId, player);
+            onlineDropped++;
+        }
+
+        // Remaining trackers (offline players) — silent cleanup
+        var offlineDropped = questManager.dropQuestFromAllTrackers(questId);
+
+        int online = onlineDropped;
+        source.sendFeedback(
+                () -> Text.translatable(MSG_QUEST_UHOH_DROP_FOR_ALL, online + offlineDropped, online, offlineDropped),
+                true
+        );
+        return online + offlineDropped;
     }
 }
