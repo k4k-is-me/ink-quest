@@ -692,11 +692,19 @@ public class ServerQuestManager {
     }
 
     private void updatePlayer(ServerPlayerEntity player) {
-        var tracker = this.trackedPlayers.get(player.getUuid());
-        if (tracker == null) return;
+        var playerTracker = this.trackedPlayers.get(player.getUuid());
+        if (playerTracker == null) return;
 
-        for (var questId : tracker.getQuestsToUpdate()) {
-            this.updatePlayerQuest(player, questId);
+        for (var questId : playerTracker.getActiveQuests()) {
+            var entry = this.questRepository.getQuestEntry(questId);
+            if (entry == null) continue;
+
+            var questTracker = playerTracker.getQuestTracker(questId).orElse(null);
+            if (questTracker == null) continue;
+
+            if (!entry.quest().background() && !questTracker.isPinned()) continue;
+
+            this.updatePlayerQuest(player, playerTracker, questTracker, entry);
         }
     }
 
@@ -709,15 +717,13 @@ public class ServerQuestManager {
      *
      * <p>Вызывается только для активных (незавершённых) квестов.
      */
-    private void updatePlayerQuest(ServerPlayerEntity player, Identifier questId) {
-        var playerTracker = this.getPlayerTracker(player).orElse(null);
-        if (playerTracker == null) return;
-
-        var questTracker = playerTracker.getQuestTracker(questId).orElse(null);
-        if (questTracker == null) return;
-
-        var entry = this.questRepository.getQuestEntry(questId);
-        if (entry == null) return;
+    private void updatePlayerQuest(
+            ServerPlayerEntity player,
+            PlayerProgressTracker playerTracker,
+            QuestProgressTracker questTracker,
+            QuestEntry entry
+    ) {
+        var questId = entry.questId();
 
         var stageChanged = questTracker.recomputeActiveStage(newStage ->
                 QuestProgressEvents.STAGE_CHANGED.invoker().onStageChange(entry, newStage, player));

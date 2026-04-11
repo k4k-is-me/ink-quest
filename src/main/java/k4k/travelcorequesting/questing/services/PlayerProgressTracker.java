@@ -16,8 +16,6 @@ public class PlayerProgressTracker {
     private final Map<Identifier, QuestProgressTracker> activeQuests = new HashMap<>();
     private final Map<Identifier, CompletionStatus> completedQuests = new HashMap<>();
 
-    private final List<Identifier> questsToUpdate = new ArrayList<>(20);
-
     public PlayerProgressTracker(QuestResolver resolver) {
         this.resolver = resolver;
     }
@@ -97,7 +95,7 @@ public class PlayerProgressTracker {
      * @return Список активных квестов
      */
     public List<Identifier> getActiveQuests() {
-        return this.activeQuests.keySet().stream().toList();
+        return List.copyOf(this.activeQuests.keySet());
     }
 
     /**
@@ -106,27 +104,6 @@ public class PlayerProgressTracker {
      */
     public List<Identifier> getCompleteQuests() {
         return this.completedQuests.keySet().stream().toList();
-    }
-
-    /**
-     * Возвращает список квестов, которые требуют проверки выполнения,
-     * квесты возвращаемые методом гарантированно загружены
-     * @return Список идентификаторов
-     */
-    public List<Identifier> getQuestsToUpdate() {  // TODO: Maybe move to ServerQuestManager
-        this.questsToUpdate.clear();
-
-        for (var questId : this.activeQuests.keySet()) {
-            var quest = this.resolver.getQuest(questId);
-            if (quest == null) continue;
-
-            if (!quest.background() && !this.activeQuests.get(questId).isPinned())
-                continue;
-
-            this.questsToUpdate.add(questId);
-        }
-
-        return Collections.unmodifiableList(this.questsToUpdate);
     }
 
     /**
