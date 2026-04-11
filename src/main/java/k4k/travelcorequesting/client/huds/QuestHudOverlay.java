@@ -67,6 +67,12 @@ public class QuestHudOverlay implements HudRenderCallback {
         widget.setTaskPin(taskId);
     }
 
+    public void removeTask(Identifier questId, String taskId) {
+        var widget = questWidgets.get(questId);
+        if (widget == null) return;
+        widget.removeTask(taskId);
+    }
+
     public void removeQuest(Identifier questId) {
         var widget = questWidgets.get(questId);
         if (widget == null) return;

@@ -6,9 +6,11 @@ import k4k.travelcorequesting.client.huds.QuestHudOverlay;
 import k4k.travelcorequesting.client.interfaces.ClientQuestManagerContainer;
 import k4k.travelcorequesting.infro.networking.HudChangeTaskProgressS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudRemoveQuestS2CPacket;
+import k4k.travelcorequesting.infro.networking.HudRemoveTaskS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudSetQuestStageS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudTaskCompleteS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudTaskPinS2CPacket;
+import k4k.travelcorequesting.infro.networking.TaskShowS2CPacket;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -30,10 +32,15 @@ public class TravelcoreQuestingClient implements ClientModInitializer {
             client.execute(() -> QUEST_HUD_OVERLAY.addQuest(packet.questId(), packet.quest(), packet.tasks()));
         });
 
-//        ClientPlayNetworking.registerGlobalReceiver(TaskShowS2CPacket.TYPE, (packet, player, sender) -> {
-//            var client = MinecraftClient.getInstance();
-//            client.execute(() -> QUEST_HUD_OVERLAY.addTask(packet.questId(), packet.taskId(), packet.task()));
-//        });
+        ClientPlayNetworking.registerGlobalReceiver(TaskShowS2CPacket.TYPE, (packet, player, sender) -> {
+            var client = MinecraftClient.getInstance();
+            client.execute(() -> QUEST_HUD_OVERLAY.addTask(packet.questId(), packet.taskId(), packet.task()));
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(HudRemoveTaskS2CPacket.TYPE, (packet, player, sender) -> {
+            var client = MinecraftClient.getInstance();
+            client.execute(() -> QUEST_HUD_OVERLAY.removeTask(packet.questId(), packet.taskId()));
+        });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskCompleteS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();

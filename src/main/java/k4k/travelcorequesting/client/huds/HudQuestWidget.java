@@ -42,6 +42,7 @@ public class HudQuestWidget {
     private final LinkedHashMap<String, HudTaskWidget> taskWidgets = new LinkedHashMap<>();
     private final Animator animator = new Animator(Util::getMeasuringTimeMs);
     private @Nullable LinkedHashMap<String, HudTaskWidget> outgoingTasks = null;
+    private final LinkedHashMap<String, HudTaskWidget> removingTasks = new LinkedHashMap<>();
     private @Nullable String pinnedTaskId = null;
 
     public HudQuestWidget(QuestDisplay display, Map<String, TaskDisplay> tasks) {
@@ -64,6 +65,7 @@ public class HudQuestWidget {
     }
 
     public void changeStage(QuestDisplay display, Map<String, TaskDisplay> tasks) {
+        removingTasks.clear();
         outgoingTasks = new LinkedHashMap<>(taskWidgets);
         outgoingTasks.values().forEach(HudTaskWidget::playSwitchOutAnimation);
 
@@ -71,6 +73,13 @@ public class HudQuestWidget {
         taskWidgets.clear();
         pinnedTaskId = null;
         populateTasks(tasks);
+    }
+
+    public void removeTask(String taskId) {
+        var widget = taskWidgets.remove(taskId);
+        if (widget == null) return;
+        widget.playOutAnimation();
+        removingTasks.put(taskId, widget);
     }
 
     public void addTask(String taskId, TaskDisplay task) {
@@ -87,6 +96,7 @@ public class HudQuestWidget {
     }
 
     public void update() {
+        removingTasks.entrySet().removeIf(e -> e.getValue().isAnimatorIdle());
         if (outgoingTasks != null && outgoingTasks.values().stream().allMatch(HudTaskWidget::isAnimatorIdle)) {
             outgoingTasks = null;
             taskWidgets.values().forEach(HudTaskWidget::playSwitchInAnimation);
@@ -112,11 +122,13 @@ public class HudQuestWidget {
     public int getHeight(int hudWidth) {
         int titleHeight = client.textRenderer.getWrappedLinesHeight(display.title(), hudWidth - 2);
         int currentHeight = computeCurrentTasksHeight(taskWidgets, hudWidth);
+        int removingHeight = computeTasksHeight(removingTasks, hudWidth, null);
+        int combinedHeight = currentHeight + removingHeight;
 
-        if (outgoingTasks == null) return titleHeight + currentHeight;
+        if (outgoingTasks == null) return titleHeight + combinedHeight;
 
         int outgoingHeight = computeTasksHeight(outgoingTasks, hudWidth, null);
-        return titleHeight + Math.max(currentHeight, outgoingHeight);
+        return titleHeight + Math.max(combinedHeight, outgoingHeight);
     }
 
     public int render(DrawContext context, int x, int y, int hudWidth) {
@@ -145,9 +157,13 @@ public class HudQuestWidget {
         }
 
         int tasksHeight = currentTasksHeight;
+        if (!removingTasks.isEmpty()) {
+            int removingTasksHeight = renderTasks(context, drawX, taskStartY + currentTasksHeight, hudWidth, removingTasks, null);
+            tasksHeight += removingTasksHeight;
+        }
         if (outgoingTasks != null) {
             int outgoingTasksHeight = renderTasks(context, drawX, taskStartY, hudWidth, outgoingTasks, null);
-            tasksHeight = Math.max(currentTasksHeight, outgoingTasksHeight);
+            tasksHeight = Math.max(tasksHeight, outgoingTasksHeight);
         }
 
         RenderSystem.setShaderColor(1, 1, 1, 1);

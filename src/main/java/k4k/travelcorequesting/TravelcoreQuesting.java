@@ -8,9 +8,11 @@ import k4k.travelcorequesting.infro.commands.ExecuteCommandExtension;
 import k4k.travelcorequesting.infro.loaders.QuestingPersistentStateAdapter;
 import k4k.travelcorequesting.infro.networking.HudChangeTaskProgressS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudRemoveQuestS2CPacket;
+import k4k.travelcorequesting.infro.networking.HudRemoveTaskS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudSetQuestStageS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudTaskCompleteS2CPacket;
 import k4k.travelcorequesting.infro.networking.HudTaskPinS2CPacket;
+import k4k.travelcorequesting.infro.networking.TaskShowS2CPacket;
 import k4k.travelcorequesting.infro.utils.QuestDisplays;
 import k4k.travelcorequesting.infro.utils.TaskDisplays;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
@@ -39,10 +41,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// TODO: Реализовать периодическую синхронизацию квестов между сервером и клиентом.
-//   Реализовать распределённую синхронизацию.
-//   (Можно не реализовывать периодическую синхронизацию квестов, если клиент
-//   будет синхронизироваться по событию)
 
 public class TravelcoreQuesting implements ModInitializer {
 	public static final String MOD_ID = "travelcorequesting";
@@ -150,6 +148,27 @@ public class TravelcoreQuesting implements ModInitializer {
 		QuestEvents.TASK_PIN_CHANGED.register((questId, taskId, player) ->
 				ServerPlayNetworking.send(player, new HudTaskPinS2CPacket(questId, taskId))
 		);
+
+		QuestProgressEvents.TASK_LOADED.register((taskEntry, player, stageChanged) -> {
+			if (stageChanged) return;
+			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
+			if (!questManager.isQuestPinned(taskEntry.questId(), player)) return;
+			ServerPlayNetworking.send(player, new TaskShowS2CPacket(
+					taskEntry.questId(),
+					taskEntry.taskId(),
+					TaskDisplays.fromTask(taskEntry.task())
+			));
+		});
+
+		QuestProgressEvents.TASK_UNLOADED.register((taskEntry, player, stageChanged) -> {
+			if (stageChanged) return;
+			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
+			if (!questManager.isQuestPinned(taskEntry.questId(), player)) return;
+			ServerPlayNetworking.send(player, new HudRemoveTaskS2CPacket(
+					taskEntry.questId(),
+					taskEntry.taskId()
+			));
+		});
 	}
 
 	private void registerQuestResourceLoader() {
