@@ -17,6 +17,7 @@ import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.apache.commons.lang3.NotImplementedException;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 import java.util.function.Function;
@@ -42,7 +43,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
             var stageNbt = new NbtList();
             quest.getStage(stageId).stream()
                     .map(NbtString::of)
-                    .forEach(stagesNbt::add);
+                    .forEach(stageNbt::add);
             stagesNbt.add(stageNbt);
         }
 
@@ -77,13 +78,16 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         nbt.putBoolean("successManual", task.isManualSuccess());
         nbt.putBoolean("failureManual", task.isManualFailure());
 
-        nbt.put("successCondition", encodeDynamicCondition(task.successCondition()));
-        nbt.put("failureCondition", encodeDynamicCondition(task.failureCondition()));
+        var successCondition = task.successCondition();
+        if (successCondition != null) nbt.put("successCondition", encodeDynamicCondition(successCondition));
+
+        var failureCondition = task.failureCondition();
+        if (failureCondition != null) nbt.put("failureCondition", encodeDynamicCondition(failureCondition));
 
         return nbt;
     }
 
-    private NbtCompound encodeDynamicCondition(ITaskCondition condition) {
+    private NbtCompound encodeDynamicCondition(@NotNull ITaskCondition condition) {
         var nbt = new NbtCompound();
 
         if (condition instanceof PredicateCondition predicateCondition) {
@@ -179,9 +183,9 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         if (nbt.contains("unload"))
             task.setUnloadFunction(Identifier.tryParse(nbt.getString("unload")));
         if (nbt.contains("successCondition"))
-            task.setSuccessCondition(decodeDynamicCondition(nbt.getCompound("successCondition")));
+            task.setSuccessCondition(nbt.contains("successCondition") ? decodeDynamicCondition(nbt.getCompound("successCondition")) : null);
         if (nbt.contains("failureCondition"))
-            task.setFailureCondition(decodeDynamicCondition(nbt.getCompound("failureCondition")));
+            task.setFailureCondition(nbt.contains("failureCondition") ? decodeDynamicCondition(nbt.getCompound("failureCondition")) : null);
 
         task.setManualSuccess(nbt.getBoolean("successManual"));
         task.setManualFailure(nbt.getBoolean("failureManual"));
