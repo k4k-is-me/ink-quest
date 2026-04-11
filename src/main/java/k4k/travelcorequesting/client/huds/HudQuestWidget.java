@@ -74,7 +74,7 @@ public class HudQuestWidget {
     }
 
     public void addTask(String taskId, TaskDisplay task) {
-        // TODO: анимация "расталкивания" — место появляется плавно
+        if (taskWidgets.containsKey(taskId)) return;
         boolean isRequired = taskWidgets.isEmpty();
         var widget = new HudTaskWidget(task, isRequired);
         widget.playInAnimation();

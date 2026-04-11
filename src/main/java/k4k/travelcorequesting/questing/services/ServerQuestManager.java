@@ -693,11 +693,11 @@ public class ServerQuestManager {
         var entry = this.questRepository.getQuestEntry(questId);
         if (entry == null) return;
 
-        questTracker.recomputeActiveStage(newStage ->
+        var stageChanged = questTracker.recomputeActiveStage(newStage ->
                 QuestProgressEvents.STAGE_CHANGED.invoker().onStageChange(entry, newStage, player));
 
         if (questTracker.getActiveStage().isPresent()) {
-            this.ensureActiveStageLoaded(player, questTracker);
+            this.ensureActiveStageLoaded(player, questTracker, stageChanged);
             this.processActiveTasks(player, questId, questTracker);
         }
 
@@ -765,7 +765,7 @@ public class ServerQuestManager {
      * @param player Игрок
      * @param questTracker Трекер квеста
      */
-    private void ensureActiveStageLoaded(ServerPlayerEntity player, QuestProgressTracker questTracker) {
+    private void ensureActiveStageLoaded(ServerPlayerEntity player, QuestProgressTracker questTracker, boolean stageChanged) {
         var prevLoadedTasks = new HashSet<>(questTracker.getActiveTasks());
         questTracker.loadActiveStage(
                 task -> this.conditionDispatcher.getCurrentValue(task.successCondition(), player),
@@ -779,7 +779,7 @@ public class ServerQuestManager {
             var taskEntry = this.questRepository.getTaskEntry(questTracker.getQuestId(), taskId);
             if (taskEntry == null) return;
 
-            QuestProgressEvents.TASK_UNLOADED.invoker().onTaskUnload(taskEntry, player);
+            QuestProgressEvents.TASK_UNLOADED.invoker().onTaskUnload(taskEntry, player, stageChanged);
         });
 
         // Load tasks in current stage that are not loaded
@@ -790,7 +790,7 @@ public class ServerQuestManager {
             this.conditionDispatcher.load(taskEntry.task().successCondition(), player);
             this.conditionDispatcher.load(taskEntry.task().failureCondition(), player);
 
-            QuestProgressEvents.TASK_LOADED.invoker().onTaskLoad(taskEntry, player);
+            QuestProgressEvents.TASK_LOADED.invoker().onTaskLoad(taskEntry, player, stageChanged);
         });
 
     }

@@ -35,9 +35,9 @@ public class QuestProgressEvents {
         }
     });
 
-    public static final Event<TaskLoaded> TASK_LOADED = EventFactory.createArrayBacked(TaskLoaded.class, (callbacks) -> (taskEntry, player) -> {
+    public static final Event<TaskLoaded> TASK_LOADED = EventFactory.createArrayBacked(TaskLoaded.class, (callbacks) -> (taskEntry, player, stageChanged) -> {
         for (var event : callbacks) {
-            event.onTaskLoad(taskEntry, player);
+            event.onTaskLoad(taskEntry, player, stageChanged);
         }
     });
 
@@ -50,9 +50,9 @@ public class QuestProgressEvents {
     // С unload могут быть технические трудности. Дело в том, что для выполнения unload нужен игрок, а его
     // может не быть на момент выполнения remove задачи (когда unload бы вызывался), а на момент автоматического
     // вызова unload (как это происходит с load) задачи уже не будет.
-    public static final Event<TaskUnloaded> TASK_UNLOADED = EventFactory.createArrayBacked(TaskUnloaded.class, (callbacks) -> (taskEntry, player) -> {
+    public static final Event<TaskUnloaded> TASK_UNLOADED = EventFactory.createArrayBacked(TaskUnloaded.class, (callbacks) -> (taskEntry, player, stageChanged) -> {
         for (var event : callbacks) {
-            event.onTaskUnload(taskEntry, player);
+            event.onTaskUnload(taskEntry, player, stageChanged);
         }
     });
 
@@ -97,7 +97,7 @@ public class QuestProgressEvents {
 
     @FunctionalInterface
     public interface TaskLoaded {
-        void onTaskLoad(TaskEntry taskEntry, ServerPlayerEntity player);
+        void onTaskLoad(TaskEntry taskEntry, ServerPlayerEntity player, boolean stageChanged);
     }
 
     @FunctionalInterface
@@ -107,7 +107,7 @@ public class QuestProgressEvents {
 
     @FunctionalInterface
     public interface TaskUnloaded {
-        void onTaskUnload(TaskEntry taskEntry, ServerPlayerEntity player);
+        void onTaskUnload(TaskEntry taskEntry, ServerPlayerEntity player, boolean stageChanged);
     }
 
     @FunctionalInterface

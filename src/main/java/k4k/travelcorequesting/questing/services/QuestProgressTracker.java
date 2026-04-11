@@ -81,11 +81,11 @@ public final class QuestProgressTracker {
      * сменился - вызывает хендлер
      * @param handler Обработчик смены этапа
      */
-    public void recomputeActiveStage(StageChangeHandler handler) {
+    public boolean recomputeActiveStage(StageChangeHandler handler) {
         var stage = this.computeActiveStageIndex();
 
         if (Objects.equals(stage, this.activeStage))
-            return;
+            return false;
 
         this.activeStage = stage;
 
@@ -95,6 +95,7 @@ public final class QuestProgressTracker {
                     .getRequiredTask(this.activeStage);
 
         handler.onStageChange(stage);
+        return true;
     }
 
     /**
