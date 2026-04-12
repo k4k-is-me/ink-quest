@@ -7,7 +7,7 @@
   "quest.command.error.tracking": "%s already has this quest",
   "quest.command.error.tracked": "Quest is being tracked",
   "quest.command.error.exists": "Quest already exists",
-  "quest.command.error.static": "Cannot modify quest from datapack",
+  "quest.command.error.static": "Quest is static",
   "quest.command.error.pinned": "Quest already pinned",
   "quest.command.error.not_pinned": "Quest is not pinned",
   "quest.command.error.complete": "Quest already complete",
@@ -75,5 +75,6 @@
   "quest.command.complete.task": "Completed task for %s",
   "quest.command.complete.stage": "Completed %s/%s tasks in active stage for %s",
   "quest.command.complete.quest": "Completed %s/%s tasks in quest for %s",
+  "quest.command.remove": "Quest removed",
   "quest.command.purge": "[!] Force-dropped quest for %s player(s) (%s online + %s offline)"
 }

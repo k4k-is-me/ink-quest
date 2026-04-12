@@ -75,6 +75,7 @@ public class QuestCommand {
     private static final String MSG_TASK_COMPLETE = "quest.command.complete.task";
     private static final String MSG_STAGE_COMPLETE = "quest.command.complete.stage";
     private static final String MSG_QUEST_COMPLETE = "quest.command.complete.quest";
+    private static final String MSG_QUEST_REMOVE = "quest.command.remove";
     private static final String MSG_QUEST_PURGE = "quest.command.purge";
 
     public static final List<QuestGeneralStatus> QUEST_STATUSES = Arrays.stream(QuestGeneralStatus.values()).toList();
@@ -120,6 +121,7 @@ public class QuestCommand {
                 .then(addPinSubCommand())
                 .then(addUnPinSubCommand())
                 .then(addCompleteSubCommand())
+                .then(addRemoveSubCommand())
                 .then(addPurgeSubCommand())
         );
     }
@@ -726,6 +728,42 @@ public class QuestCommand {
 
         questManager.pinRemove(questId, player);
         source.sendFeedback(() -> Text.translatable(MSG_QUEST_PIN_REMOVE), false);
+        return 1;
+    }
+
+    /// quest remove <questId: Identifier>
+    private static ArgumentBuilder<ServerCommandSource, ?> addRemoveSubCommand() {
+        return literal("remove")
+                .then(argument(ARG_QUEST_ID, identifier())
+                        .suggests(new DynamicQuestSuggestionProvider())
+                        .executes(context -> removeQuest(
+                                context,
+                                getIdentifier(context, ARG_QUEST_ID)
+                        ))
+                );
+    }
+
+    private static int removeQuest(CommandContext<ServerCommandSource> context, Identifier questId) {
+        var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
+        var source = context.getSource();
+
+        if (!questManager.isQuestExists(questId)) {
+            source.sendError(Text.translatable(ERR_QUEST_MISSING));
+            return 0;
+        }
+
+        if (questManager.isQuestStatic(questId)) {
+            source.sendError(Text.translatable(ERR_QUEST_STATIC));
+            return 0;
+        }
+
+        if (questManager.isQuestTrackedByAnyone(questId)) {
+            source.sendError(Text.translatable(ERR_QUEST_TRACKED));
+            return 0;
+        }
+
+        questManager.removeDynamicQuest(questId);
+        source.sendFeedback(() -> Text.translatable(MSG_QUEST_REMOVE), true);
         return 1;
     }
 

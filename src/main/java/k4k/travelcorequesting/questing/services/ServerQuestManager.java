@@ -86,6 +86,15 @@ public class ServerQuestManager {
         QuestEvents.QUEST_CREATED.invoker().onQuestCreation(entry);
     }
 
+    public void removeDynamicQuest(Identifier questId) {
+        Objects.requireNonNull(questId);
+
+        this.questRepository.removeDynamicQuest(questId);
+        this.isDirty = true;
+
+        QuestEvents.QUEST_REMOVED.invoker().onQuestRemoval(questId);
+    }
+
     // <editor-fold desc="Модификация квестов">
 
     /**

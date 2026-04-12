@@ -83,6 +83,13 @@ public final class QuestRepository implements QuestResolver {
         return new QuestEntry(questId, quest, QuestSourceType.DYNAMIC);
     }
 
+    public void removeDynamicQuest(Identifier questId) {
+        Objects.requireNonNull(questId);
+        if (!this.dynamicQuests.containsKey(questId))
+            throw new IllegalArgumentException(String.format("Dynamic quest %s not found", questId));
+        this.dynamicQuests.remove(questId);
+    }
+
     public QuestModifier getQuestModifier(Identifier questId) {
         Objects.requireNonNull(questId);
 
