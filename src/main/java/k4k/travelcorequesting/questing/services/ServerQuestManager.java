@@ -3,6 +3,7 @@ package k4k.travelcorequesting.questing.services;
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.abstractions.Quest;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
+import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
@@ -749,7 +750,7 @@ public class ServerQuestManager {
                 QuestEvents.QUEST_PIN_REMOVED.invoker().onQuestPinRemove(questId, player);
             }
             QuestProgressEvents.QUEST_COMPLETED.invoker().onQuestCompletion(entry, status, player);
-            this.unlockDependentQuests(player, playerTracker, questId);
+            this.unlockDependentQuests(player, playerTracker, questId, wasPinned);
             this.isDirty = true;
         });
     }
@@ -839,8 +840,11 @@ public class ServerQuestManager {
     /**
      * Проверяет и выдаёт квесты, зависящие от завершённого квеста.
      * Квест выдаётся, если все квесты хотя бы в одной группе зависимостей завершены успешно.
+     * Закрепление выданного квеста определяется его {@link QuestPinMode}:
+     * {@code FORCE} — всегда закрепить, {@code AUTO} — закрепить если родительский был закреплён,
+     * {@code OFF} — не закреплять.
      */
-    private void unlockDependentQuests(ServerPlayerEntity player, PlayerProgressTracker playerTracker, Identifier questId) {
+    private void unlockDependentQuests(ServerPlayerEntity player, PlayerProgressTracker playerTracker, Identifier questId, boolean wasParentPinned) {
         for (var dependentQuestId : this.questRepository.getDependentQuests(questId)) {
             var dependentQuest = this.questRepository.getQuest(dependentQuestId);
             if (dependentQuest == null) continue;
@@ -851,6 +855,14 @@ public class ServerQuestManager {
 
                 if (isGroupComplete) {
                     this.giveQuest(dependentQuestId, player);
+
+                    boolean shouldPin = switch (dependentQuest.getPinMode()) {
+                        case FORCE -> true;
+                        case AUTO -> wasParentPinned;
+                        case OFF -> false;
+                    };
+                    if (shouldPin) this.pinRequiredTask(dependentQuestId, player);
+
                     break;
                 }
             }

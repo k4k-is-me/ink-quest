@@ -4,6 +4,7 @@ import k4k.travelcorequesting.common.NbtEncoder;
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.abstractions.Quest;
 import k4k.travelcorequesting.domain.abstractions.Task;
+import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
@@ -57,7 +58,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         nbt.putString("icon", quest.icon().toString());
         nbt.putInt("index", quest.index());
         nbt.putBoolean("background", quest.background());
-        nbt.putBoolean("pin", quest.pin());
+        nbt.putString("pin_mode", quest.getPinMode().name().toLowerCase());
         nbt.put("dependencies", dependenciesNbt);
         nbt.put("stages", stagesNbt);
         nbt.put("tasks", tasksNbt);
@@ -121,7 +122,11 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         var icon = Identifier.tryParse(nbt.getString("icon"));
         var index = nbt.getInt("index");
         var background = nbt.getBoolean("background");
-        var pin = nbt.getBoolean("pin");
+        var pinMode = nbt.contains("pin_mode") ? switch (nbt.getString("pin_mode")) {
+            case "force" -> QuestPinMode.FORCE;
+            case "off" -> QuestPinMode.OFF;
+            default -> QuestPinMode.AUTO;
+        } : QuestPinMode.AUTO;
 
         // Декодируем зависимости
         var dependenciesNbt = nbt.getList("dependencies", NbtElement.LIST_TYPE);
@@ -156,7 +161,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         quest.setIcon(icon);
         quest.setIndex(index);
         quest.setBackground(background);
-        quest.setPin(pin);
+        quest.setPinMode(pinMode);
         quest.setDependencies(dependencies);
         // Добавляем задачи
         tasks.forEach(quest::setTask);

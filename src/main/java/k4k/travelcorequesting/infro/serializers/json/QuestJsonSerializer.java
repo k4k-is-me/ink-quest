@@ -4,6 +4,7 @@ import com.google.gson.*;
 import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.common.serialization.IdentifierSerializer;
 import k4k.travelcorequesting.common.serialization.JUtil;
+import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
@@ -28,7 +29,7 @@ public class QuestJsonSerializer {
     // Increase version if new changes are not compatible!
     //   eg: added or removed a required field, changed field type or enum value is removed
     protected static final int VERSION = 1;
-    protected static final int VARIANT = 0;
+    protected static final int VARIANT = 1;
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeHierarchyAdapter(MutableQuest.class, new GsonSerializer())
@@ -78,7 +79,15 @@ public class QuestJsonSerializer {
 
             var isBackground = JUtil.getMemberWithDefault(json, "background", JsonElement::getAsBoolean, false);
 
-            var pin = JUtil.getMemberWithDefault(json, "pin", JsonElement::getAsBoolean, false);
+            var pinMode = JUtil.getMemberWithDefault(json, "pin_mode", element -> {
+                String smth = element.getAsString().toLowerCase();
+                return switch (smth) {
+                    case "auto" -> QuestPinMode.AUTO;
+                    case "force" -> QuestPinMode.FORCE;
+                    case "off" -> QuestPinMode.OFF;
+                    default -> throw new JsonParseException("Unknown pin_mode '%s', expected: auto, force, off".formatted(smth));
+                };
+            }, QuestPinMode.AUTO);
 
             // Зависимости квеста
             var dependencies = JUtil.getMemberArray(
@@ -114,7 +123,7 @@ public class QuestJsonSerializer {
             quest.setIcon(icon);
             quest.setIndex(index);
             quest.setBackground(isBackground);
-            quest.setPin(pin);
+            quest.setPinMode(pinMode);
 
             // Добавляем задачи
             for (var taskEntry : tasks.entrySet()) {

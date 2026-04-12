@@ -1,6 +1,7 @@
 package k4k.travelcorequesting.questing.abstractions;
 
 import k4k.travelcorequesting.domain.abstractions.Quest;
+import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -12,7 +13,7 @@ public interface QuestModifier {
     Quest setIcon(Identifier icon);
     Quest setIndex(int index);
     Quest setBackground(boolean isBackground);
-    Quest setPin(boolean pin);
+    Quest setPinMode(QuestPinMode pinMode);
     Quest addAndDependency(Identifier dependency);
     Quest addOrDependency(Identifier dependency);
     Quest removeDependencies();

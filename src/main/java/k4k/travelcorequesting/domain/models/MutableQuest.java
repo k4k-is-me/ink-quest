@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.domain.abstractions.Quest;
 import k4k.travelcorequesting.domain.abstractions.Task;
+import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -20,7 +21,7 @@ public final class MutableQuest implements Quest {
     private Identifier icon;
     private int index;
     private boolean background;
-    private boolean pin;
+    private QuestPinMode pinMode = QuestPinMode.AUTO;
     private final List<List<Identifier>> dependencies;
     private final Map<String, MutableTask> tasks;
     private final List<List<String>> stages;  // NOTE: Should not have duplicate tasks in any one stage
@@ -33,7 +34,6 @@ public final class MutableQuest implements Quest {
             Identifier icon,
             int index,
             boolean background,
-            boolean pin,
             List<List<Identifier>> dependencies,
             Map<String, MutableTask> tasks,
             List<List<String>> stages
@@ -43,7 +43,6 @@ public final class MutableQuest implements Quest {
         this.icon = icon;
         this.index = index;
         this.background = background;
-        this.pin = pin;
         this.dependencies = dependencies;
         this.tasks = tasks;
         this.stages = stages;
@@ -58,7 +57,6 @@ public final class MutableQuest implements Quest {
                 null,
                 DEFAULT_QUEST_ICON,
                 0,
-                true,
                 true,
                 new ArrayList<>(),
                 new HashMap<>(),
@@ -112,12 +110,12 @@ public final class MutableQuest implements Quest {
     }
 
     @Override
-    public boolean pin() {
-        return this.pin;
+    public QuestPinMode getPinMode() {
+        return this.pinMode;
     }
 
-    public void setPin(boolean pin) {
-        this.pin = pin;
+    public void setPinMode(QuestPinMode pinMode) {
+        this.pinMode = pinMode;
     }
 
     @Override

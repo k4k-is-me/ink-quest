@@ -2,6 +2,7 @@ package k4k.travelcorequesting.questing.services;
 
 import k4k.travelcorequesting.domain.abstractions.Quest;
 import k4k.travelcorequesting.domain.abstractions.Task;
+import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
@@ -336,12 +337,12 @@ public final class QuestRepository implements QuestResolver {
         }
 
         /**
-         * Устанавливает режим закрепления квеста. Ошибка, если квеста не существует
-         * @param pin Режим
+         * Устанавливает режим автозакрепления квеста. Ошибка, если квеста не существует
+         * @param pinMode Режим
          */
         @Override
-        public Quest setPin(boolean pin) {
-            quest.setPin(pin);
+        public Quest setPinMode(QuestPinMode pinMode) {
+            quest.setPinMode(pinMode);
             this.isDirty = true;
             return quest;
         }

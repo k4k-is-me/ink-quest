@@ -241,8 +241,18 @@ public class QuestCommand {
                                 .executes(context -> giveQuest(
                                         context,
                                         getIdentifier(context, ARG_QUEST_ID),
-                                        getPlayer(context, ARG_PLAYER)
+                                        getPlayer(context, ARG_PLAYER),
+                                        false
                                 ))
+
+                                .then(literal("pin")
+                                        .executes(context -> giveQuest(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                getPlayer(context, ARG_PLAYER),
+                                                true
+                                        ))
+                                )
                         )
                 );
     }
@@ -463,7 +473,7 @@ public class QuestCommand {
         int apply(ServerQuestManager questManager, ServerCommandSource source, QuestEntry entry);
     }
 
-    public static int giveQuest(CommandContext<ServerCommandSource> context, Identifier questId, ServerPlayerEntity player) {
+    public static int giveQuest(CommandContext<ServerCommandSource> context, Identifier questId, ServerPlayerEntity player, boolean pin) {
         var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
         var questResolver = questManager.getQuestResolver();
         var source = context.getSource();
@@ -481,6 +491,9 @@ public class QuestCommand {
         }
 
         questManager.giveQuest(questId, player);
+
+        if (pin) questManager.pinRequiredTask(questId, player);
+
         source.sendFeedback(() -> Text.translatable(MSG_QUEST_GIVE, QuestTexts.getQuestText(entry), player.getName()), false);
         return 1;
     }

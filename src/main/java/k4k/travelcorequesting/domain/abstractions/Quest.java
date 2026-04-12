@@ -1,5 +1,6 @@
 package k4k.travelcorequesting.domain.abstractions;
 
+import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -13,7 +14,7 @@ public interface Quest {
     Identifier icon();
     int index();
     boolean background();
-    boolean pin();
+    QuestPinMode getPinMode();
 
     // Methods to work with collections that do not require copying
 
