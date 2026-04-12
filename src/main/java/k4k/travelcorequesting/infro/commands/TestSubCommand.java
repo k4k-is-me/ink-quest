@@ -64,6 +64,29 @@ public class TestSubCommand {
                 );
     }
 
+    static int checkQuest(CommandContext<ServerCommandSource> context, ServerPlayerEntity player, Identifier questId, QuestGeneralStatus status) {
+        var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
+        var questResolver = questManager.getQuestResolver();
+        var entry = questResolver.getQuestEntry(questId);
+
+        if (!questManager.isQuestExists(questId) || entry == null) return 0;
+        if (!questManager.isQuestTracked(questId, player)) return 0;
+
+        return getQuestStatusPredicate(status).test(questManager, entry.questId(), player) ? 1 : 0;
+    }
+
+    static int checkTask(CommandContext<ServerCommandSource> context, ServerPlayerEntity player, Identifier questId, String taskId, TaskGeneralStatus status) {
+        var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
+        var questResolver = questManager.getQuestResolver();
+        var entry = questResolver.getQuestEntry(questId);
+
+        if (!questManager.isQuestExists(questId) || entry == null) return 0;
+        if (!questManager.isQuestTracked(questId, player)) return 0;
+        if (!entry.quest().containsTask(taskId)) return 0;
+
+        return getTaskStatusPredicate(status).test(questManager, questId, taskId, player) ? 1 : 0;
+    }
+
     public static int testQuest(CommandContext<ServerCommandSource> context, ServerPlayerEntity player, Identifier questId, QuestGeneralStatus status) {
         var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
         var questResolver = questManager.getQuestResolver();
