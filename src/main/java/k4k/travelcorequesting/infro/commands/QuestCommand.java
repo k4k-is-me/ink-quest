@@ -75,7 +75,7 @@ public class QuestCommand {
     private static final String MSG_TASK_COMPLETE = "quest.command.complete.task";
     private static final String MSG_STAGE_COMPLETE = "quest.command.complete.stage";
     private static final String MSG_QUEST_COMPLETE = "quest.command.complete.quest";
-    private static final String MSG_QUEST_UHOH_DROP_FOR_ALL = "quest.command.uhoh.drop_for_all";
+    private static final String MSG_QUEST_PURGE = "quest.command.purge";
 
     public static final List<QuestGeneralStatus> QUEST_STATUSES = Arrays.stream(QuestGeneralStatus.values()).toList();
 
@@ -120,7 +120,7 @@ public class QuestCommand {
                 .then(addPinSubCommand())
                 .then(addUnPinSubCommand())
                 .then(addCompleteSubCommand())
-                .then(addUhohSubCommand())
+                .then(addPurgeSubCommand())
         );
     }
 
@@ -729,17 +729,15 @@ public class QuestCommand {
         return 1;
     }
 
-    /// quest uhoh dropForAll <questId: Identifier>
-    private static ArgumentBuilder<ServerCommandSource, ?> addUhohSubCommand() {
-        return literal("uhoh")
-                .then(literal("dropForAll")
-                        .then(argument(ARG_QUEST_ID, identifier())
-                                .suggests(new RegisteredQuestSuggestionProvider())
-                                .executes(context -> dropQuestForAll(
-                                        context,
-                                        getIdentifier(context, ARG_QUEST_ID)
-                                ))
-                        )
+    /// quest purge <questId: Identifier>
+    private static ArgumentBuilder<ServerCommandSource, ?> addPurgeSubCommand() {
+        return literal("purge")
+                .then(argument(ARG_QUEST_ID, identifier())
+                        .suggests(new RegisteredQuestSuggestionProvider())
+                        .executes(context -> dropQuestForAll(
+                                context,
+                                getIdentifier(context, ARG_QUEST_ID)
+                        ))
                 );
     }
 
@@ -766,7 +764,7 @@ public class QuestCommand {
 
         int online = onlineDropped;
         source.sendFeedback(
-                () -> Text.translatable(MSG_QUEST_UHOH_DROP_FOR_ALL, online + offlineDropped, online, offlineDropped),
+                () -> Text.translatable(MSG_QUEST_PURGE, online + offlineDropped, online, offlineDropped),
                 true
         );
         return online + offlineDropped;
