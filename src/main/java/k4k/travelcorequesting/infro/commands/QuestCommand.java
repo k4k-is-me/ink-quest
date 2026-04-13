@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
+import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.infro.abstractions.QuestStatusPredicate;
 import k4k.travelcorequesting.infro.enums.QuestGeneralStatus;
 import k4k.travelcorequesting.infro.enums.TaskGeneralStatus;
@@ -23,6 +24,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Function;
 
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static k4k.travelcorequesting.infro.command_argument_types.CompletionLevelArgumentType.*;
@@ -43,6 +46,8 @@ public class QuestCommand {
     // Quest building args
     private static final String ARG_TITLE = "title";
     private static final String ARG_DESCRIPTION = "description";
+    private static final String ARG_ICON = "icon";
+    private static final String ARG_INDEX = "index";
 
     // Result messages
     public static final String ERR_QUEST_MISSING = "quest.command.error.missing";
@@ -66,6 +71,10 @@ public class QuestCommand {
     private static final String MSG_QUEST_NEW = "quest.command.new";
     private static final String MSG_QUEST_MODIFY_TITLE = "quest.command.modify.title";
     private static final String MSG_QUEST_MODIFY_DESCRIPTION = "quest.command.modify.description";
+    private static final String MSG_QUEST_MODIFY_ICON = "quest.command.modify.icon";
+    private static final String MSG_QUEST_MODIFY_INDEX = "quest.command.modify.index";
+    private static final String MSG_QUEST_MODIFY_BACKGROUND = "quest.command.modify.background";
+    private static final String MSG_QUEST_MODIFY_PIN_MODE = "quest.command.modify.pin_mode";
     private static final String MSG_QUEST_MODIFY_TASK_ADD = "quest.command.modify.task.add";
     private static final String MSG_QUEST_MODIFY_TASK_REMOVE = "quest.command.modify.task.remove";
     private static final String MSG_QUEST_GIVE = "quest.command.give";
@@ -179,6 +188,69 @@ public class QuestCommand {
                                         .executes(context -> modifyQuestDescription(
                                                 context,
                                                 getIdentifier(context, ARG_QUEST_ID)
+                                        ))
+                                )
+                        )
+
+                        // ... icon <icon: Identifier>
+                        .then(literal("icon")
+                                .then(argument(ARG_ICON, identifier())
+                                        .executes(context -> modifyQuestIcon(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID)
+                                        ))
+                                )
+                        )
+
+                        // ... index <index: int>
+                        .then(literal("index")
+                                .then(argument(ARG_INDEX, integer())
+                                        .executes(context -> modifyQuestIndex(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID)
+                                        ))
+                                )
+                        )
+
+                        // ... background true|false
+                        .then(literal("background")
+                                .then(literal("true")
+                                        .executes(context -> modifyQuestBackground(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                true
+                                        ))
+                                )
+                                .then(literal("false")
+                                        .executes(context -> modifyQuestBackground(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                false
+                                        ))
+                                )
+                        )
+
+                        // ... pin_mode auto|off|force
+                        .then(literal("pin_mode")
+                                .then(literal("auto")
+                                        .executes(context -> modifyQuestPinMode(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                QuestPinMode.AUTO
+                                        ))
+                                )
+                                .then(literal("off")
+                                        .executes(context -> modifyQuestPinMode(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                QuestPinMode.OFF
+                                        ))
+                                )
+                                .then(literal("force")
+                                        .executes(context -> modifyQuestPinMode(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                QuestPinMode.FORCE
                                         ))
                                 )
                         )
@@ -394,6 +466,40 @@ public class QuestCommand {
             var description = getTextArgument(context, ARG_DESCRIPTION);
             questManager.modifyQuest(questId, quest -> quest.setDescription(description));
             source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_DESCRIPTION), true);
+            return 1;
+        });
+    }
+
+    public static int modifyQuestIcon(CommandContext<ServerCommandSource> context, Identifier questId) {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
+            var icon = getIdentifier(context, ARG_ICON);
+            questManager.modifyQuest(questId, quest -> quest.setIcon(icon));
+            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_ICON), true);
+            return 1;
+        });
+    }
+
+    public static int modifyQuestIndex(CommandContext<ServerCommandSource> context, Identifier questId) {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
+            var index = getInteger(context, ARG_INDEX);
+            questManager.modifyQuest(questId, quest -> quest.setIndex(index));
+            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_INDEX), true);
+            return 1;
+        });
+    }
+
+    private static int modifyQuestBackground(CommandContext<ServerCommandSource> context, Identifier questId, boolean background) {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
+            questManager.modifyQuest(questId, quest -> quest.setBackground(background));
+            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_BACKGROUND), true);
+            return 1;
+        });
+    }
+
+    private static int modifyQuestPinMode(CommandContext<ServerCommandSource> context, Identifier questId, QuestPinMode pinMode) {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
+            questManager.modifyQuest(questId, quest -> quest.setPinMode(pinMode));
+            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_PIN_MODE), true);
             return 1;
         });
     }

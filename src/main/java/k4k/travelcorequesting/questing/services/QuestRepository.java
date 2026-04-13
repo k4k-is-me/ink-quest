@@ -77,9 +77,8 @@ public final class QuestRepository implements QuestResolver {
         if (this.dynamicQuests.containsKey(questId))
             throw new IllegalArgumentException(String.format("Quest with id %s already exists", questId));
 
-        var quest = this.dynamicQuests.put(questId, MutableQuest.create(
-                Text.literal(questId.toString())
-        ));
+        var quest = MutableQuest.create(Text.literal(questId.toString()));
+        this.dynamicQuests.put(questId, quest);
 
         return new QuestEntry(questId, quest, QuestSourceType.DYNAMIC);
     }
