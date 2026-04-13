@@ -116,7 +116,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         return nbt;
     }
 
-    public Quest decode(NbtCompound nbt) {
+    public MutableQuest decode(NbtCompound nbt) {
         var title = Text.Serializer.fromJson(nbt.getString("title"));
         var description = nbt.contains("description") ? Text.Serializer.fromJson(nbt.getString("description")) : null;
         var icon = Identifier.tryParse(nbt.getString("icon"));

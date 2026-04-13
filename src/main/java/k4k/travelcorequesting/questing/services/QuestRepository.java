@@ -17,7 +17,6 @@ import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -40,13 +39,9 @@ public final class QuestRepository implements QuestResolver {
         this.recomputeDependants();
     }
 
-    public void replaceDynamicQuests(Map<Identifier, Quest> newDynamicQuests) {
+    public void replaceDynamicQuests(Map<Identifier, MutableQuest> newDynamicQuests) {
         this.dynamicQuests.clear();
-        this.dynamicQuests.putAll(newDynamicQuests.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> (MutableQuest) entry.getValue()
-                )));
+        this.dynamicQuests.putAll(Map.copyOf(newDynamicQuests));
     }
 
     /**

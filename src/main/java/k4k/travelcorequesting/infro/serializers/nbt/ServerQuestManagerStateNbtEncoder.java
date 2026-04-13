@@ -1,7 +1,7 @@
 package k4k.travelcorequesting.infro.serializers.nbt;
 
 import k4k.travelcorequesting.common.NbtEncoder;
-import k4k.travelcorequesting.domain.abstractions.Quest;
+import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.questing.states.PlayerTrackerState;
 import k4k.travelcorequesting.questing.states.ServerQuestManagerState;
 import net.minecraft.nbt.NbtCompound;
@@ -48,7 +48,7 @@ public class ServerQuestManagerStateNbtEncoder implements NbtEncoder<ServerQuest
             players.put(UUID.fromString(playerKey), playerTrackerStateEncoder.decode(playerNbt.getCompound(playerKey)));
         }
 
-        var dynamicQuests = new HashMap<Identifier, Quest>(questsNbt.getSize());
+        var dynamicQuests = new HashMap<Identifier, MutableQuest>(questsNbt.getSize());
         for (var questKey : questsNbt.getKeys()) {
             dynamicQuests.put(
                     Identifier.tryParse(questKey),
