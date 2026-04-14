@@ -2,6 +2,7 @@ package k4k.travelcorequesting.questing.services;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.abstractions.Quest;
+import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
@@ -906,7 +907,7 @@ public class ServerQuestManager {
                 ))),
                 this.questRepository.getDynamicQuestIds().stream().collect(Collectors.toUnmodifiableMap(
                         Function.identity(),
-                        this.questRepository::requireQuest
+                        id -> (MutableQuest) this.questRepository.requireQuest(id)
                 ))
         );
     }

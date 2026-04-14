@@ -1,10 +1,10 @@
 package k4k.travelcorequesting.client.huds;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import k4k.travelcorequesting.common.animation.Animation;
-import k4k.travelcorequesting.common.animation.Animator;
-import k4k.travelcorequesting.common.animation.ParameterKey;
-import static k4k.travelcorequesting.common.animation.ParameterAnimations.*;
+import k4k.travelcorequesting.client.animation.Animation;
+import k4k.travelcorequesting.client.animation.Animator;
+import k4k.travelcorequesting.client.animation.ParameterKey;
+import static k4k.travelcorequesting.client.animation.ParameterAnimations.*;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
