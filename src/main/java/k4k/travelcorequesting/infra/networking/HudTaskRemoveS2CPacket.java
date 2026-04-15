@@ -1,39 +1,39 @@
 package k4k.travelcorequesting.infra.networking;
 
 import k4k.travelcorequesting.TravelcoreQuesting;
-import k4k.travelcorequesting.infra.utils.TaskDisplays;
-import k4k.travelcorequesting.questing.models.TaskDisplay;
 import net.fabricmc.fabric.api.networking.v1.FabricPacket;
 import net.fabricmc.fabric.api.networking.v1.PacketType;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 
-public record TaskShowS2CPacket(
+/**
+ * Удаляет задачу из HUD закреплённого квеста.
+ * Отправляется сервером при событии {@code TASK_UNLOADED} (без смены этапа).
+ */
+public record HudTaskRemoveS2CPacket(
         Identifier questId,
-        String taskId,
-        TaskDisplay task
+        String taskId
 ) implements FabricPacket {
     @Override
     public PacketType<?> getType() {
         return TYPE;
     }
 
-    public static final PacketType<TaskShowS2CPacket> TYPE = PacketType.create(
-            Identifier.of(TravelcoreQuesting.MOD_ID, "task-load-s2c"),
-            TaskShowS2CPacket::read
+    public static final PacketType<HudTaskRemoveS2CPacket> TYPE = PacketType.create(
+            Identifier.of(TravelcoreQuesting.MOD_ID, "task-remove-s2c"),
+            HudTaskRemoveS2CPacket::read
     );
 
-    public static TaskShowS2CPacket read(PacketByteBuf buf) {
+    /** Читает пакет из буфера. */
+    public static HudTaskRemoveS2CPacket read(PacketByteBuf buf) {
         var questId = buf.readIdentifier();
         var taskId = buf.readString();
-        var task = TaskDisplays.readFromPacketByteBuf(buf);
-        return new TaskShowS2CPacket(questId, taskId, task);
+        return new HudTaskRemoveS2CPacket(questId, taskId);
     }
 
     @Override
     public void write(PacketByteBuf buf) {
         buf.writeIdentifier(this.questId);
         buf.writeString(this.taskId);
-        TaskDisplays.writeToPacketByteBuf(buf, this.task);
     }
 }

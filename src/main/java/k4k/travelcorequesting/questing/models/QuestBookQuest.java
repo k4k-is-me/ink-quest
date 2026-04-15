@@ -12,8 +12,8 @@ import java.util.List;
  * @param description описание квеста (может отсутствовать)
  * @param tasks       список задач текущего активного этапа (или последнего завершённого)
  */
-public record QuestDetailData(
+public record QuestBookQuest(
         Text title,
         @Nullable Text description,
-        List<TaskDetailData> tasks
+        List<QuestBookTask> tasks
 ) {}

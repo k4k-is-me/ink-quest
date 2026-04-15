@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 
 public final class MutableQuest implements Quest {
-    private static final Identifier DEFAULT_QUEST_ICON = Identifier.of(TravelcoreQuesting.MOD_ID, "textures/icons/quest_default.png");
+    private static final Identifier DEFAULT_QUEST_ICON = Identifier.of(TravelcoreQuesting.MOD_ID, "default");
 
     private Text title;
     private @Nullable Text description;

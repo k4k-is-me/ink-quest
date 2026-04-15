@@ -1,11 +1,19 @@
 package k4k.travelcorequesting.infra.utils;
 
 import k4k.travelcorequesting.domain.abstractions.Task;
-import k4k.travelcorequesting.questing.models.TaskDisplay;
+import k4k.travelcorequesting.questing.models.HudTask;
 import net.minecraft.network.PacketByteBuf;
 
-public class TaskDisplays {
-    public static void writeToPacketByteBuf(PacketByteBuf buf, TaskDisplay task) {
+/** Утилиты сериализации {@link HudTask} в/из сетевых пакетов и фабричный метод из доменной модели. */
+public class HudTasks {
+
+    /**
+     * Записывает {@link HudTask} в буфер пакета.
+     *
+     * @param buf  буфер пакета
+     * @param task данные для записи
+     */
+    public static void writeToPacketByteBuf(PacketByteBuf buf, HudTask task) {
         buf.writeText(task.title());
 
         buf.writeBoolean(task.description() != null);
@@ -20,18 +28,31 @@ public class TaskDisplays {
         if (failureTarget != null) buf.writeInt(failureTarget);
     }
 
-    public static TaskDisplay readFromPacketByteBuf(PacketByteBuf buf) {
+    /**
+     * Читает {@link HudTask} из буфера пакета.
+     *
+     * @param buf буфер пакета
+     * @return прочитанные данные
+     */
+    public static HudTask readFromPacketByteBuf(PacketByteBuf buf) {
         var title = buf.readText();
         var description = buf.readBoolean() ? buf.readText() : null;
         var successTarget = buf.readBoolean() ? buf.readInt() : null;
         var failureTarget = buf.readBoolean() ? buf.readInt() : null;
-        return new TaskDisplay(title, description, successTarget, failureTarget);
+        return new HudTask(title, description, successTarget, failureTarget);
     }
 
-    public static TaskDisplay fromTask(Task task) {
+    /**
+     * Создаёт {@link HudTask} из доменной модели задачи.
+     * {@code successTarget}/{@code failureTarget} заполняются только для gradual-условий.
+     *
+     * @param task задача
+     * @return данные для HUD-виджета
+     */
+    public static HudTask fromTask(Task task) {
         var successCondition = task.successCondition();
         var failureCondition = task.failureCondition();
-        return new TaskDisplay(
+        return new HudTask(
                 task.title(),
                 task.description(),
                 successCondition != null && successCondition.isGradual() ? successCondition.getTargetValue() : null,

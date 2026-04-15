@@ -1,8 +1,8 @@
 package k4k.travelcorequesting.infra.networking;
 
 import k4k.travelcorequesting.TravelcoreQuesting;
-import k4k.travelcorequesting.infra.utils.QuestBriefDatas;
-import k4k.travelcorequesting.questing.models.QuestBriefData;
+import k4k.travelcorequesting.infra.utils.QuestBookQuestListItems;
+import k4k.travelcorequesting.questing.models.QuestBookQuestListItem;
 import net.fabricmc.fabric.api.networking.v1.FabricPacket;
 import net.fabricmc.fabric.api.networking.v1.PacketType;
 import net.minecraft.network.PacketByteBuf;
@@ -12,8 +12,8 @@ import net.minecraft.util.Identifier;
  * Уведомление клиента о добавлении нового квеста в список.
  * Отправляется сервером при событии {@code QUEST_GIVEN}.
  */
-public record QuestBriefAddedS2CPacket(
-        QuestBriefData quest
+public record QuestBookQuestListItemAddedS2CPacket(
+        QuestBookQuestListItem quest
 ) implements FabricPacket {
 
     @Override
@@ -21,18 +21,18 @@ public record QuestBriefAddedS2CPacket(
         return TYPE;
     }
 
-    public static final PacketType<QuestBriefAddedS2CPacket> TYPE = PacketType.create(
+    public static final PacketType<QuestBookQuestListItemAddedS2CPacket> TYPE = PacketType.create(
             Identifier.of(TravelcoreQuesting.MOD_ID, "quest-brief-added-s2c"),
-            QuestBriefAddedS2CPacket::read
+            QuestBookQuestListItemAddedS2CPacket::read
     );
 
     /** @param buf буфер пакета */
-    public static QuestBriefAddedS2CPacket read(PacketByteBuf buf) {
-        return new QuestBriefAddedS2CPacket(QuestBriefDatas.readFromPacketByteBuf(buf));
+    public static QuestBookQuestListItemAddedS2CPacket read(PacketByteBuf buf) {
+        return new QuestBookQuestListItemAddedS2CPacket(QuestBookQuestListItems.readFromPacketByteBuf(buf));
     }
 
     @Override
     public void write(PacketByteBuf buf) {
-        QuestBriefDatas.writeToPacketByteBuf(this.quest, buf);
+        QuestBookQuestListItems.writeToPacketByteBuf(this.quest, buf);
     }
 }

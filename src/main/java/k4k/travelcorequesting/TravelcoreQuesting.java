@@ -1,26 +1,29 @@
 package k4k.travelcorequesting;
 
+import k4k.travelcorequesting.infra.handlers.QuestBookSyncHandler;
+import k4k.travelcorequesting.infra.requests.GetQuestDetailsClientRequest;
 import k4k.travelcorequesting.infra.command_argument_types.CompletionLevelArgumentType;
 import k4k.travelcorequesting.infra.command_argument_types.CompletionStatusArgumentType;
 import k4k.travelcorequesting.infra.command_argument_types.QuestGeneralStatusArgumentType;
 import k4k.travelcorequesting.infra.command_argument_types.TaskGeneralStatusArgumentType;
 import k4k.travelcorequesting.infra.commands.ExecuteCommandExtension;
 import k4k.travelcorequesting.infra.loaders.QuestingPersistentStateAdapter;
-import k4k.travelcorequesting.infra.networking.HudChangeTaskProgressS2CPacket;
-import k4k.travelcorequesting.infra.networking.HudRemoveQuestS2CPacket;
-import k4k.travelcorequesting.infra.networking.HudRemoveTaskS2CPacket;
+import k4k.travelcorequesting.infra.networking.HudTaskSetProgressS2CPacket;
+import k4k.travelcorequesting.infra.networking.HudQuestRemoveS2CPacket;
+import k4k.travelcorequesting.infra.networking.HudTaskRemoveS2CPacket;
 import k4k.travelcorequesting.infra.networking.HudSetQuestStageS2CPacket;
 import k4k.travelcorequesting.infra.networking.HudTaskCompleteS2CPacket;
 import k4k.travelcorequesting.infra.networking.HudTaskPinS2CPacket;
-import k4k.travelcorequesting.infra.networking.TaskShowS2CPacket;
-import k4k.travelcorequesting.infra.utils.QuestDisplays;
-import k4k.travelcorequesting.infra.utils.TaskDisplays;
+import k4k.travelcorequesting.infra.networking.QuestBookTaskPinC2SPacket;
+import k4k.travelcorequesting.infra.networking.HudTaskAddS2CPacket;
+import k4k.travelcorequesting.infra.utils.HudQuests;
+import k4k.travelcorequesting.infra.utils.HudTasks;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import k4k.travelcorequesting.infra.loaders.QuestResourceLoader;
 import k4k.travelcorequesting.infra.commands.QuestCommand;
 import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
-import k4k.travelcorequesting.questing.models.TaskDisplay;
+import k4k.travelcorequesting.questing.models.HudTask;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
@@ -54,6 +57,21 @@ public class TravelcoreQuesting implements ModInitializer {
 		registerCommands();
 		registerQuestProgressUpdate();
 		registerQuestingPersistence();
+		QuestBookSyncHandler.register();
+		GetQuestDetailsClientRequest.INSTANCE.registerServer();
+		ServerPlayNetworking.registerGlobalReceiver(QuestBookTaskPinC2SPacket.TYPE, (packet, player, sender) -> {
+			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
+			try {
+				// Повторный клик по уже закреплённой задаче снимает пин с квеста
+				if (questManager.isTaskPinned(packet.questId(), packet.taskId(), player)) {
+					questManager.pinRemove(packet.questId(), player);
+				} else {
+					questManager.pinTask(packet.questId(), packet.taskId(), player);
+				}
+			} catch (IllegalArgumentException ignored) {
+				// Квест или задача не существуют — игнорируем
+			}
+		});
 
 		ArgumentTypeRegistry.registerArgumentType(
 				Identifier.of(MOD_ID, "completion_status"),
@@ -84,17 +102,17 @@ public class TravelcoreQuesting implements ModInitializer {
 
 			var stage = questManager.getActiveStage(questEntry.questId(), player).orElse(null);
 
-			Map<String, TaskDisplay> tasks = stage != null
+			Map<String, HudTask> tasks = stage != null
 					? questEntry.quest().getStage(stage).stream()
 							.collect(Collectors.toMap(
 									Function.identity(),
-									taskId -> TaskDisplays.fromTask(Objects.requireNonNull(questEntry.quest().getTask(taskId)))
+									taskId -> HudTasks.fromTask(Objects.requireNonNull(questEntry.quest().getTask(taskId)))
 							))
 					: Collections.emptyMap();
 
 			ServerPlayNetworking.send(player, new HudSetQuestStageS2CPacket(
 					questEntry.questId(),
-					QuestDisplays.fromQuest(questEntry.quest(), stage),
+					HudQuests.fromQuest(questEntry.quest(), stage),
 					tasks
 			));
 		});
@@ -107,11 +125,11 @@ public class TravelcoreQuesting implements ModInitializer {
 
 			ServerPlayNetworking.send(player, new HudSetQuestStageS2CPacket(
 					questEntry.questId(),
-					QuestDisplays.fromQuest(questEntry.quest(), stage),
+					HudQuests.fromQuest(questEntry.quest(), stage),
 					questEntry.quest().getStage(stage).stream()
 							.collect(Collectors.toMap(
 									Function.identity(),
-									taskId -> TaskDisplays.fromTask(Objects.requireNonNull(questEntry.quest().getTask(taskId)))
+									taskId -> HudTasks.fromTask(Objects.requireNonNull(questEntry.quest().getTask(taskId)))
 							))
 			));
 		});
@@ -128,21 +146,21 @@ public class TravelcoreQuesting implements ModInitializer {
 		});
 
 		QuestEvents.QUEST_PIN_REMOVED.register((questId, player) ->
-				ServerPlayNetworking.send(player, new HudRemoveQuestS2CPacket(questId))
+				ServerPlayNetworking.send(player, new HudQuestRemoveS2CPacket(questId))
 		);
 
 		QuestProgressEvents.TASK_SUCCESS_PROGRESS_CHANGED.register((taskEntry, player, newValue) -> {
 			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
 			if (!questManager.isQuestPinned(taskEntry.questId(), player)) return;
 
-			ServerPlayNetworking.send(player, new HudChangeTaskProgressS2CPacket(taskEntry.questId(), taskEntry.taskId(), newValue, true));
+			ServerPlayNetworking.send(player, new HudTaskSetProgressS2CPacket(taskEntry.questId(), taskEntry.taskId(), newValue, true));
 		});
 
 		QuestProgressEvents.TASK_FAILURE_PROGRESS_CHANGED.register((taskEntry, player, newValue) -> {
 			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
 			if (!questManager.isQuestPinned(taskEntry.questId(), player)) return;
 
-			ServerPlayNetworking.send(player, new HudChangeTaskProgressS2CPacket(taskEntry.questId(), taskEntry.taskId(), newValue, false));
+			ServerPlayNetworking.send(player, new HudTaskSetProgressS2CPacket(taskEntry.questId(), taskEntry.taskId(), newValue, false));
 		});
 
 		QuestEvents.TASK_PIN_CHANGED.register((questId, taskId, player) ->
@@ -153,10 +171,10 @@ public class TravelcoreQuesting implements ModInitializer {
 			if (stageChanged) return;
 			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
 			if (!questManager.isQuestPinned(taskEntry.questId(), player)) return;
-			ServerPlayNetworking.send(player, new TaskShowS2CPacket(
+			ServerPlayNetworking.send(player, new HudTaskAddS2CPacket(
 					taskEntry.questId(),
 					taskEntry.taskId(),
-					TaskDisplays.fromTask(taskEntry.task())
+					HudTasks.fromTask(taskEntry.task())
 			));
 		});
 
@@ -164,7 +182,7 @@ public class TravelcoreQuesting implements ModInitializer {
 			if (stageChanged) return;
 			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
 			if (!questManager.isQuestPinned(taskEntry.questId(), player)) return;
-			ServerPlayNetworking.send(player, new HudRemoveTaskS2CPacket(
+			ServerPlayNetworking.send(player, new HudTaskRemoveS2CPacket(
 					taskEntry.questId(),
 					taskEntry.taskId()
 			));

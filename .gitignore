@@ -44,3 +44,4 @@ docs/
 .claude/
 CLAUDE.md
 src/main/resources/data/*/quests/test_*.json
+*.aseprite

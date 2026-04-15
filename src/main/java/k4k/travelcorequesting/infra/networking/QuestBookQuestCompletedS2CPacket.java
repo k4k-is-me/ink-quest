@@ -11,7 +11,7 @@ import net.minecraft.util.Identifier;
  * Уведомление клиента о завершении квеста.
  * Отправляется сервером при событии {@code QUEST_COMPLETED}.
  */
-public record QuestBriefCompletedS2CPacket(
+public record QuestBookQuestCompletedS2CPacket(
         Identifier questId,
         CompletionStatus completionStatus
 ) implements FabricPacket {
@@ -21,16 +21,16 @@ public record QuestBriefCompletedS2CPacket(
         return TYPE;
     }
 
-    public static final PacketType<QuestBriefCompletedS2CPacket> TYPE = PacketType.create(
+    public static final PacketType<QuestBookQuestCompletedS2CPacket> TYPE = PacketType.create(
             Identifier.of(TravelcoreQuesting.MOD_ID, "quest-brief-completed-s2c"),
-            QuestBriefCompletedS2CPacket::read
+            QuestBookQuestCompletedS2CPacket::read
     );
 
     /** @param buf буфер пакета */
-    public static QuestBriefCompletedS2CPacket read(PacketByteBuf buf) {
+    public static QuestBookQuestCompletedS2CPacket read(PacketByteBuf buf) {
         var questId = buf.readIdentifier();
         var completionStatus = buf.readEnumConstant(CompletionStatus.class);
-        return new QuestBriefCompletedS2CPacket(questId, completionStatus);
+        return new QuestBookQuestCompletedS2CPacket(questId, completionStatus);
     }
 
     @Override

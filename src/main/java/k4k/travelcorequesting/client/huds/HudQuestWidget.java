@@ -1,16 +1,17 @@
 package k4k.travelcorequesting.client.huds;
 
-import k4k.travelcorequesting.client.utils.DrawContexts;
 import k4k.travelcorequesting.client.animation.Animation;
 import k4k.travelcorequesting.client.animation.Animator;
 import k4k.travelcorequesting.client.animation.ParameterKey;
 import static k4k.travelcorequesting.client.animation.ParameterAnimations.*;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
-import k4k.travelcorequesting.questing.models.QuestDisplay;
-import k4k.travelcorequesting.questing.models.TaskDisplay;
+import k4k.travelcorequesting.questing.models.HudQuest;
+import k4k.travelcorequesting.questing.models.HudTask;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,14 +39,14 @@ public class HudQuestWidget {
 
     private final MinecraftClient client = MinecraftClient.getInstance();
 
-    private QuestDisplay display;
+    private HudQuest display;
     private final LinkedHashMap<String, HudTaskWidget> taskWidgets = new LinkedHashMap<>();
     private final Animator animator = new Animator(Util::getMeasuringTimeMs);
     private @Nullable LinkedHashMap<String, HudTaskWidget> outgoingTasks = null;
     private final LinkedHashMap<String, HudTaskWidget> removingTasks = new LinkedHashMap<>();
     private @Nullable String pinnedTaskId = null;
 
-    public HudQuestWidget(QuestDisplay display, Map<String, TaskDisplay> tasks) {
+    public HudQuestWidget(HudQuest display, Map<String, HudTask> tasks) {
         this.display = display;
         populateTasks(tasks);
     }
@@ -64,7 +65,7 @@ public class HudQuestWidget {
         return animator.isIdle() && taskWidgets.values().stream().allMatch(HudTaskWidget::isAnimatorIdle);
     }
 
-    public void changeStage(QuestDisplay display, Map<String, TaskDisplay> tasks) {
+    public void changeStage(HudQuest display, Map<String, HudTask> tasks) {
         removingTasks.clear();
         outgoingTasks = new LinkedHashMap<>(taskWidgets);
         outgoingTasks.values().forEach(HudTaskWidget::playSwitchOutAnimation);
@@ -82,7 +83,7 @@ public class HudQuestWidget {
         removingTasks.put(taskId, widget);
     }
 
-    public void addTask(String taskId, TaskDisplay task) {
+    public void addTask(String taskId, HudTask task) {
         if (taskWidgets.containsKey(taskId)) return;
         boolean isRequired = taskWidgets.isEmpty();
         var widget = new HudTaskWidget(task, isRequired);
@@ -142,7 +143,8 @@ public class HudQuestWidget {
 
         int drawX = x + offsetX;
         int titleColor = ((int) (opacity * 255) << 24) | 0x00FFFFFF;
-        int titleHeight = DrawContexts.drawTextWrapped(context, client.textRenderer, display.title(), drawX + 1, y + 1, hudWidth - 2, titleColor, true);
+        context.drawText(client.textRenderer, Text.literal("").append(display.title()).formatted(Formatting.BOLD), drawX + 1, y + 1, titleColor, true);
+        var titleHeight = client.textRenderer.fontHeight;
         int taskStartY = y + titleHeight + QUEST_TASKS_GAP + 1;
 
         int currentTasksHeight;
@@ -230,7 +232,7 @@ public class HudQuestWidget {
         return !pinnedTaskId.equals(taskWidgets.keySet().iterator().next());
     }
 
-    private void populateTasks(Map<String, TaskDisplay> tasks) {
+    private void populateTasks(Map<String, HudTask> tasks) {
         List<String> taskOrder = display.tasks();
         int index = 0;
         for (var taskId : taskOrder) {

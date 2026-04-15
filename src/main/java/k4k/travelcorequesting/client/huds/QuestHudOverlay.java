@@ -1,8 +1,8 @@
 package k4k.travelcorequesting.client.huds;
 
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
-import k4k.travelcorequesting.questing.models.QuestDisplay;
-import k4k.travelcorequesting.questing.models.TaskDisplay;
+import k4k.travelcorequesting.questing.models.HudQuest;
+import k4k.travelcorequesting.questing.models.HudTask;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -23,7 +23,7 @@ public class QuestHudOverlay implements HudRenderCallback {
 
     public QuestHudOverlay() {}
 
-    public void addQuest(Identifier questId, QuestDisplay quest, Map<String, TaskDisplay> tasks) {
+    public void addQuest(Identifier questId, HudQuest quest, Map<String, HudTask> tasks) {
         var existing = questWidgets.get(questId);
 
         if (existing != null) {
@@ -43,7 +43,7 @@ public class QuestHudOverlay implements HudRenderCallback {
         }));
     }
 
-    public void addTask(Identifier questId, String taskId, TaskDisplay task) {
+    public void addTask(Identifier questId, String taskId, HudTask task) {
         var widget = questWidgets.get(questId);
         if (widget == null) return;
         widget.addTask(taskId, task);

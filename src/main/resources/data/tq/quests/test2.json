@@ -3,7 +3,7 @@
   "variant": 0,
 
   "display": {
-    "icon": "tq:default",
+    "icon": "travelcorequesting:default",
     "group": "Group",
     "notify_changed": true
   },

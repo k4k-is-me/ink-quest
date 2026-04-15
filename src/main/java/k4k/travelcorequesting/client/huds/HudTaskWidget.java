@@ -1,13 +1,14 @@
 package k4k.travelcorequesting.client.huds;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.client.utils.DrawContexts;
 import k4k.travelcorequesting.client.animation.Animation;
 import k4k.travelcorequesting.client.animation.Animator;
 import k4k.travelcorequesting.client.animation.ParameterKey;
 import static k4k.travelcorequesting.client.animation.ParameterAnimations.*;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
-import k4k.travelcorequesting.questing.models.TaskDisplay;
+import k4k.travelcorequesting.questing.models.HudTask;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
@@ -17,7 +18,7 @@ import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 public class HudTaskWidget {
-    private static final Identifier TASK_ICONS_TEXTURE = Identifier.of("tq", "textures/icons/default.png");
+    private static final Identifier TASK_ICONS_TEXTURE = Identifier.of(TravelcoreQuesting.MOD_ID, "textures/icons/default.png");
 
     private static final int ICON_SIZE = 8;
     private static final int ICON_GAP = 2;
@@ -64,7 +65,7 @@ public class HudTaskWidget {
 
     private final MinecraftClient client = MinecraftClient.getInstance();
 
-    private final TaskDisplay display;
+    private final HudTask display;
     private final boolean isRequired;
     private final Animator animator = new Animator(Util::getMeasuringTimeMs);
 
@@ -74,7 +75,7 @@ public class HudTaskWidget {
     private final int failureTarget;
     private @Nullable CompletionStatus completionStatus = null;
 
-    public HudTaskWidget(TaskDisplay display, boolean isRequired) {
+    public HudTaskWidget(HudTask display, boolean isRequired) {
         this.display = display;
         this.isRequired = isRequired;
         Integer st = display.successTarget();

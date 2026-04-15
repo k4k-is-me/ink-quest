@@ -10,7 +10,7 @@ import net.minecraft.util.Identifier;
  * Уведомление клиента об удалении квеста из списка.
  * Отправляется сервером при событии {@code QUEST_DROPPED}.
  */
-public record QuestBriefRemovedS2CPacket(
+public record QuestBookQuestRemovedS2CPacket(
         Identifier questId
 ) implements FabricPacket {
 
@@ -19,14 +19,14 @@ public record QuestBriefRemovedS2CPacket(
         return TYPE;
     }
 
-    public static final PacketType<QuestBriefRemovedS2CPacket> TYPE = PacketType.create(
+    public static final PacketType<QuestBookQuestRemovedS2CPacket> TYPE = PacketType.create(
             Identifier.of(TravelcoreQuesting.MOD_ID, "quest-brief-removed-s2c"),
-            QuestBriefRemovedS2CPacket::read
+            QuestBookQuestRemovedS2CPacket::read
     );
 
     /** @param buf буфер пакета */
-    public static QuestBriefRemovedS2CPacket read(PacketByteBuf buf) {
-        return new QuestBriefRemovedS2CPacket(buf.readIdentifier());
+    public static QuestBookQuestRemovedS2CPacket read(PacketByteBuf buf) {
+        return new QuestBookQuestRemovedS2CPacket(buf.readIdentifier());
     }
 
     @Override

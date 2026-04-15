@@ -1,10 +1,10 @@
 package k4k.travelcorequesting.infra.networking;
 
 import k4k.travelcorequesting.TravelcoreQuesting;
-import k4k.travelcorequesting.infra.utils.QuestDisplays;
-import k4k.travelcorequesting.infra.utils.TaskDisplays;
-import k4k.travelcorequesting.questing.models.QuestDisplay;
-import k4k.travelcorequesting.questing.models.TaskDisplay;
+import k4k.travelcorequesting.infra.utils.HudQuests;
+import k4k.travelcorequesting.infra.utils.HudTasks;
+import k4k.travelcorequesting.questing.models.HudQuest;
+import k4k.travelcorequesting.questing.models.HudTask;
 import net.fabricmc.fabric.api.networking.v1.FabricPacket;
 import net.fabricmc.fabric.api.networking.v1.PacketType;
 import net.minecraft.network.PacketByteBuf;
@@ -15,8 +15,8 @@ import java.util.Map;
 
 public record HudSetQuestStageS2CPacket(
         Identifier questId,
-        QuestDisplay quest,
-        Map<String, TaskDisplay> tasks
+        HudQuest quest,
+        Map<String, HudTask> tasks
 ) implements FabricPacket {
     @Override
     public PacketType<?> getType() {
@@ -30,13 +30,13 @@ public record HudSetQuestStageS2CPacket(
 
     public static HudSetQuestStageS2CPacket read(PacketByteBuf buf) {
         var questId = buf.readIdentifier();
-        var quest = QuestDisplays.readFromPacketByteBuf(buf);
+        var quest = HudQuests.readFromPacketByteBuf(buf);
 
         var tasksSize = buf.readInt();
-        var tasks = new HashMap<String, TaskDisplay>(tasksSize);
+        var tasks = new HashMap<String, HudTask>(tasksSize);
         for (var i = 0; i < tasksSize; i++) {
             var key = buf.readString();
-            var value = TaskDisplays.readFromPacketByteBuf(buf);
+            var value = HudTasks.readFromPacketByteBuf(buf);
             tasks.put(key, value);
         }
 
@@ -46,12 +46,12 @@ public record HudSetQuestStageS2CPacket(
     @Override
     public void write(PacketByteBuf buf) {
         buf.writeIdentifier(this.questId);
-        QuestDisplays.writeToPacketByteBuf(this.quest, buf);
+        HudQuests.writeToPacketByteBuf(this.quest, buf);
 
         buf.writeInt(this.tasks.size());
         for (var taskEntry : this.tasks.entrySet()) {
             buf.writeString(taskEntry.getKey());
-            TaskDisplays.writeToPacketByteBuf(buf, taskEntry.getValue());
+            HudTasks.writeToPacketByteBuf(buf, taskEntry.getValue());
         }
     }
 }

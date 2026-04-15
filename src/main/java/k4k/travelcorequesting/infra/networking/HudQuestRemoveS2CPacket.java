@@ -6,7 +6,11 @@ import net.fabricmc.fabric.api.networking.v1.PacketType;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 
-public record HudRemoveQuestS2CPacket (
+/**
+ * Удаляет квест из HUD.
+ * Отправляется сервером при снятии пина с квеста ({@code QUEST_PIN_REMOVED}).
+ */
+public record HudQuestRemoveS2CPacket(
         Identifier questId
 ) implements FabricPacket {
     @Override
@@ -14,14 +18,15 @@ public record HudRemoveQuestS2CPacket (
         return TYPE;
     }
 
-    public static final PacketType<HudRemoveQuestS2CPacket> TYPE = PacketType.create(
+    public static final PacketType<HudQuestRemoveS2CPacket> TYPE = PacketType.create(
             Identifier.of(TravelcoreQuesting.MOD_ID, "quest-pin-remove-s2c"),
-            HudRemoveQuestS2CPacket::read
+            HudQuestRemoveS2CPacket::read
     );
 
-    public static HudRemoveQuestS2CPacket read(PacketByteBuf buf) {
+    /** Читает пакет из буфера. */
+    public static HudQuestRemoveS2CPacket read(PacketByteBuf buf) {
         var questId = buf.readIdentifier();
-        return new HudRemoveQuestS2CPacket(questId);
+        return new HudQuestRemoveS2CPacket(questId);
     }
 
     @Override

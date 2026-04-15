@@ -484,6 +484,24 @@ public class ServerQuestManager {
                 .orElse(false);
     }
 
+    /** Статус завершения квеста для игрока; {@link Optional#empty()} — если квест активен или не выдан. */
+    public Optional<CompletionStatus> getQuestCompletionStatus(Identifier questId, ServerPlayerEntity player) {
+        Objects.requireNonNull(questId);
+        Objects.requireNonNull(player);
+
+        return this.getPlayerTracker(player)
+                .flatMap(tracker -> tracker.getCompletionStatus(questId));
+    }
+
+    public Optional<CompletionStatus> getTaskCompletionStatus(Identifier questId, String taskId, ServerPlayerEntity player) {
+        Objects.requireNonNull(questId);
+        Objects.requireNonNull(taskId);
+        Objects.requireNonNull(player);
+
+        return this.getQuestTracker(player, questId)
+                .flatMap(tracker -> tracker.getCompletionStatus(taskId));
+    }
+
     /** Завершён ли квест успешно. */
     public boolean isQuestSucceeded(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
@@ -516,17 +534,6 @@ public class ServerQuestManager {
         return this.getQuestTracker(player, questId)
                 .map(QuestProgressTracker::isPinned)
                 .orElse(false);
-    }
-
-    /** Есть ли квест у игрока (активный или завершённый). Аналог {@link #isQuestTracked}. */
-    public boolean hasQuest(ServerPlayerEntity player, Identifier questId) {
-        Objects.requireNonNull(questId);
-        Objects.requireNonNull(player);
-
-        var playerTracker = this.trackedPlayers.get(player.getUuid());
-        if (playerTracker == null) return false;
-
-        return playerTracker.isTracked(questId);
     }
 
     /** Активна ли задача (находится в активном этапе и не завершена). */

@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
  * @param completionStatus статус завершения; {@code null} — квест активен
  * @param index            индекс для сортировки внутри группы
  */
-public record QuestBriefData(
+public record QuestBookQuestListItem(
         Identifier questId,
         Text title,
         @Nullable Text description,

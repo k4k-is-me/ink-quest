@@ -1,6 +1,7 @@
 package k4k.travelcorequesting.client.huds;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.client.animation.Animation;
 import k4k.travelcorequesting.client.animation.Animator;
 import k4k.travelcorequesting.client.animation.ParameterKey;
@@ -12,7 +13,7 @@ import net.minecraft.util.math.MathHelper;
 import java.util.function.Function;
 
 public class HudProgressBarWidget {
-    private static final Identifier PROGRESS_BAR_TEXTURE = Identifier.of("tq", "textures/icons/default.png");
+    private static final Identifier PROGRESS_BAR_TEXTURE = Identifier.of(TravelcoreQuesting.MOD_ID, "textures/icons/default.png");
 
     private static final int BAR_HEIGHT = 1;
     public static final int BAR_WIDTH = 32;

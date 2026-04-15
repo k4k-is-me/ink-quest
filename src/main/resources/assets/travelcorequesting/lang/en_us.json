@@ -1,5 +1,10 @@
 {
   "gui.quest_book": "Quests",
+  "gui.quest_book.header": "QUESTS",
+  "gui.quest_book.active": "ACTIVE",
+  "gui.quest_book.complete": "COMPLETE",
+  "gui.quest_book.no_quests": "No quests yet",
+  "gui.quest_book.no_selection": "<- Select for details",
   "quest.tooltip.task_count": "Tasks: %s",
   "quest.tooltip.stage_count": "Stages: %s",
   "quest.command.error.missing": "Quest not found",

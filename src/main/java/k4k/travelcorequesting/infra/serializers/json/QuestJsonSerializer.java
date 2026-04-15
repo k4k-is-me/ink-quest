@@ -73,7 +73,7 @@ public class QuestJsonSerializer {
 
             var icon = JUtil.getMemberWithDefault(json, "icon",
                     element -> context.deserialize(element, Identifier.class),
-                    Identifier.of(TravelcoreQuesting.MOD_ID, "textures/icons/default"));
+                    Identifier.of(TravelcoreQuesting.MOD_ID, "default"));
 
             var index = JUtil.getMemberWithDefault(json, "index", JsonElement::getAsInt, 0);
 

@@ -1,8 +1,8 @@
 package k4k.travelcorequesting.infra.networking;
 
 import k4k.travelcorequesting.TravelcoreQuesting;
-import k4k.travelcorequesting.infra.utils.QuestBriefDatas;
-import k4k.travelcorequesting.questing.models.QuestBriefData;
+import k4k.travelcorequesting.infra.utils.QuestBookQuestListItems;
+import k4k.travelcorequesting.questing.models.QuestBookQuestListItem;
 import net.fabricmc.fabric.api.networking.v1.FabricPacket;
 import net.fabricmc.fabric.api.networking.v1.PacketType;
 import net.minecraft.network.PacketByteBuf;
@@ -15,8 +15,8 @@ import java.util.List;
  * Полная синхронизация списка квестов игрока с клиентом.
  * Отправляется сервером при входе игрока в мир.
  */
-public record QuestListSyncS2CPacket(
-        List<QuestBriefData> quests
+public record QuestBookSyncS2CPacket(
+        List<QuestBookQuestListItem> quests
 ) implements FabricPacket {
 
     @Override
@@ -24,26 +24,26 @@ public record QuestListSyncS2CPacket(
         return TYPE;
     }
 
-    public static final PacketType<QuestListSyncS2CPacket> TYPE = PacketType.create(
+    public static final PacketType<QuestBookSyncS2CPacket> TYPE = PacketType.create(
             Identifier.of(TravelcoreQuesting.MOD_ID, "quest-list-sync-s2c"),
-            QuestListSyncS2CPacket::read
+            QuestBookSyncS2CPacket::read
     );
 
     /** @param buf буфер пакета */
-    public static QuestListSyncS2CPacket read(PacketByteBuf buf) {
+    public static QuestBookSyncS2CPacket read(PacketByteBuf buf) {
         var count = buf.readInt();
-        var quests = new ArrayList<QuestBriefData>(count);
+        var quests = new ArrayList<QuestBookQuestListItem>(count);
         for (var i = 0; i < count; i++) {
-            quests.add(QuestBriefDatas.readFromPacketByteBuf(buf));
+            quests.add(QuestBookQuestListItems.readFromPacketByteBuf(buf));
         }
-        return new QuestListSyncS2CPacket(quests);
+        return new QuestBookSyncS2CPacket(quests);
     }
 
     @Override
     public void write(PacketByteBuf buf) {
         buf.writeInt(this.quests.size());
         for (var quest : this.quests) {
-            QuestBriefDatas.writeToPacketByteBuf(quest, buf);
+            QuestBookQuestListItems.writeToPacketByteBuf(quest, buf);
         }
     }
 }
