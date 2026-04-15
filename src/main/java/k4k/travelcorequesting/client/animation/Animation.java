@@ -178,7 +178,7 @@ public class Animation {
         public <T> Builder addParameter(ParameterKey<T> key, ParameterAnimation<T> animation, long delay, long duration, AnimationFillMode fillMode) {
             if (duration <= 0) throw new IllegalArgumentException("Duration must be greater than zero");
             animations.put(key, new ParameterDefinition<>(animation, fillMode, duration, delay));
-            if (!this.isExplicitDuration && duration > this.duration) this.duration = duration;
+            if (!this.isExplicitDuration && delay + duration > this.duration) this.duration = delay + duration;
             return this;
         }
 
@@ -188,7 +188,7 @@ public class Animation {
         public <T> Builder addParameter(ParameterKey<T> key, ParameterAnimation<T> animation, long delay, long duration) {
             if (duration <= 0) throw new IllegalArgumentException("Duration must be greater than zero");
             animations.put(key, new ParameterDefinition<>(animation, ONE_TIME, duration, delay));
-            if (!this.isExplicitDuration && duration > this.duration) this.duration = duration;
+            if (!this.isExplicitDuration && delay + duration > this.duration) this.duration = delay + duration;
             return this;
         }
 
