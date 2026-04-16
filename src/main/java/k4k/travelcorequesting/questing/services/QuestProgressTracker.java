@@ -89,11 +89,6 @@ public final class QuestProgressTracker {
 
         this.activeStage = stage;
 
-        // Если квест имел закреплённую задачу - закрепляем обязательную задачу нового этапа
-        if (this.pinnedTaskId != null && this.activeStage != null)
-            this.pinnedTaskId = this.resolver.requireQuest(this.questId)
-                    .getRequiredTask(this.activeStage);
-
         handler.onStageChange(stage);
         return true;
     }

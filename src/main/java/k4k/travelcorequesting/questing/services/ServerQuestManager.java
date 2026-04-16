@@ -746,6 +746,11 @@ public class ServerQuestManager {
         var stageChanged = questTracker.recomputeActiveStage(newStage ->
                 QuestProgressEvents.STAGE_CHANGED.invoker().onStageChange(entry, newStage, player));
 
+        if (stageChanged && questTracker.isPinned())
+            questTracker.getActiveStage()
+                    .map(entry.quest()::getRequiredTask)
+                    .ifPresent(questTracker::setTaskPin);
+
         if (questTracker.getActiveStage().isPresent()) {
             this.ensureActiveStageLoaded(player, questTracker, stageChanged);
             this.processActiveTasks(player, questId, questTracker);
