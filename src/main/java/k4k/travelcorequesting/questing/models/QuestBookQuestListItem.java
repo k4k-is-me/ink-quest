@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
  * @param icon             идентификатор иконки (предмет)
  * @param completionStatus статус завершения; {@code null} — квест активен
  * @param index            индекс для сортировки внутри группы
+ * @param isPinned         закреплён ли квест в HUD
  */
 public record QuestBookQuestListItem(
         Identifier questId,
@@ -21,5 +22,6 @@ public record QuestBookQuestListItem(
         @Nullable Text description,
         @Nullable Identifier icon,
         @Nullable CompletionStatus completionStatus,
-        int index
+        int index,
+        boolean isPinned
 ) {}

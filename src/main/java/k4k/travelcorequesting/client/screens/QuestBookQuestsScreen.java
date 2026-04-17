@@ -1,7 +1,7 @@
 package k4k.travelcorequesting.client.screens;
 
 import k4k.travelcorequesting.TravelcoreQuesting;
-import k4k.travelcorequesting.client.interfaces.ClientQuestManagerContainer;
+import k4k.travelcorequesting.client.interfaces.ClientQuestBookManagerContainer;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.infra.networking.QuestBookTaskPinC2SPacket;
 import k4k.travelcorequesting.questing.models.QuestBookQuestListItem;
@@ -152,6 +152,22 @@ public class QuestBookQuestsScreen extends Screen {
             detailFuture = null;
         }
 
+        var questManager = ClientQuestBookManagerContainer.getQuestManager(client);
+
+        // Сброс выбора если квест исчез из списка (reload датапаков, drop)
+        if (selectedQuestId != null && !questManager.hasQuest(selectedQuestId)) {
+            selectedQuestId = null;
+            detailData = null;
+            detailFuture = null;
+        }
+
+        // Автообновление деталей если кэш был инвалидирован пока книга открыта
+        if (selectedQuestId != null && detailFuture == null && detailData != null
+                && !questManager.isDetailCacheFresh(selectedQuestId)) {
+            detailData = null;
+            detailFuture = questManager.fetchQuestDetails(selectedQuestId);
+        }
+
         renderBackground(context);
         context.drawTexture(BACKGROUND_TEXTURE, bookX, bookY, 0, 0, BOOK_W, BOOK_H);
         super.render(context, mouseX, mouseY, delta);
@@ -191,7 +207,7 @@ public class QuestBookQuestsScreen extends Screen {
 
         context.enableScissor(px, py, px + LEFT_W, py + LEFT_H);
 
-        var quests = ClientQuestManagerContainer.getQuestManager(client).getPlayerQuests();
+        var quests = ClientQuestBookManagerContainer.getQuestManager(client).getPlayerQuests();
 
         if (quests.isEmpty()) {
             var text = Text.translatable("gui.quest_book.no_quests");
@@ -280,6 +296,8 @@ public class QuestBookQuestsScreen extends Screen {
 
         if (hovered || selected) {
             context.drawBorder(px - 1, y - 1, LEFT_W + 2, itemH + 2, color3);
+        } else if (quest.isPinned()) {
+            context.drawBorder(px - 1, y - 1, LEFT_W + 2, itemH + 2, color2);
         }
 
         // Иконка квеста из атласа квеста; u зависит от статуса, v=24 (required row + book offset)
@@ -361,14 +379,15 @@ public class QuestBookQuestsScreen extends Screen {
             }
             taskY += RIGHT_TASKS_GAP;
 
-            var questIcon = ClientQuestManagerContainer.getQuestManager(client).getPlayerQuests().stream()
+            var questIcon = ClientQuestBookManagerContainer.getQuestManager(client).getPlayerQuests().stream()
                     .filter(q -> q.questId().equals(selectedQuestId))
                     .map(QuestBookQuestListItem::icon)
                     .findFirst().orElse(null);
 
             var tasks = detailData.tasks();
+            var pinnedTaskId = detailData.pinnedTaskId();
             for (int i = 0; i < tasks.size(); i++) {
-                taskY = drawTaskItem(context, px, py, taskY, tasks.get(i), i, questIcon);
+                taskY = drawTaskItem(context, px, py, taskY, tasks.get(i), i, questIcon, pinnedTaskId);
             }
 
             rightContentHeight = taskY - (py - rightScroll);
@@ -386,16 +405,18 @@ public class QuestBookQuestsScreen extends Screen {
     /**
      * Рисует один элемент задачи в правой панели.
      * Включает иконку, заголовок (многострочный), описание и прогресс-бар для постепенных условий.
+     * Закреплённая задача выделяется рамкой цвета {@code color2}.
      *
-     * @param px        левый край правой панели
-     * @param py        верхняя граница видимой части панели (для hover)
-     * @param y         текущая Y-позиция задачи
-     * @param task      данные задачи
-     * @param index     индекс в списке (0 = required)
-     * @param questIcon текстура атласа иконок квеста
+     * @param px           левый край правой панели
+     * @param py           верхняя граница видимой части панели (для hover)
+     * @param y            текущая Y-позиция задачи
+     * @param task         данные задачи
+     * @param index        индекс в списке (0 = required)
+     * @param questIcon    текстура атласа иконок квеста
+     * @param pinnedTaskId идентификатор закреплённой задачи; {@code null} — ни одна не закреплена
      * @return Y-позиция следующего элемента
      */
-    private int drawTaskItem(DrawContext context, int px, int py, int y, QuestBookTask task, int index, @Nullable Identifier questIcon) {
+    private int drawTaskItem(DrawContext context, int px, int py, int y, QuestBookTask task, int index, @Nullable Identifier questIcon, @Nullable String pinnedTaskId) {
         boolean isRequired = index == 0;
         // v иконки: HUD использует 0 (optional) или 8 (required); в книге +16
         int iconV = (isRequired ? ITEM_ICON : 0) + 16;
@@ -421,8 +442,11 @@ public class QuestBookQuestsScreen extends Screen {
 
         if (hovered) hoveredTaskIndex = index;
 
+        boolean isPinned = task.taskId().equals(pinnedTaskId);
         if (hovered) {
             context.drawBorder(px - 1, y - 1, RIGHT_W + 2, itemH + 2, color3);
+        } else if (isPinned) {
+            context.drawBorder(px - 1, y - 1, RIGHT_W + 2, itemH + 2, color2);
         }
 
         // Иконка задачи из атласа квеста; u зависит от статуса, v со смещением +16 относительно HUD
@@ -518,7 +542,7 @@ public class QuestBookQuestsScreen extends Screen {
         selectedQuestId = questId;
         detailData = null;
         rightScroll = 0;
-        detailFuture = ClientQuestManagerContainer.getQuestManager(client).fetchQuestDetails(questId);
+        detailFuture = ClientQuestBookManagerContainer.getQuestManager(client).fetchQuestDetails(questId);
     }
 
     /**

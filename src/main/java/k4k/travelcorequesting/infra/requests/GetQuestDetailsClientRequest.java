@@ -59,6 +59,9 @@ public class GetQuestDetailsClientRequest {
             buf.writeBoolean(data.description() != null);
             if (data.description() != null) buf.writeText(data.description());
 
+            buf.writeBoolean(data.pinnedTaskId() != null);
+            if (data.pinnedTaskId() != null) buf.writeString(data.pinnedTaskId());
+
             buf.writeInt(data.tasks().size());
             for (var task : data.tasks()) {
                 buf.writeString(task.taskId());
@@ -80,6 +83,7 @@ public class GetQuestDetailsClientRequest {
 
             var title = buf.readText();
             var description = buf.readBoolean() ? buf.readText() : null;
+            var pinnedTaskId = buf.readBoolean() ? buf.readString() : null;
 
             var taskCount = buf.readInt();
             var tasks = new ArrayList<QuestBookTask>(taskCount);
@@ -93,7 +97,7 @@ public class GetQuestDetailsClientRequest {
                 tasks.add(new QuestBookTask(taskId, taskTitle, taskDescription, isGradual, completionLevel, completionStatus));
             }
 
-            return new GetQuestDetailResponse(new QuestBookQuest(title, description, tasks));
+            return new GetQuestDetailResponse(new QuestBookQuest(title, description, tasks, pinnedTaskId));
         }
     };
 
@@ -150,7 +154,7 @@ public class GetQuestDetailsClientRequest {
         // Нет активного этапа (квест завершён или ещё не начат) — задачи не отправляем
         if (stageOpt.isEmpty()) {
             return new GetQuestDetailResponse(
-                    new QuestBookQuest(quest.title(), quest.description(), List.of())
+                    new QuestBookQuest(quest.title(), quest.description(), List.of(), null)
             );
         }
 
@@ -158,7 +162,9 @@ public class GetQuestDetailsClientRequest {
                 .map(taskId -> buildTaskDetail(questManager, resolver, request.questId(), taskId, player))
                 .toList();
 
-        return new GetQuestDetailResponse(new QuestBookQuest(quest.title(), quest.description(), tasks));
+        var pinnedTaskId = questManager.getPinnedTaskId(request.questId(), player).orElse(null);
+
+        return new GetQuestDetailResponse(new QuestBookQuest(quest.title(), quest.description(), tasks, pinnedTaskId));
     }
 
     /**

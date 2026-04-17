@@ -2,14 +2,17 @@ package k4k.travelcorequesting.infra.handlers;
 
 import k4k.travelcorequesting.infra.networking.QuestBookQuestListItemAddedS2CPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookQuestCompletedS2CPacket;
+import k4k.travelcorequesting.infra.networking.QuestBookQuestPinS2CPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookQuestRemovedS2CPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookSyncS2CPacket;
+import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.QuestBookQuestListItem;
 import k4k.travelcorequesting.questing.models.QuestEntry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 /**
@@ -37,6 +40,28 @@ public class QuestBookSyncHandler {
                 ServerPlayNetworking.send(player, new QuestBookQuestCompletedS2CPacket(
                         questEntry.questId(), status
                 )));
+
+        QuestEvents.QUEST_PINNED.register((questEntry, player) ->
+                ServerPlayNetworking.send(player, new QuestBookQuestPinS2CPacket(
+                        questEntry.questId(), true
+                )));
+
+        QuestEvents.QUEST_PIN_REMOVED.register((questId, player) ->
+                ServerPlayNetworking.send(player, new QuestBookQuestPinS2CPacket(
+                        questId, false
+                )));
+    }
+
+    /**
+     * Переотправляет полный список квестов всем онлайн-игрокам.
+     * Вызывается после перезагрузки датапаков.
+     *
+     * @param server сервер
+     */
+    public static void resyncAll(MinecraftServer server) {
+        for (var player : server.getPlayerManager().getPlayerList()) {
+            syncFullList(player);
+        }
     }
 
     /**
@@ -63,6 +88,7 @@ public class QuestBookSyncHandler {
     private static QuestBookQuestListItem toQuestBookQuestListItem(QuestEntry entry, ServerPlayerEntity player) {
         var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
         var completionStatus = questManager.getQuestCompletionStatus(entry.questId(), player).orElse(null);
+        var isPinned = questManager.isQuestPinned(entry.questId(), player);
 
         return new QuestBookQuestListItem(
                 entry.questId(),
@@ -70,7 +96,8 @@ public class QuestBookSyncHandler {
                 entry.quest().description(),
                 entry.quest().icon(),
                 completionStatus,
-                entry.quest().index()
+                entry.quest().index(),
+                isPinned
         );
     }
 }

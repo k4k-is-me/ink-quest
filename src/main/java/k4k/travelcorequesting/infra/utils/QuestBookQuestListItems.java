@@ -27,6 +27,7 @@ public class QuestBookQuestListItems {
         if (data.completionStatus() != null) buf.writeEnumConstant(data.completionStatus());
 
         buf.writeInt(data.index());
+        buf.writeBoolean(data.isPinned());
     }
 
     /**
@@ -42,7 +43,8 @@ public class QuestBookQuestListItems {
         var icon = buf.readBoolean() ? buf.readIdentifier() : null;
         var completionStatus = buf.readBoolean() ? buf.readEnumConstant(CompletionStatus.class) : null;
         var index = buf.readInt();
+        var isPinned = buf.readBoolean();
 
-        return new QuestBookQuestListItem(questId, title, description, icon, completionStatus, index);
+        return new QuestBookQuestListItem(questId, title, description, icon, completionStatus, index, isPinned);
     }
 }

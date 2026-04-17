@@ -598,6 +598,15 @@ public class ServerQuestManager {
         return this.isTaskComplete(questId, taskId, player, CompletionStatus.SKIPPED);
     }
 
+    /** Возвращает идентификатор закреплённой задачи квеста для игрока. */
+    public Optional<String> getPinnedTaskId(Identifier questId, ServerPlayerEntity player) {
+        Objects.requireNonNull(questId);
+        Objects.requireNonNull(player);
+
+        return this.getQuestTracker(player, questId)
+                .flatMap(QuestProgressTracker::getTaskPin);
+    }
+
     /** Закреплена ли конкретная задача. */
     public boolean isTaskPinned(Identifier questId, String taskId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);

@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
 /// Детали квеста запрашиваются по требованию (pull) и кэшируются.
 ///
 /// Экземпляр хранится в `MinecraftClient` и инициализируется только там.
-public class ClientQuestManager {
+public class ClientQuestBookManager {
 
     /** Время жизни кэша деталей квеста в миллисекундах. */
     public static final long DETAIL_CACHE_TTL_MS = 5_000L;
@@ -80,15 +80,63 @@ public class ClientQuestManager {
 
         this.quests.put(questId, new QuestBookQuestListItem(
                 old.questId(), old.title(), old.description(),
-                old.icon(), completionStatus, old.index()
+                old.icon(), completionStatus, old.index(), old.isPinned()
         ));
         // Инвалидируем кэш: задачи завершённого квеста изменили статус
         this.detailsCache.remove(questId);
     }
 
+    /**
+     * Обновляет флаг закрепления квеста в списке.
+     * Вызывается при событии {@code QUEST_PINNED} / {@code QUEST_PIN_REMOVED} ({@code QuestBookQuestPinS2CPacket}).
+     *
+     * @param questId  идентификатор квеста
+     * @param isPinned новый статус закрепления
+     */
+    public void onQuestPinChanged(Identifier questId, boolean isPinned) {
+        var old = this.quests.get(questId);
+        if (old == null) return;
+
+        this.quests.put(questId, new QuestBookQuestListItem(
+                old.questId(), old.title(), old.description(),
+                old.icon(), old.completionStatus(), old.index(), isPinned
+        ));
+    }
+
+    /**
+     * Инвалидирует кэш деталей квеста.
+     * Вызывается при получении HUD-пакетов, которые означают изменение состояния задач:
+     * смена этапа, пин задачи, прогресс, загрузка/выгрузка задачи.
+     *
+     * @param questId идентификатор квеста
+     */
+    public void invalidateDetail(Identifier questId) {
+        this.detailsCache.remove(questId);
+    }
+
+    /**
+     * Возвращает {@code true}, если кэш деталей квеста существует и не устарел.
+     *
+     * @param questId идентификатор квеста
+     */
+    public boolean isDetailCacheFresh(Identifier questId) {
+        var cached = this.detailsCache.get(questId);
+        return cached != null && !cached.isExpired();
+    }
+
     // -------------------------------------------------------------------------
     // Запросы от UI
     // -------------------------------------------------------------------------
+
+    /**
+     * Возвращает {@code true}, если квест присутствует в списке игрока.
+     * Используется экраном книги для обнаружения удалённых квестов (reload, drop).
+     *
+     * @param questId идентификатор квеста
+     */
+    public boolean hasQuest(Identifier questId) {
+        return this.quests.containsKey(questId);
+    }
 
     /**
      * Возвращает список квестов игрока, отсортированный для отображения в книге квестов.

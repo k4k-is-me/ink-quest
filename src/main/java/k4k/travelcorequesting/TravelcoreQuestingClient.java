@@ -5,7 +5,7 @@ import k4k.travelcorequesting.infra.networking.*;
 import k4k.travelcorequesting.infra.requests.GetQuestDetailsClientRequest;
 import k4k.travelcorequesting.client.handlers.QuestBookOpenEventHandler;
 import k4k.travelcorequesting.client.huds.QuestHudOverlay;
-import k4k.travelcorequesting.client.interfaces.ClientQuestManagerContainer;
+import k4k.travelcorequesting.client.interfaces.ClientQuestBookManagerContainer;
 import k4k.travelcorequesting.infra.networking.QuestBookQuestCompletedS2CPacket;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -27,17 +27,26 @@ public class TravelcoreQuestingClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(HudSetQuestStageS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> QUEST_HUD_OVERLAY.addQuest(packet.questId(), packet.quest(), packet.tasks()));
+            client.execute(() -> {
+                QUEST_HUD_OVERLAY.addQuest(packet.questId(), packet.quest(), packet.tasks());
+                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
+            });
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskAddS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> QUEST_HUD_OVERLAY.addTask(packet.questId(), packet.taskId(), packet.task()));
+            client.execute(() -> {
+                QUEST_HUD_OVERLAY.addTask(packet.questId(), packet.taskId(), packet.task());
+                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
+            });
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskRemoveS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> QUEST_HUD_OVERLAY.removeTask(packet.questId(), packet.taskId()));
+            client.execute(() -> {
+                QUEST_HUD_OVERLAY.removeTask(packet.questId(), packet.taskId());
+                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
+            });
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskCompleteS2CPacket.TYPE, (packet, player, sender) -> {
@@ -52,35 +61,47 @@ public class TravelcoreQuestingClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskSetProgressS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> QUEST_HUD_OVERLAY.setTaskProgress(packet.questId(), packet.taskId(), packet.value(), packet.isSuccessProgress()));
+            client.execute(() -> {
+                QUEST_HUD_OVERLAY.setTaskProgress(packet.questId(), packet.taskId(), packet.value(), packet.isSuccessProgress());
+                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
+            });
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskPinS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> QUEST_HUD_OVERLAY.setTaskPin(packet.questId(), packet.taskId()));
+            client.execute(() -> {
+                QUEST_HUD_OVERLAY.setTaskPin(packet.questId(), packet.taskId());
+                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestPinS2CPacket.TYPE, (packet, player, sender) -> {
+            var client = MinecraftClient.getInstance();
+            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
+                    .onQuestPinChanged(packet.questId(), packet.isPinned()));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookSyncS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestManagerContainer.getQuestManager(client)
+            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
                     .onListSync(packet.quests()));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestListItemAddedS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestManagerContainer.getQuestManager(client)
+            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
                     .onQuestAdded(packet.quest()));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestRemovedS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestManagerContainer.getQuestManager(client)
+            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
                     .onQuestRemoved(packet.questId()));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestCompletedS2CPacket.TYPE, (packet, player, sender) -> {
             var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestManagerContainer.getQuestManager(client)
+            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
                     .onQuestCompleted(packet.questId(), packet.completionStatus()));
         });
     }
