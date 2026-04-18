@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Тесты для {@link QuestProgressTracker}: хранение активного этапа, активных задач,
  * завершение задач, вычисление активного этапа, закрепление задач, сериализация.
  */
+@SuppressWarnings("SameParameterValue")
 class QuestProgressTrackerTest {
 
     private QuestRepository repo;

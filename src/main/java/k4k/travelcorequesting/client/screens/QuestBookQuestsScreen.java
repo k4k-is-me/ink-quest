@@ -393,7 +393,7 @@ public class QuestBookQuestsScreen extends Screen {
             rightContentHeight = taskY - (py - rightScroll);
         } else {
             // Детали ещё загружаются
-            var ellipsis = String.join("", IntStream.range(0, 3).mapToObj(i -> System.currentTimeMillis() / 1000 % 3 == i ? " " : ".").toList());
+            var ellipsis = String.join("", IntStream.range(0, 3).mapToObj(i -> System.currentTimeMillis() / 300 % 3 == i ? " " : ".").toList());
             var loading = Text.literal(ellipsis);
             context.drawText(textRenderer, loading, px + (RIGHT_W - textRenderer.getWidth(loading)) / 2,
                     contentBase + RIGHT_TITLE_REL, color3, false);

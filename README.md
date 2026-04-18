@@ -139,12 +139,12 @@ InkQuest занимает нишу, которую не закрывают FTB Q
 
 Для каждой задачи можно задать условие успеха и условие провала:
 
-```json
+```json lines
 {
     "tasks": {
         "my_task": {
-            "success": { "condition": { ... } },
-            "failure": { "condition": { ... } }
+            "success": { "condition": ... },
+            "failure": { "condition": ... }
         }
     }
 }

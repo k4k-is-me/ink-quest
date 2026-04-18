@@ -4,7 +4,6 @@ import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.questing.states.PlayerTrackerState;
-import k4k.travelcorequesting.questing.states.QuestTrackerState;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Тесты для {@link PlayerProgressTracker}: добавление и удаление отслеживаемых квестов,
  * проверка статусов, вычисление завершённости квеста (checkCompletion), сериализация.
  */
+@SuppressWarnings("SameParameterValue")
 class PlayerProgressTrackerTest {
 
     private QuestRepository repo;
