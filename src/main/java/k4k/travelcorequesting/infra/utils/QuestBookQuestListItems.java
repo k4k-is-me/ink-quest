@@ -20,8 +20,7 @@ public class QuestBookQuestListItems {
         buf.writeBoolean(data.description() != null);
         if (data.description() != null) buf.writeText(data.description());
 
-        buf.writeBoolean(data.icon() != null);
-        if (data.icon() != null) buf.writeIdentifier(data.icon());
+        buf.writeIdentifier(data.icon());
 
         buf.writeBoolean(data.completionStatus() != null);
         if (data.completionStatus() != null) buf.writeEnumConstant(data.completionStatus());
@@ -40,7 +39,7 @@ public class QuestBookQuestListItems {
         var questId = buf.readIdentifier();
         var title = buf.readText();
         var description = buf.readBoolean() ? buf.readText() : null;
-        var icon = buf.readBoolean() ? buf.readIdentifier() : null;
+        var icon = buf.readIdentifier();
         var completionStatus = buf.readBoolean() ? buf.readEnumConstant(CompletionStatus.class) : null;
         var index = buf.readInt();
         var isPinned = buf.readBoolean();
