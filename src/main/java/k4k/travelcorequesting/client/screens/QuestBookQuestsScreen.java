@@ -18,8 +18,11 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Экран квестовой книги.
@@ -95,6 +98,12 @@ public class QuestBookQuestsScreen extends Screen {
     private int mouseX;
     private int mouseY;
 
+    // Клавиатурный фокус
+    private enum ActivePanel { LEFT, RIGHT }
+    private ActivePanel activePanel = ActivePanel.LEFT;
+    private @Nullable Identifier focusedQuestId = null;
+    private int focusedTaskIndex = -1;
+
     public QuestBookQuestsScreen() {
         super(Text.translatable("gui.quest_book"));
     }
@@ -160,11 +169,14 @@ public class QuestBookQuestsScreen extends Screen {
             detailData = null;
             detailFuture = null;
         }
+        if (focusedQuestId != null && !questManager.hasQuest(focusedQuestId)) {
+            focusedQuestId = null;
+        }
 
-        // Автообновление деталей если кэш был инвалидирован пока книга открыта
+        // Автообновление деталей если кэш был инвалидирован пока книга открыта.
+        // detailData не сбрасываем — показываем старые данные до получения новых, чтобы не мелькал экран.
         if (selectedQuestId != null && detailFuture == null && detailData != null
                 && !questManager.isDetailCacheFresh(selectedQuestId)) {
-            detailData = null;
             detailFuture = questManager.fetchQuestDetails(selectedQuestId);
         }
 
@@ -218,11 +230,25 @@ public class QuestBookQuestsScreen extends Screen {
             return;
         }
 
-        var active = quests.stream().filter(q -> q.completionStatus() == null).toList();
+        var pinned = quests.stream().filter(q -> q.completionStatus() == null && q.isPinned()).toList();
+        var active = quests.stream().filter(q -> q.completionStatus() == null && !q.isPinned()).toList();
         var complete = quests.stream().filter(q -> q.completionStatus() != null).toList();
 
         int y = py - leftScroll;
         int startY = y;
+
+        // Секция закреплённых (иконка вместо текста, только если есть закреплённые квесты)
+        if (!pinned.isEmpty()) {
+            drawIconSectionHeader(context, px, y);
+            y += SECTION_HEADER_FULL_HEIGHT;
+            for (var q : pinned) {
+                y = drawQuestItem(context, px, py, y, q);
+            }
+
+            // Разделитель секций (центрированный, 4px после последнего квеста)
+            context.drawTexture(BACKGROUND_TEXTURE, px + (LEFT_W - 32) / 2, y, 32, 192, 32, 2);
+            y += 2 + 4;
+        }
 
         // Секция "ACTIVE"
         var activeText = Text.literal("").append(Text.translatable("gui.quest_book.active")).formatted(Formatting.BOLD);
@@ -233,11 +259,10 @@ public class QuestBookQuestsScreen extends Screen {
         }
 
         // Разделитель секций (центрированный, 4px после последнего квеста)
-        int dividerY = y + 4;
-        context.drawTexture(BACKGROUND_TEXTURE, px + (LEFT_W - 32) / 2, dividerY, 32, 192, 32, 2);
+        context.drawTexture(BACKGROUND_TEXTURE, px + (LEFT_W - 32) / 2, y, 32, 192, 32, 2);
+        y += 2 + 4;
 
         // Секция "COMPLETE"
-        y = dividerY + 2 + 4;
         var completeText = Text.literal("").append(Text.translatable("gui.quest_book.complete")).formatted(Formatting.BOLD);
         drawSectionHeader(context, px, y, completeText, color1);
         y += SECTION_HEADER_FULL_HEIGHT;
@@ -275,6 +300,21 @@ public class QuestBookQuestsScreen extends Screen {
     }
 
     /**
+     * Рисует заголовок секции с иконкой из текстуры книги вместо текста.
+     * Высота занимаемой области — {@value SECTION_HEADER_FULL_HEIGHT} пикселей.
+     *
+     * @param px левый край панели
+     * @param y  верхний край заголовка
+     */
+    private void drawIconSectionHeader(DrawContext context, int px, int y) {
+        int bgStart = ITEM_ICON + ITEM_ICON_GAP;
+        int bgW = LEFT_W - bgStart;
+        context.drawTexture(BACKGROUND_TEXTURE, px + bgStart, y, bgStart, 200, bgW, 6);
+        context.drawTexture(BACKGROUND_TEXTURE, px, y, 64, 192, ITEM_ICON, ITEM_ICON);
+        context.drawTexture(BACKGROUND_TEXTURE, px, y + ITEM_ICON + 2, 0, 208, LEFT_W, 2);
+    }
+
+    /**
      * Рисует один элемент списка квестов (иконка + заголовок).
      * Учитывает hover и выделение; анимирует заголовок, если он не помещается.
      *
@@ -293,22 +333,21 @@ public class QuestBookQuestsScreen extends Screen {
         boolean selected = quest.questId().equals(selectedQuestId);
 
         if (hovered) hoveredQuestId = quest.questId();
+        boolean focused = activePanel == ActivePanel.LEFT && quest.questId().equals(focusedQuestId);
 
-        if (hovered || selected) {
-            context.drawBorder(px - 1, y - 1, LEFT_W + 2, itemH + 2, color3);
-        } else if (quest.isPinned()) {
-            context.drawBorder(px - 1, y - 1, LEFT_W + 2, itemH + 2, color2);
+        if (focused) {
+            context.drawBorder(px, y - 2, LEFT_W, itemH + 2, color1);
+        } else if (hovered || selected) {
+            context.drawBorder(px, y - 2, LEFT_W, itemH + 2, color3);
         }
 
         // Иконка квеста из атласа квеста; u зависит от статуса, v=24 (required row + book offset)
-        if (quest.icon() != null) {
-            var iconTex = quest.icon().withPath(path -> "textures/icons/" + path + ".png");
-            context.drawTexture(iconTex, px, y, iconU(quest.completionStatus()), 24, ITEM_ICON, ITEM_ICON);
-        }
+        var iconTex = quest.icon().withPath(path -> "textures/icons/" + path + ".png");
+        context.drawTexture(iconTex, px + 2, y, iconU(quest.completionStatus()), 24, ITEM_ICON, ITEM_ICON);
 
         // Заголовок квеста (жирный, чёрный по умолчанию; сохраняет стиль текста)
-        int textX = px + ITEM_ICON + ITEM_ICON_GAP;
-        int textMaxW = LEFT_W - ITEM_ICON - ITEM_ICON_GAP;
+        int textX = px + 2 + ITEM_ICON + ITEM_ICON_GAP;
+        int textMaxW = LEFT_W - ITEM_ICON - ITEM_ICON_GAP - 4;
         var boldTitle = Text.literal("").styled(s -> s.withBold(true)).append(quest.title());
 
         int titleW = textRenderer.getWidth(boldTitle);
@@ -441,9 +480,12 @@ public class QuestBookQuestsScreen extends Screen {
                 && mouseY >= Math.max(y, py) && mouseY < Math.min(y + itemH, py + RIGHT_H);
 
         if (hovered) hoveredTaskIndex = index;
-
+        boolean focused = activePanel == ActivePanel.RIGHT && index == focusedTaskIndex;
         boolean isPinned = task.taskId().equals(pinnedTaskId);
-        if (hovered) {
+
+        if (focused) {
+            context.drawBorder(px - 1, y - 1, RIGHT_W + 2, itemH + 2, color1);
+        } else if (hovered) {
             context.drawBorder(px - 1, y - 1, RIGHT_W + 2, itemH + 2, color3);
         } else if (isPinned) {
             context.drawBorder(px - 1, y - 1, RIGHT_W + 2, itemH + 2, color2);
@@ -485,11 +527,98 @@ public class QuestBookQuestsScreen extends Screen {
     // -------------------------------------------------------------------------
 
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (activePanel == ActivePanel.LEFT) {
+            if (keyCode == GLFW.GLFW_KEY_UP) { navigateLeft(-1); return true; }
+            if (keyCode == GLFW.GLFW_KEY_DOWN) { navigateLeft(1); return true; }
+            if ((keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) && focusedQuestId != null) {
+                selectQuest(focusedQuestId);
+                playClickSound();
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_RIGHT && selectedQuestId != null) {
+                activePanel = ActivePanel.RIGHT;
+                if (focusedTaskIndex < 0) focusedTaskIndex = 0;
+                return true;
+            }
+        } else {
+            if (keyCode == GLFW.GLFW_KEY_UP) { navigateRight(-1); return true; }
+            if (keyCode == GLFW.GLFW_KEY_DOWN) { navigateRight(1); return true; }
+            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                if (focusedTaskIndex >= 0 && detailData != null && selectedQuestId != null) {
+                    var tasks = detailData.tasks();
+                    if (focusedTaskIndex < tasks.size()) {
+                        ClientPlayNetworking.send(new QuestBookTaskPinC2SPacket(selectedQuestId, tasks.get(focusedTaskIndex).taskId()));
+                        playClickSound();
+                    }
+                }
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_LEFT) {
+                activePanel = ActivePanel.LEFT;
+                if (focusedQuestId == null) focusedQuestId = selectedQuestId;
+                return true;
+            }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    /**
+     * Перемещает фокус в левой панели на {@code dir} позиций (+1 вниз, -1 вверх).
+     * Если фокус ещё не установлен, выбирает первый или последний элемент.
+     *
+     * @param dir направление: +1 вниз, -1 вверх
+     */
+    private void navigateLeft(int dir) {
+        if (client == null) return;
+        var quests = getOrderedQuests();
+        if (quests.isEmpty()) return;
+        int current = -1;
+        for (int i = 0; i < quests.size(); i++) {
+            if (quests.get(i).questId().equals(focusedQuestId)) { current = i; break; }
+        }
+        int next = current < 0 ? (dir > 0 ? 0 : quests.size() - 1)
+                                : Math.max(0, Math.min(quests.size() - 1, current + dir));
+        focusedQuestId = quests.get(next).questId();
+    }
+
+    /**
+     * Перемещает фокус в правой панели на {@code dir} позиций.
+     * Если фокус ещё не установлен, выбирает первую или последнюю задачу.
+     *
+     * @param dir направление: +1 вниз, -1 вверх
+     */
+    private void navigateRight(int dir) {
+        if (detailData == null) return;
+        int size = detailData.tasks().size();
+        if (size == 0) return;
+        int next = focusedTaskIndex < 0 ? (dir > 0 ? 0 : size - 1)
+                                        : Math.max(0, Math.min(size - 1, focusedTaskIndex + dir));
+        focusedTaskIndex = next;
+    }
+
+    /**
+     * Возвращает квесты в порядке отображения: сначала активные, потом завершённые.
+     *
+     * @return упорядоченный список квестов игрока
+     */
+    private List<QuestBookQuestListItem> getOrderedQuests() {
+        var quests = ClientQuestBookManagerContainer.getQuestManager(client).getPlayerQuests();
+        var result = new ArrayList<QuestBookQuestListItem>();
+        quests.stream().filter(q -> q.completionStatus() == null && q.isPinned()).forEach(result::add);
+        quests.stream().filter(q -> q.completionStatus() == null && !q.isPinned()).forEach(result::add);
+        quests.stream().filter(q -> q.completionStatus() != null).forEach(result::add);
+        return result;
+    }
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
         // Клик по квесту в левой панели
         if (hoveredQuestId != null) {
+            activePanel = ActivePanel.LEFT;
+            focusedQuestId = hoveredQuestId;
             selectQuest(hoveredQuestId);
             playClickSound();
             return true;
@@ -500,6 +629,8 @@ public class QuestBookQuestsScreen extends Screen {
             var tasks = detailData.tasks();
             if (hoveredTaskIndex < tasks.size()) {
                 var task = tasks.get(hoveredTaskIndex);
+                activePanel = ActivePanel.RIGHT;
+                focusedTaskIndex = hoveredTaskIndex;
                 ClientPlayNetworking.send(new QuestBookTaskPinC2SPacket(selectedQuestId, task.taskId()));
                 playClickSound();
                 return true;
