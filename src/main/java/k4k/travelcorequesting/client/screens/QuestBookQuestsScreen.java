@@ -71,6 +71,13 @@ public class QuestBookQuestsScreen extends Screen {
 
     // Прогресс-бар
     private static final int BAR_WIDTH = 32;
+    private static final int BAR_BG_V = 40;
+    private static final int BAR_FILL_V = 41;
+
+    // Задачи в правой панели
+    private static final int TASKS_SIDE_PADDING = 2;
+    private static final int OPTIONAL_TASK_EXTRA_PADDING = 6;
+    private static final int TASKS_GAP = 2;
 
     // Цвета из текстуры (загружаются в init)
     private int color1 = 0xFF333333;
@@ -425,8 +432,30 @@ public class QuestBookQuestsScreen extends Screen {
 
             var tasks = detailData.tasks();
             var pinnedTaskId = detailData.pinnedTaskId();
-            for (int i = 0; i < tasks.size(); i++) {
-                taskY = drawTaskItem(context, px, py, taskY, tasks.get(i), i, questIcon, pinnedTaskId);
+            int taskAreaX = px + TASKS_SIDE_PADDING;
+            int taskAreaW = RIGHT_W - TASKS_SIDE_PADDING * 2;
+
+            boolean isPinnedOptional = pinnedTaskId != null
+                    && !tasks.isEmpty()
+                    && !tasks.get(0).taskId().equals(pinnedTaskId)
+                    && tasks.stream().anyMatch(t -> t.taskId().equals(pinnedTaskId));
+
+            if (isPinnedOptional) {
+                for (int i = 0; i < tasks.size(); i++) {
+                    if (tasks.get(i).taskId().equals(pinnedTaskId)) {
+                        taskY = drawTaskItem(context, taskAreaX, taskAreaW, py, taskY, tasks.get(i), i, false, false, questIcon);
+                        break;
+                    }
+                }
+                taskY += TASKS_GAP;
+                for (int i = 0; i < tasks.size(); i++) {
+                    if (tasks.get(i).taskId().equals(pinnedTaskId)) continue;
+                    taskY = drawTaskItem(context, taskAreaX, taskAreaW, py, taskY, tasks.get(i), i, i == 0, i != 0, questIcon);
+                }
+            } else {
+                for (int i = 0; i < tasks.size(); i++) {
+                    taskY = drawTaskItem(context, taskAreaX, taskAreaW, py, taskY, tasks.get(i), i, i == 0, i != 0, questIcon);
+                }
             }
 
             rightContentHeight = taskY - (py - rightScroll);
@@ -443,27 +472,32 @@ public class QuestBookQuestsScreen extends Screen {
 
     /**
      * Рисует один элемент задачи в правой панели.
-     * Включает иконку, заголовок (многострочный), описание и прогресс-бар для постепенных условий.
-     * Закреплённая задача выделяется рамкой цвета {@code color2}.
+     * Необязательные задачи рисуются с дополнительным отступом слева ({@value OPTIONAL_TASK_EXTRA_PADDING}px).
+     * Рамка отображается только при hover или keyboard-фокусе.
      *
-     * @param px           левый край правой панели
+     * @param taskAreaX    левый край блока задач (уже учитывает TASKS_SIDE_PADDING)
+     * @param taskAreaW    ширина блока задач
      * @param py           верхняя граница видимой части панели (для hover)
      * @param y            текущая Y-позиция задачи
      * @param task         данные задачи
-     * @param index        индекс в списке (0 = required)
-     * @param questIcon    текстура атласа иконок квеста
-     * @param pinnedTaskId идентификатор закреплённой задачи; {@code null} — ни одна не закреплена
+     * @param originalIndex индекс в detailData.tasks() (используется для hover/focus)
+     * @param isRequired   {@code true} если задача обязательная — влияет только на иконку
+     * @param withIndent   {@code true} если нужен доп. отступ слева (опциональные задачи, кроме вынесенной наверх pinned)
+     * @param questIcon    текстура атласа иконок квеста; {@code null} — дефолтная
      * @return Y-позиция следующего элемента
      */
-    private int drawTaskItem(DrawContext context, int px, int py, int y, QuestBookTask task, int index, @Nullable Identifier questIcon, @Nullable String pinnedTaskId) {
-        boolean isRequired = index == 0;
+    private int drawTaskItem(DrawContext context, int taskAreaX, int taskAreaW, int py, int y,
+                             QuestBookTask task, int originalIndex, boolean isRequired, boolean withIndent,
+                             @Nullable Identifier questIcon) {
+        int indent = withIndent ? OPTIONAL_TASK_EXTRA_PADDING : 0;
+        int drawX = taskAreaX + indent;
+        int textX = drawX + ITEM_ICON + ITEM_ICON_GAP;
+        int textW = taskAreaW - ITEM_ICON - ITEM_ICON_GAP - indent;
+
         // v иконки: HUD использует 0 (optional) или 8 (required); в книге +16
         int iconV = (isRequired ? ITEM_ICON : 0) + 16;
         int iconU = iconU(task.completionStatus());
         var iconTex = questIcon != null ? questIcon.withPath(path -> "textures/icons/" + path + ".png") : ICONS_TEXTURE;
-
-        int textX = px + ITEM_ICON + ITEM_ICON_GAP;
-        int textW = RIGHT_W - ITEM_ICON - ITEM_ICON_GAP;
 
         // Вычисляем высоту элемента
         int titleLines = textRenderer.wrapLines(task.title(), textW).size();
@@ -471,30 +505,30 @@ public class QuestBookQuestsScreen extends Screen {
         int descH = task.description() != null
                 ? textRenderer.wrapLines(task.description(), textW).size() * textRenderer.fontHeight
                 : 0;
-        int barH = (task.isGradual() && !task.isComplete()) ? 3 : 0; // 1px бар + 2px отступ
+        int barH = (task.isGradual() && !task.isComplete()) ? 3 : 0; // 1px бар + 1px тень + 1px отступ
         int itemH = Math.max(ITEM_ICON, titleH) + (descH > 0 ? descH + 1 : 0) + barH;
 
+        // Рамка рисуется от drawX - 1, что >= scissors + 1 (не обрезается)
+        int borderX = drawX - 2;
+        int borderW = ITEM_ICON + ITEM_ICON_GAP + textW + 2;
         boolean visible = y + itemH > py && y < py + RIGHT_H;
         boolean hovered = visible
-                && mouseX >= px && mouseX < px + RIGHT_W
+                && mouseX >= borderX && mouseX < borderX + borderW
                 && mouseY >= Math.max(y, py) && mouseY < Math.min(y + itemH, py + RIGHT_H);
 
-        if (hovered) hoveredTaskIndex = index;
-        boolean focused = activePanel == ActivePanel.RIGHT && index == focusedTaskIndex;
-        boolean isPinned = task.taskId().equals(pinnedTaskId);
+        if (hovered) hoveredTaskIndex = originalIndex;
+        boolean focused = activePanel == ActivePanel.RIGHT && originalIndex == focusedTaskIndex;
 
         if (focused) {
-            context.drawBorder(px - 1, y - 1, RIGHT_W + 2, itemH + 2, color1);
+            context.drawBorder(borderX, y - 2, borderW, itemH + 2, color1);
         } else if (hovered) {
-            context.drawBorder(px - 1, y - 1, RIGHT_W + 2, itemH + 2, color3);
-        } else if (isPinned) {
-            context.drawBorder(px - 1, y - 1, RIGHT_W + 2, itemH + 2, color2);
+            context.drawBorder(borderX, y - 2, borderW, itemH + 2, color3);
         }
 
         // Иконка задачи из атласа квеста; u зависит от статуса, v со смещением +16 относительно HUD
-        context.drawTexture(iconTex, px, y, iconU, iconV, ITEM_ICON, ITEM_ICON);
+        context.drawTexture(iconTex, drawX, y, iconU, iconV, ITEM_ICON, ITEM_ICON);
 
-        // Заголовок задачи (серый, многострочный)
+        // Заголовок задачи (многострочный)
         int currentY = y;
         for (var line : textRenderer.wrapLines(task.title(), textW)) {
             context.drawText(textRenderer, line, textX, currentY, 0x2B2B2B, false);
@@ -513,9 +547,9 @@ public class QuestBookQuestsScreen extends Screen {
         // Прогресс-бар для постепенных условий
         if (task.isGradual() && !task.isComplete()) {
             int fillW = (int) (task.completionLevel() * BAR_WIDTH);
-            context.drawTexture(ICONS_TEXTURE, textX, currentY + 1, 0, 32, BAR_WIDTH, 1);
+            context.drawTexture(ICONS_TEXTURE, textX, currentY + 1, 0, BAR_BG_V, BAR_WIDTH, 1);
             if (fillW > 0) {
-                context.drawTexture(ICONS_TEXTURE, textX, currentY + 1, 0, 33, fillW, 1);
+                context.drawTexture(ICONS_TEXTURE, textX, currentY + 1, 0, BAR_FILL_V, fillW, 1);
             }
         }
 
