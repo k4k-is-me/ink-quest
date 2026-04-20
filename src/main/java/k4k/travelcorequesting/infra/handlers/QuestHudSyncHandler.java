@@ -14,6 +14,7 @@ import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.HudTask;
 import k4k.travelcorequesting.questing.models.QuestEntry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -31,6 +32,9 @@ public class QuestHudSyncHandler {
 
     /** Регистрирует все обработчики событий синхронизации HUD. */
     public static void register() {
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                resyncPlayer(handler.player));
+
         QuestEvents.QUEST_PINNED.register((questEntry, player) -> {
             var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
             var stage = questManager.getActiveStage(questEntry.questId(), player).orElse(null);
@@ -106,14 +110,27 @@ public class QuestHudSyncHandler {
      */
     public static void resyncAll(MinecraftServer server) {
         for (var player : server.getPlayerManager().getPlayerList()) {
-            var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
-            questManager.getTrackedQuests(player).stream()
-                    .filter(entry -> questManager.isQuestPinned(entry.questId(), player))
-                    .forEach(entry -> {
-                        var stage = questManager.getActiveStage(entry.questId(), player).orElse(null);
-                        sendQuestStagePacket(player, entry, stage);
-                    });
+            resyncPlayer(player);
         }
+    }
+
+    /**
+     * Синхронизирует HUD конкретного игрока: отправляет данные этапа и закреплённой задачи
+     * для каждого закреплённого квеста. Вызывается при входе игрока и после перезагрузки датапаков.
+     *
+     * @param player игрок
+     */
+    private static void resyncPlayer(ServerPlayerEntity player) {
+        var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
+        questManager.getTrackedQuests(player).stream()
+                .filter(entry -> questManager.isQuestPinned(entry.questId(), player))
+                .forEach(entry -> {
+                    var stage = questManager.getActiveStage(entry.questId(), player).orElse(null);
+                    sendQuestStagePacket(player, entry, stage);
+                    questManager.getPinnedTaskId(entry.questId(), player).ifPresent(taskId ->
+                            ServerPlayNetworking.send(player, new HudTaskPinS2CPacket(entry.questId(), taskId))
+                    );
+                });
     }
 
     /**

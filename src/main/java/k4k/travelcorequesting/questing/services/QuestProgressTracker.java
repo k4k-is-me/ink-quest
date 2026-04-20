@@ -45,6 +45,7 @@ public final class QuestProgressTracker {
 
         tracker.completeTasks.putAll(state.completeTasks());
         tracker.activeStage = state.activeStage();
+        tracker.pinnedTaskId = state.pinnedTaskId();
 
         return tracker;
     }

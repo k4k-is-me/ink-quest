@@ -342,9 +342,7 @@ public class QuestBookQuestsScreen extends Screen {
         if (hovered) hoveredQuestId = quest.questId();
         boolean focused = activePanel == ActivePanel.LEFT && quest.questId().equals(focusedQuestId);
 
-        if (focused) {
-            context.drawBorder(px, y - 2, LEFT_W, itemH + 2, color1);
-        } else if (hovered || selected) {
+        if (focused || hovered || selected) {
             context.drawBorder(px, y - 2, LEFT_W, itemH + 2, color3);
         }
 
@@ -519,9 +517,7 @@ public class QuestBookQuestsScreen extends Screen {
         if (hovered) hoveredTaskIndex = originalIndex;
         boolean focused = activePanel == ActivePanel.RIGHT && originalIndex == focusedTaskIndex;
 
-        if (focused) {
-            context.drawBorder(borderX, y - 2, borderW, itemH + 2, color1);
-        } else if (hovered) {
+        if (focused || hovered) {
             context.drawBorder(borderX, y - 2, borderW, itemH + 2, color3);
         }
 
