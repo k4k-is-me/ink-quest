@@ -8,7 +8,7 @@ import net.minecraft.util.Identifier;
 
 /**
  * Удаляет квест из HUD.
- * Отправляется сервером при снятии пина с квеста ({@code QUEST_PIN_REMOVED}).
+ * Отправляется сервером при снятии пина с квеста ({@code QUEST_UNPINNED}).
  */
 public record HudQuestRemoveS2CPacket(
         Identifier questId

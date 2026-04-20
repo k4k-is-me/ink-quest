@@ -88,7 +88,7 @@ public class ClientQuestBookManager {
 
     /**
      * Обновляет флаг закрепления квеста в списке.
-     * Вызывается при событии {@code QUEST_PINNED} / {@code QUEST_PIN_REMOVED} ({@code QuestBookQuestPinS2CPacket}).
+     * Вызывается при событии {@code QUEST_PINNED} / {@code QUEST_UNPINNED} ({@code QuestBookQuestPinS2CPacket}).
      *
      * @param questId  идентификатор квеста
      * @param isPinned новый статус закрепления

@@ -8,7 +8,7 @@ import net.minecraft.util.Identifier;
 
 /**
  * S2C пакет изменения статуса закрепления квеста в книге квестов.
- * Отправляется при {@code QUEST_PINNED} и {@code QUEST_PIN_REMOVED}.
+ * Отправляется при {@code QUEST_PINNED} и {@code QUEST_UNPINNED}.
  *
  * @param questId  идентификатор квеста
  * @param isPinned {@code true} — квест закреплён, {@code false} — снят

@@ -33,9 +33,9 @@ public class QuestEvents {
         }
     });
 
-    public static final Event<QuestPinRemoved> QUEST_PIN_REMOVED = EventFactory.createArrayBacked(QuestPinRemoved.class, callbacks -> (questEntry, player) -> {
+    public static final Event<QuestUnpinned> QUEST_UNPINNED = EventFactory.createArrayBacked(QuestUnpinned.class, callbacks -> (questEntry, player) -> {
         for (var event : callbacks) {
-            event.onQuestPinRemove(questEntry, player);
+            event.onQuestUnpin(questEntry, player);
         }
     });
 
@@ -45,10 +45,10 @@ public class QuestEvents {
         }
     });
 
-    /// Закреплённая задача квеста сменилась (квест уже был закреплён, этап не менялся)
-    public static final Event<TaskPinChanged> TASK_PIN_CHANGED = EventFactory.createArrayBacked(TaskPinChanged.class, callbacks -> (questId, taskId, player) -> {
+    /// Закреплённая задача квеста установлена — при первом закреплении квеста и при смене задачи
+    public static final Event<TaskPinned> TASK_PINNED = EventFactory.createArrayBacked(TaskPinned.class, callbacks -> (questId, taskId, player) -> {
         for (var event : callbacks) {
-            event.onTaskPinChange(questId, taskId, player);
+            event.onTaskPin(questId, taskId, player);
         }
     });
 
@@ -79,12 +79,12 @@ public class QuestEvents {
     }
 
     @FunctionalInterface
-    public interface QuestPinRemoved {
-        void onQuestPinRemove(Identifier questId, ServerPlayerEntity player);
+    public interface QuestUnpinned {
+        void onQuestUnpin(Identifier questId, ServerPlayerEntity player);
     }
 
     @FunctionalInterface
-    public interface TaskPinChanged {
-        void onTaskPinChange(Identifier questId, String taskId, ServerPlayerEntity player);
+    public interface TaskPinned {
+        void onTaskPin(Identifier questId, String taskId, ServerPlayerEntity player);
     }
 }

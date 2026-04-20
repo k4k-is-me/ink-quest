@@ -165,7 +165,7 @@ public class ServerQuestManager {
      * <p>Если квест был закреплён, сначала открепляет его.
      * Игнорируется, если квест не был выдан.
      *
-     * <p>События: [{@link QuestEvents#QUEST_PIN_REMOVED}] →
+     * <p>События: [{@link QuestEvents#QUEST_UNPINNED}] →
      * {@link QuestProgressEvents#QUEST_DROPPED}
      *
      * @param questId идентификатор квеста
@@ -225,7 +225,7 @@ public class ServerQuestManager {
      * <p>Игнорируется, если у игрока нет этого квеста или квест уже завершён.
      *
      * <p>События: {@link QuestEvents#QUEST_PINNED} если квест не был закреплён,
-     * {@link QuestEvents#TASK_PIN_CHANGED} если был.
+     * {@link QuestEvents#TASK_PINNED} всегда.
      *
      * @param questId идентификатор квеста
      * @param player  игрок
@@ -253,7 +253,7 @@ public class ServerQuestManager {
      * нет этого квеста.
      *
      * <p>События: {@link QuestEvents#QUEST_PINNED} если квест не был закреплён,
-     * {@link QuestEvents#TASK_PIN_CHANGED} если был.
+     * {@link QuestEvents#TASK_PINNED} всегда.
      *
      * @param questId идентификатор квеста
      * @param taskId  идентификатор задачи
@@ -274,8 +274,8 @@ public class ServerQuestManager {
     }
 
     /**
-     * Общая логика закрепления задачи. Если квест уже закреплён — файрит
-     * {@link QuestEvents#TASK_PIN_CHANGED}, иначе — {@link QuestEvents#QUEST_PINNED}.
+     * Общая логика закрепления задачи. Всегда файрит {@link QuestEvents#TASK_PINNED}.
+     * Если квест не был закреплён — дополнительно файрит {@link QuestEvents#QUEST_PINNED}.
      */
     private void pinTaskInternal(QuestEntry questEntry, QuestProgressTracker tracker, String taskId, ServerPlayerEntity player) {
         boolean wasPinned = tracker.isPinned();
@@ -283,11 +283,10 @@ public class ServerQuestManager {
         tracker.setTaskPin(taskId);
         this.isDirty = true;
 
-        if (wasPinned) {
-            QuestEvents.TASK_PIN_CHANGED.invoker().onTaskPinChange(questEntry.questId(), taskId, player);
-        } else {
+        if (!wasPinned) {
             QuestEvents.QUEST_PINNED.invoker().onQuestPin(questEntry, player);
         }
+        QuestEvents.TASK_PINNED.invoker().onTaskPin(questEntry.questId(), taskId, player);
     }
 
     /**
@@ -295,7 +294,7 @@ public class ServerQuestManager {
      *
      * <p>Игнорируется, если квест не закреплён или не выдан.
      *
-     * <p>События: {@link QuestEvents#QUEST_PIN_REMOVED}
+     * <p>События: {@link QuestEvents#QUEST_UNPINNED}
      *
      * @param questId идентификатор квеста
      * @param player  игрок
@@ -309,7 +308,7 @@ public class ServerQuestManager {
 
         tracker.resetTaskPin();
 
-        QuestEvents.QUEST_PIN_REMOVED.invoker().onQuestPinRemove(questId, player);
+        QuestEvents.QUEST_UNPINNED.invoker().onQuestUnpin(questId, player);
         this.isDirty = true;
     }
 
@@ -769,7 +768,7 @@ public class ServerQuestManager {
 
         playerTracker.checkCompletion(questId, status -> {
             if (wasPinned) {
-                QuestEvents.QUEST_PIN_REMOVED.invoker().onQuestPinRemove(questId, player);
+                QuestEvents.QUEST_UNPINNED.invoker().onQuestUnpin(questId, player);
             }
             QuestProgressEvents.QUEST_COMPLETED.invoker().onQuestCompletion(entry, status, player);
             this.unlockDependentQuests(player, playerTracker, questId, wasPinned);

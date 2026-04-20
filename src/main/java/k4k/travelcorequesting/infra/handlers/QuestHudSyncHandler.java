@@ -54,7 +54,7 @@ public class QuestHudSyncHandler {
             ));
         });
 
-        QuestEvents.QUEST_PIN_REMOVED.register((questId, player) ->
+        QuestEvents.QUEST_UNPINNED.register((questId, player) ->
                 ServerPlayNetworking.send(player, new HudQuestRemoveS2CPacket(questId))
         );
 
@@ -72,7 +72,7 @@ public class QuestHudSyncHandler {
                     taskEntry.questId(), taskEntry.taskId(), newValue, false));
         });
 
-        QuestEvents.TASK_PIN_CHANGED.register((questId, taskId, player) ->
+        QuestEvents.TASK_PINNED.register((questId, taskId, player) ->
                 ServerPlayNetworking.send(player, new HudTaskPinS2CPacket(questId, taskId))
         );
 

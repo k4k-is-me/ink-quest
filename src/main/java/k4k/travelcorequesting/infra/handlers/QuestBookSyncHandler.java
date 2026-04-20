@@ -46,7 +46,7 @@ public class QuestBookSyncHandler {
                         questEntry.questId(), true
                 )));
 
-        QuestEvents.QUEST_PIN_REMOVED.register((questId, player) ->
+        QuestEvents.QUEST_UNPINNED.register((questId, player) ->
                 ServerPlayNetworking.send(player, new QuestBookQuestPinS2CPacket(
                         questId, false
                 )));
