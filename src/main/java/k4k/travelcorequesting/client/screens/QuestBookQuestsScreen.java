@@ -626,9 +626,9 @@ public class QuestBookQuestsScreen extends Screen {
         if (detailData == null) return;
         int size = detailData.tasks().size();
         if (size == 0) return;
-        int next = focusedTaskIndex < 0 ? (dir > 0 ? 0 : size - 1)
-                                        : Math.max(0, Math.min(size - 1, focusedTaskIndex + dir));
-        focusedTaskIndex = next;
+        focusedTaskIndex = focusedTaskIndex >= 0
+                ? Math.max(0, Math.min(size - 1, focusedTaskIndex + dir))
+                : (dir > 0 ? 0 : size - 1);
     }
 
     /**
