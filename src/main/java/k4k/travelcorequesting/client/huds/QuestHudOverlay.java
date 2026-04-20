@@ -24,6 +24,12 @@ public class QuestHudOverlay implements HudRenderCallback {
     public QuestHudOverlay() {}
 
     public void addQuest(Identifier questId, HudQuest quest, Map<String, HudTask> tasks) {
+        if (outgoingQuests.contains(questId)) {
+            outgoingQuests.remove(questId);
+            questWidgets.remove(questId);
+            questOrder.remove(questId);
+        }
+
         var existing = questWidgets.get(questId);
 
         if (existing != null) {
