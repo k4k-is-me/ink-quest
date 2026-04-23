@@ -85,5 +85,18 @@
   "quest.command.complete.stage": "Completed %s/%s tasks in active stage for %s",
   "quest.command.complete.quest": "Completed %s/%s tasks in quest for %s",
   "quest.command.remove": "Quest removed",
-  "quest.command.purge": "[!] Force-dropped quest for %s player(s) (%s online + %s offline)"
+  "quest.command.purge": "[!] Force-dropped quest for %s player(s) (%s online + %s offline)",
+  "quest.command.error.stage.invalid": "Stage index out of range",
+  "quest.command.query.stages.complete": "Stages complete for %s: %s",
+  "quest.command.query.stages.total": "Total stages for %s: %s",
+  "quest.command.query.stages.percent": "Stages percent for %s: %s%%",
+  "quest.command.query.stage.tasks.complete": "Tasks complete in stage for %s: %s",
+  "quest.command.query.stage.tasks.total": "Total tasks in stage for %s: %s",
+  "quest.command.query.stage.tasks.percent": "Tasks percent in stage for %s: %s%%",
+  "quest.command.query.task.success.value": "Task success value for %s: %s",
+  "quest.command.query.task.success.target": "Task success target for %s: %s",
+  "quest.command.query.task.success.percent": "Task success percent for %s: %s%%",
+  "quest.command.query.task.failure.value": "Task failure value for %s: %s",
+  "quest.command.query.task.failure.target": "Task failure target for %s: %s",
+  "quest.command.query.task.failure.percent": "Task failure percent for %s: %s%%"
 }

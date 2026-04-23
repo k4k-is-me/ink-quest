@@ -132,6 +132,7 @@ public class QuestCommand {
                 .then(addCompleteSubCommand())
                 .then(addRemoveSubCommand())
                 .then(addPurgeSubCommand())
+                .then(QuerySubCommand.getNodeTree())
         );
     }
 
