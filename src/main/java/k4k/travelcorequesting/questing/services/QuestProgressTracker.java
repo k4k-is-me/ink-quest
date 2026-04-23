@@ -26,6 +26,9 @@ public final class QuestProgressTracker {
     /// Активно отслеживаемые задачи квеста
     private final Map<String, TaskProgressTracker> activeTasks = new HashMap<>();
 
+    /// Задачи, для которых был TASK_LOADED, но ещё не было TASK_UNLOADED
+    private final Set<String> loadedTasks = new HashSet<>();
+
     /// Закреплённая задача квеста
     private @Nullable String pinnedTaskId = null;
 
@@ -46,6 +49,7 @@ public final class QuestProgressTracker {
         tracker.completeTasks.putAll(state.completeTasks());
         tracker.activeStage = state.activeStage();
         tracker.pinnedTaskId = state.pinnedTaskId();
+        tracker.loadedTasks.addAll(state.loadedTasks());
 
         return tracker;
     }
@@ -58,7 +62,8 @@ public final class QuestProgressTracker {
                 Collections.unmodifiableMap(this.activeTasks.entrySet().stream().collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> entry.getValue().saveState()
-                )))
+                ))),
+                Collections.unmodifiableSet(this.loadedTasks)
         );
     }
 
@@ -179,6 +184,28 @@ public final class QuestProgressTracker {
      */
     public Set<String> getActiveTasks() {
         return Collections.unmodifiableSet(this.activeTasks.keySet());  // NOTE: returned set is backed by a map so it may change
+    }
+
+    /**
+     * Возвращает задачи, для которых был вызван TASK_LOADED, но ещё не TASK_UNLOADED.
+     * Используется в {@code ensureActiveStageLoaded} для вычисления diff загруженных задач.
+     */
+    public Set<String> getLoadedTasks() {
+        return Collections.unmodifiableSet(this.loadedTasks);
+    }
+
+    /**
+     * Помечает задачу как загруженную. Вызывается из {@code ensureActiveStageLoaded} после TASK_LOADED.
+     */
+    public void markLoaded(String taskId) {
+        this.loadedTasks.add(taskId);
+    }
+
+    /**
+     * Снимает отметку загруженной задачи. Вызывается из {@code ensureActiveStageLoaded} после TASK_UNLOADED.
+     */
+    public void markUnloaded(String taskId) {
+        this.loadedTasks.remove(taskId);
     }
 
     /**

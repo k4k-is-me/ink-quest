@@ -6,9 +6,13 @@ import k4k.travelcorequesting.questing.states.PlayerTrackerState;
 import k4k.travelcorequesting.questing.states.QuestTrackerState;
 import k4k.travelcorequesting.questing.states.TaskTrackerState;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class PlayerTrackerStateNbtEncoder implements NbtEncoder<PlayerTrackerState, NbtCompound> {
     public NbtCompound encode(PlayerTrackerState state) {
@@ -53,8 +57,12 @@ public class PlayerTrackerStateNbtEncoder implements NbtEncoder<PlayerTrackerSta
             completeNbt.putString(completeTaskEntry.getKey(), completeTaskEntry.getValue().toString());
         }
 
+        var loadedTasksNbt = new NbtList();
+        state.loadedTasks().forEach(id -> loadedTasksNbt.add(NbtString.of(id)));
+
         nbt.put("ActiveTasks", activeNbt);
         nbt.put("CompleteTasks", completeNbt);
+        nbt.put("LoadedTasks", loadedTasksNbt);
 
         return nbt;
     }
@@ -95,6 +103,12 @@ public class PlayerTrackerStateNbtEncoder implements NbtEncoder<PlayerTrackerSta
             completeTasks.put(key, CompletionStatus.valueOf(completeNbt.getString(key)));
         }
 
-        return new QuestTrackerState(activeStage, pinnedTaskId, completeTasks, activeTasksTrackers);
+        var loadedTasks = new HashSet<String>();
+        if (nbt.contains("LoadedTasks")) {
+            var loadedNbt = nbt.getList("LoadedTasks", NbtElement.STRING_TYPE);
+            for (var i = 0; i < loadedNbt.size(); i++) loadedTasks.add(loadedNbt.getString(i));
+        }
+
+        return new QuestTrackerState(activeStage, pinnedTaskId, completeTasks, activeTasksTrackers, loadedTasks);
     }
 }

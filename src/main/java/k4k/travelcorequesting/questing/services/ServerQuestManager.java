@@ -759,8 +759,8 @@ public class ServerQuestManager {
                     .map(entry.quest()::getRequiredTask)
                     .ifPresent(questTracker::setTaskPin);
 
+        this.ensureActiveStageLoaded(player, questTracker, stageChanged);
         if (questTracker.getActiveStage().isPresent()) {
-            this.ensureActiveStageLoaded(player, questTracker, stageChanged);
             this.processActiveTasks(player, questId, questTracker);
         }
 
@@ -824,29 +824,32 @@ public class ServerQuestManager {
 
     /**
      * Удостоверяется, что все задачи активного этапа загружены. Загружает то что не загружено и выгружает то,
-     * что уже не нужно. Отправляет соответствующие события
+     * что уже не нужно. Отправляет соответствующие события. Вызывается безусловно — в том числе когда activeStage
+     * равен null, чтобы выгрузить задачи последнего этапа при завершении квеста.
      * @param player Игрок
      * @param questTracker Трекер квеста
+     * @param stageChanged Сменился ли активный этап в этом тике
      */
     private void ensureActiveStageLoaded(ServerPlayerEntity player, QuestProgressTracker questTracker, boolean stageChanged) {
-        var prevLoadedTasks = new HashSet<>(questTracker.getActiveTasks());
+        var loadedTasks = new HashSet<>(questTracker.getLoadedTasks());
         questTracker.loadActiveStage(
                 task -> this.conditionDispatcher.getCurrentValue(task.successCondition(), player),
                 task -> this.conditionDispatcher.getCurrentValue(task.failureCondition(), player)
         );
 
-        var loadedTasks = questTracker.getActiveTasks();
+        var shouldBeLoaded = questTracker.getActiveTasks();
 
         // Unload tasks that are loaded but not present in the current stage
-        prevLoadedTasks.stream().filter(taskId -> !loadedTasks.contains(taskId)).forEach(taskId -> {
+        loadedTasks.stream().filter(taskId -> !shouldBeLoaded.contains(taskId)).forEach(taskId -> {
             var taskEntry = this.questRepository.getTaskEntry(questTracker.getQuestId(), taskId);
             if (taskEntry == null) return;
 
             QuestProgressEvents.TASK_UNLOADED.invoker().onTaskUnload(taskEntry, player, stageChanged);
+            questTracker.markUnloaded(taskId);
         });
 
         // Load tasks in current stage that are not loaded
-        loadedTasks.stream().filter(taskId -> !prevLoadedTasks.contains(taskId)).forEach(taskId -> {
+        shouldBeLoaded.stream().filter(taskId -> !loadedTasks.contains(taskId)).forEach(taskId -> {
             var taskEntry = this.questRepository.getTaskEntry(questTracker.getQuestId(), taskId);
             if (taskEntry == null) return;
 
@@ -854,8 +857,8 @@ public class ServerQuestManager {
             this.conditionDispatcher.load(taskEntry.task().failureCondition(), player);
 
             QuestProgressEvents.TASK_LOADED.invoker().onTaskLoad(taskEntry, player, stageChanged);
+            questTracker.markLoaded(taskId);
         });
-
     }
 
     /**

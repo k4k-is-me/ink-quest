@@ -95,6 +95,8 @@ public class QuestHudSyncHandler {
             if (stageChanged) return;
             var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
             if (!questManager.isQuestPinned(taskEntry.questId(), player)) return;
+            // Завершённые задачи не требуют пакета удаления — HudTaskCompleteS2CPacket уже был отправлен
+            if (questManager.isTaskComplete(taskEntry.questId(), taskEntry.taskId(), player)) return;
             ServerPlayNetworking.send(player, new HudTaskRemoveS2CPacket(
                     taskEntry.questId(),
                     taskEntry.taskId()
