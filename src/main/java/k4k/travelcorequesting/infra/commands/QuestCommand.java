@@ -784,6 +784,11 @@ public class QuestCommand {
             return 0;
         }
 
+        if (questManager.isQuestComplete(questId, player)) {
+            source.sendError(Text.translatable(ERR_QUEST_COMPLETE));
+            return 0;
+        }
+
         if (questManager.isQuestPinned(entry.questId(), player)) {
             source.sendError(Text.translatable(ERR_QUEST_PINNED));
             return 0;
