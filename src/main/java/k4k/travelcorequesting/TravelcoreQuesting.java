@@ -2,6 +2,7 @@ package k4k.travelcorequesting;
 
 import k4k.travelcorequesting.infra.handlers.QuestBookSyncHandler;
 import k4k.travelcorequesting.infra.handlers.QuestHudSyncHandler;
+import k4k.travelcorequesting.infra.handlers.QuestLifecycleFunctionExecutor;
 import k4k.travelcorequesting.infra.requests.GetQuestDetailsClientRequest;
 import k4k.travelcorequesting.infra.command_argument_types.CompletionLevelArgumentType;
 import k4k.travelcorequesting.infra.command_argument_types.CompletionStatusArgumentType;
@@ -42,6 +43,7 @@ public class TravelcoreQuesting implements ModInitializer {
 		registerQuestingPersistence();
 		QuestBookSyncHandler.register();
 		QuestHudSyncHandler.register();
+		QuestLifecycleFunctionExecutor.register();
 		GetQuestDetailsClientRequest.INSTANCE.registerServer();
 		ServerPlayNetworking.registerGlobalReceiver(QuestBookTaskPinC2SPacket.TYPE, (packet, player, sender) -> {
 			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
