@@ -87,37 +87,6 @@ public class QuestCommand {
     private static final String MSG_QUEST_REMOVE = "quest.command.remove";
     private static final String MSG_QUEST_PURGE = "quest.command.purge";
 
-    public static final List<QuestGeneralStatus> QUEST_STATUSES = Arrays.stream(QuestGeneralStatus.values()).toList();
-
-    public static final List<TaskGeneralStatus> TASK_STATUSES = Arrays.stream(TaskGeneralStatus.values()).toList();
-
-    public static final Function<QuestGeneralStatus, String> QUEST_STATUS_TO_KEYWORD = status -> switch (status) {
-        case ACTIVE -> "active";
-        case COMPLETE -> "complete";
-        case SUCCEEDED -> "succeeded";
-        case FAILED -> "failed";
-        case SKIPPED -> "skipped";
-        case PINNED -> "pinned";
-    };
-
-    public static final Function<QuestGeneralStatus, QuestStatusPredicate> QUEST_STATUS_TO_PREDICATE = status -> switch (status) {
-        case ACTIVE -> ServerQuestManager::isQuestActive;
-        case COMPLETE -> ServerQuestManager::isQuestComplete;
-        case SUCCEEDED -> ServerQuestManager::isQuestSucceeded;
-        case FAILED -> ServerQuestManager::isQuestFailed;
-        case SKIPPED -> ServerQuestManager::isQuestSkipped;
-        case PINNED -> ServerQuestManager::isQuestPinned;
-    };
-
-    public static final Function<QuestGeneralStatus, String> QUEST_STATUS_TO_TRACKED_MESSAGE = status -> switch (status) {
-        case ACTIVE -> "quest.command.list.tracked.active";
-        case COMPLETE -> "quest.command.list.tracked.complete";
-        case SUCCEEDED -> "quest.command.list.tracked.succeeded";
-        case FAILED -> "quest.command.list.tracked.failed";
-        case SKIPPED -> "quest.command.list.tracked.skipped";
-        case PINNED -> "quest.command.list.tracked.pinned";
-    };
-
     public static void register(@NotNull CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(literal("quest")
                 .requires(source -> source.hasPermissionLevel(2))

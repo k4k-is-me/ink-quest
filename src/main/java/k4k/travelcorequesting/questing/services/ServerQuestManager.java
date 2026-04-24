@@ -636,16 +636,16 @@ public class ServerQuestManager {
                 .flatMap(QuestProgressTracker::getActiveStage);
     }
 
-    /** Число завершённых задач в указанном этапе. -1 если квест не выдан или не существует. */
+    /** Число завершённых задач в указанном этапе. */
     public int getTasksComplete(Identifier questId, int stage, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);
         Objects.requireNonNull(player);
 
         var questTracker = this.getQuestTracker(player, questId).orElse(null);
-        if (questTracker == null) return -1;
+        if (questTracker == null) return 0;
 
         var quest = this.questRepository.getQuest(questId);
-        if (quest == null) return -1;
+        if (quest == null) return 0;
 
         return (int) quest.getStage(stage).stream()
                 .map(questTracker::isComplete)

@@ -46,69 +46,150 @@ public class QuerySubCommand {
      */
     public static ArgumentBuilder<ServerCommandSource, ?> getNodeTree() {
         return literal("query")
-            .then(argument(ARG_PLAYER, player())
-                .then(argument(ARG_QUEST_ID, identifier())
-                    .then(literal("stages")
-                        .then(literal("complete").executes(ctx -> stagesComplete(ctx,
-                                getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID))))
-                        .then(literal("total").executes(ctx -> stagesTotal(ctx,
-                                getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID))))
-                        .then(literal("percent").executes(ctx -> stagesPercent(ctx,
-                                getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID))))
-                    )
-                    .then(literal("stage")
-                        .then(literal("active")
-                            .then(literal("tasks")
-                                .then(literal("complete").executes(ctx -> stageActiveTasksComplete(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID))))
-                                .then(literal("total").executes(ctx -> stageActiveTasksTotal(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID))))
-                                .then(literal("percent").executes(ctx -> stageActiveTasksPercent(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID))))
-                            )
+                .then(argument(ARG_PLAYER, player())
+                        .then(argument(ARG_QUEST_ID, identifier())
+                                .then(literal("stages")
+                                        .then(literal("complete")
+                                                .executes(context -> stagesComplete(
+                                                        context,
+                                                        getPlayer(context, ARG_PLAYER),
+                                                        getIdentifier(context, ARG_QUEST_ID)
+                                                ))
+                                        )
+                                        .then(literal("total")
+                                                .executes(context -> stagesTotal(
+                                                        context,
+                                                        getPlayer(context, ARG_PLAYER),
+                                                        getIdentifier(context, ARG_QUEST_ID)
+                                                ))
+                                        )
+                                        .then(literal("percent")
+                                                .executes(context -> stagesPercent(
+                                                        context,
+                                                        getPlayer(context, ARG_PLAYER),
+                                                        getIdentifier(context, ARG_QUEST_ID)
+                                                ))
+                                        )
+                                )
+                                .then(literal("stage")
+                                        .then(literal("active")
+                                                .then(literal("tasks")
+                                                        .then(literal("complete")
+                                                                .executes(context -> stageActiveTasksComplete(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID)
+                                                                ))
+                                                        )
+                                                        .then(literal("total")
+                                                                .executes(context -> stageActiveTasksTotal(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID)
+                                                                ))
+                                                        )
+                                                        .then(literal("percent")
+                                                                .executes(context -> stageActiveTasksPercent(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID)
+                                                                ))
+                                                        )
+                                                )
+                                        )
+                                        .then(argument(ARG_STAGE, integer(0))
+                                                .then(literal("tasks")
+                                                        .then(literal("complete")
+                                                                .executes(context -> stageNTasksComplete(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getInteger(context, ARG_STAGE)
+                                                                ))
+                                                        )
+                                                        .then(literal("total")
+                                                                .executes(context -> stageNTasksTotal(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getInteger(context, ARG_STAGE)
+                                                                ))
+                                                        )
+                                                        .then(literal("percent")
+                                                                .executes(context -> stageNTasksPercent(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getInteger(context, ARG_STAGE)
+                                                                ))
+                                                        )
+                                                )
+                                        )
+                                )
+                                .then(literal("task")
+                                        .then(argument(ARG_TASK_ID, word())
+                                                .then(literal("success")
+                                                        .then(literal("value")
+                                                                .executes(context -> taskConditionValue(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getString(context, ARG_TASK_ID),
+                                                                        true
+                                                                ))
+                                                        )
+                                                        .then(literal("target")
+                                                                .executes(context -> taskConditionTarget(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getString(context, ARG_TASK_ID),
+                                                                        true
+                                                                ))
+                                                        )
+                                                        .then(literal("percent")
+                                                                .executes(context -> taskConditionPercent(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getString(context, ARG_TASK_ID),
+                                                                        true
+                                                                ))
+                                                        )
+                                                )
+                                                .then(literal("failure")
+                                                        .then(literal("value")
+                                                                .executes(context -> taskConditionValue(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getString(context, ARG_TASK_ID),
+                                                                        false
+                                                                ))
+                                                        )
+                                                        .then(literal("target")
+                                                                .executes(context -> taskConditionTarget(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getString(context, ARG_TASK_ID),
+                                                                        false
+                                                                ))
+                                                        )
+                                                        .then(literal("percent")
+                                                                .executes(context -> taskConditionPercent(
+                                                                        context,
+                                                                        getPlayer(context, ARG_PLAYER),
+                                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                                        getString(context, ARG_TASK_ID),
+                                                                        false
+                                                                ))
+                                                        )
+                                                )
+                                        )
+                                )
                         )
-                        .then(argument(ARG_STAGE, integer(0))
-                            .then(literal("tasks")
-                                .then(literal("complete").executes(ctx -> stageNTasksComplete(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getInteger(ctx, ARG_STAGE))))
-                                .then(literal("total").executes(ctx -> stageNTasksTotal(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getInteger(ctx, ARG_STAGE))))
-                                .then(literal("percent").executes(ctx -> stageNTasksPercent(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getInteger(ctx, ARG_STAGE))))
-                            )
-                        )
-                    )
-                    .then(literal("task")
-                        .then(argument(ARG_TASK_ID, word())
-                            .then(literal("success")
-                                .then(literal("value").executes(ctx -> taskConditionValue(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getString(ctx, ARG_TASK_ID), true)))
-                                .then(literal("target").executes(ctx -> taskConditionTarget(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getString(ctx, ARG_TASK_ID), true)))
-                                .then(literal("percent").executes(ctx -> taskConditionPercent(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getString(ctx, ARG_TASK_ID), true)))
-                            )
-                            .then(literal("failure")
-                                .then(literal("value").executes(ctx -> taskConditionValue(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getString(ctx, ARG_TASK_ID), false)))
-                                .then(literal("target").executes(ctx -> taskConditionTarget(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getString(ctx, ARG_TASK_ID), false)))
-                                .then(literal("percent").executes(ctx -> taskConditionPercent(ctx,
-                                        getPlayer(ctx, ARG_PLAYER), getIdentifier(ctx, ARG_QUEST_ID),
-                                        getString(ctx, ARG_TASK_ID), false)))
-                            )
-                        )
-                    )
-                )
-            );
+                );
     }
 
     /**
@@ -228,7 +309,7 @@ public class QuerySubCommand {
         if (!validateStage(ctx.getSource(), quest, stage)) return 0;
         if (rejectIfComplete(ctx.getSource(), questManager, questId, player)) return 0;
 
-        int complete = Math.max(0, questManager.getTasksComplete(questId, stage, player));
+        int complete = questManager.getTasksComplete(questId, stage, player);
         ctx.getSource().sendFeedback(() -> Text.translatable("quest.command.query.stage.tasks.complete",
                 player.getName(), complete), false);
         return complete;
