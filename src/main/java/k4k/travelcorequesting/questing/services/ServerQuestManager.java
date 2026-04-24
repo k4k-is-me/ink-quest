@@ -6,6 +6,8 @@ import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
 import k4k.travelcorequesting.questing.abstractions.IQuestRequirementChecker;
@@ -16,6 +18,8 @@ import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.QuestEntry;
 import k4k.travelcorequesting.questing.services.taskConditionTesters.AllConditionHandler;
+import k4k.travelcorequesting.questing.services.taskConditionTesters.AnyConditionHandler;
+import k4k.travelcorequesting.questing.services.taskConditionTesters.NoneConditionHandler;
 import k4k.travelcorequesting.questing.services.taskConditionTesters.PredicateConditionHandler;
 import k4k.travelcorequesting.questing.services.taskConditionTesters.ScoreConditionHandler;
 import k4k.travelcorequesting.questing.states.ServerQuestManagerState;
@@ -71,7 +75,9 @@ public class ServerQuestManager {
                 .register(ScoreCondition.class, new ScoreConditionHandler())
                 .register(PredicateCondition.class, new PredicateConditionHandler());
         dispatcher
-                .register(AllCondition.class, new AllConditionHandler(dispatcher));
+                .register(AllCondition.class, new AllConditionHandler(dispatcher))
+                .register(AnyCondition.class, new AnyConditionHandler(dispatcher))
+                .register(NoneCondition.class, new NoneConditionHandler(dispatcher));
         this.conditionDispatcher = dispatcher;
         this.requirementChecker = requirementChecker;
     }

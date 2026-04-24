@@ -10,6 +10,8 @@ import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.models.QuestRequirement;
 import k4k.travelcorequesting.domain.models.TaskEventActions;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
 import net.minecraft.nbt.NbtCompound;
@@ -139,6 +141,22 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
                     .forEach(subConditions::add);
             nbt.put("conditions", subConditions);
         }
+        else if (condition instanceof AnyCondition anyCondition) {
+            nbt.putString("type", "any");
+            var subConditions = new NbtList();
+            anyCondition.subConditions().stream()
+                    .map(this::encodeDynamicCondition)
+                    .forEach(subConditions::add);
+            nbt.put("conditions", subConditions);
+        }
+        else if (condition instanceof NoneCondition noneCondition) {
+            nbt.putString("type", "none");
+            var subConditions = new NbtList();
+            noneCondition.subConditions().stream()
+                    .map(this::encodeDynamicCondition)
+                    .forEach(subConditions::add);
+            nbt.put("conditions", subConditions);
+        }
         else throw new NotImplementedException("Conversion of %s to nbt is not implemented".formatted(condition.getClass().getSimpleName()));
 
         return nbt;
@@ -262,6 +280,20 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
                         .map(this::decodeDynamicCondition)
                         .collect(Collectors.toList());
                 return new AllCondition(subConditions);
+            case "any":
+                var anyConditionsNbt = nbt.getList("conditions", NbtElement.COMPOUND_TYPE);
+                var anySubConditions = IntStream.range(0, anyConditionsNbt.size())
+                        .mapToObj(anyConditionsNbt::getCompound)
+                        .map(this::decodeDynamicCondition)
+                        .collect(Collectors.toList());
+                return new AnyCondition(anySubConditions);
+            case "none":
+                var noneConditionsNbt = nbt.getList("conditions", NbtElement.COMPOUND_TYPE);
+                var noneSubConditions = IntStream.range(0, noneConditionsNbt.size())
+                        .mapToObj(noneConditionsNbt::getCompound)
+                        .map(this::decodeDynamicCondition)
+                        .collect(Collectors.toList());
+                return new NoneCondition(noneSubConditions);
             default:
                 throw new NotImplementedException("Decoding of condition type %s is not implemented".formatted(type));
         }

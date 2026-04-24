@@ -11,6 +11,8 @@ import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.models.QuestRequirement;
 import k4k.travelcorequesting.domain.models.TaskEventActions;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
 import k4k.travelcorequesting.questing.exceptions.IncompatibleQuestVersionException;
@@ -230,6 +232,16 @@ public class QuestJsonSerializer {
                     var subConditions = JUtil.getMemberArray(json, "conditions",
                             element -> deserializeTaskCondition(element, context));
                     return new AllCondition(subConditions);
+
+                case "any":
+                    var anySubConditions = JUtil.getMemberArray(json, "conditions",
+                            element -> deserializeTaskCondition(element, context));
+                    return new AnyCondition(anySubConditions);
+
+                case "none":
+                    var noneSubConditions = JUtil.getMemberArray(json, "conditions",
+                            element -> deserializeTaskCondition(element, context));
+                    return new NoneCondition(noneSubConditions);
 
                 default:
                     throw new JsonParseException(
