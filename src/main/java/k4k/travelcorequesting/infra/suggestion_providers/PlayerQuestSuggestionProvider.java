@@ -27,12 +27,6 @@ public class PlayerQuestSuggestionProvider implements SuggestionProvider<ServerC
         this.positive = positive;
     }
 
-    public PlayerQuestSuggestionProvider(String playerArgumentName) {
-        this.playerArgumentName = playerArgumentName;
-        this.predicate = Predicate.TRUE;
-        this.positive = true;
-    }
-
     @Override
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
         var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
@@ -46,7 +40,6 @@ public class PlayerQuestSuggestionProvider implements SuggestionProvider<ServerC
 
     @FunctionalInterface
     public interface Predicate {
-        Predicate TRUE = (questManager, questId, player) -> true;
         boolean test(ServerQuestManager questManager, Identifier questId, ServerPlayerEntity player);
     }
 }

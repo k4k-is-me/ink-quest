@@ -7,6 +7,7 @@ import k4k.travelcorequesting.infra.abstractions.TaskStatusPredicate;
 import k4k.travelcorequesting.infra.enums.QuestGeneralStatus;
 import k4k.travelcorequesting.infra.enums.TaskGeneralStatus;
 import k4k.travelcorequesting.infra.suggestion_providers.PlayerQuestSuggestionProvider;
+import k4k.travelcorequesting.infra.suggestion_providers.QuestTaskSuggestionProvider;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import k4k.travelcorequesting.questing.services.ServerQuestManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -49,6 +50,7 @@ public class TestSubCommand {
 
                                 .then(literal("task")
                                         .then(argument(ARG_TASK_ID, word())
+                                                .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID))
                                                 .then(argument(ARG_TASK_STATUS, taskGeneralStatus())
                                                         .executes(context -> testTask(
                                                                 context,

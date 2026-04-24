@@ -264,6 +264,7 @@ public class QuestCommand {
                                 )
                                 .then(literal("remove")
                                         .then(argument(ARG_TASK_ID, word())
+                                                .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID))
                                                 .executes(ctx -> modifyQuestRemoveTask(ctx,
                                                         getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID)))
                                         )
@@ -317,7 +318,7 @@ public class QuestCommand {
         return literal("complete")
                 .then(argument(ARG_PLAYER, player())
                         .then(argument(ARG_QUEST_ID, identifier())
-                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, ServerQuestManager::isQuestComplete, false))
+                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, ServerQuestManager::isQuestActive, true))
 
                                 .then(argument(ARG_COMPLETION_STATUS, completionStatus())
                                         .then(argument(ARG_COMPLETION_LEVEL, completionLevel())
@@ -347,6 +348,7 @@ public class QuestCommand {
 
                                 .then(literal("task")
                                         .then(argument(ARG_TASK_ID, word())
+                                                .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID, ARG_PLAYER, (qm, qId, tId, p) -> !qm.isTaskComplete(qId, tId, p), true))
                                                 .then(argument(ARG_COMPLETION_STATUS, completionStatus())
                                                         .executes(context -> completeTask(
                                                                 context,
@@ -366,7 +368,7 @@ public class QuestCommand {
         return literal("pin")
                 .then(argument(ARG_PLAYER, player())
                         .then(argument(ARG_QUEST_ID, identifier())
-                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, ServerQuestManager::isQuestPinned, false))
+                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, (qm, qId, p) -> qm.isQuestActive(qId, p) && !qm.isQuestPinned(qId, p), true))
                                 .executes(context -> pinRequiredTask(
                                         context,
                                         getIdentifier(context, ARG_QUEST_ID),
@@ -374,6 +376,7 @@ public class QuestCommand {
                                 ))
 
                                 .then(argument(ARG_TASK_ID, word())
+                                        .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID, ARG_PLAYER, (qm, qId, tId, p) -> qm.isTaskActive(qId, tId, p) && !qm.isTaskPinned(qId, tId, p), true))
                                         .executes(context -> pinTask(
                                                 context,
                                                 getIdentifier(context, ARG_QUEST_ID),

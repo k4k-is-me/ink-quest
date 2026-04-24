@@ -3,6 +3,8 @@ package k4k.travelcorequesting.infra.commands;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import k4k.travelcorequesting.domain.abstractions.Quest;
+import k4k.travelcorequesting.infra.suggestion_providers.PlayerQuestSuggestionProvider;
+import k4k.travelcorequesting.infra.suggestion_providers.QuestTaskSuggestionProvider;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import k4k.travelcorequesting.questing.services.ServerQuestManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -48,6 +50,7 @@ public class QuerySubCommand {
         return literal("query")
                 .then(argument(ARG_PLAYER, player())
                         .then(argument(ARG_QUEST_ID, identifier())
+                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, ServerQuestManager::isQuestTracked, true))
                                 .then(literal("stages")
                                         .then(literal("complete")
                                                 .executes(context -> stagesComplete(
@@ -128,6 +131,7 @@ public class QuerySubCommand {
                                 )
                                 .then(literal("task")
                                         .then(argument(ARG_TASK_ID, word())
+                                                .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID))
                                                 .then(literal("success")
                                                         .then(literal("value")
                                                                 .executes(context -> taskConditionValue(

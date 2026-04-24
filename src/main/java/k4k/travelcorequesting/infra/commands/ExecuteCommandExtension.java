@@ -8,6 +8,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 
+import k4k.travelcorequesting.infra.suggestion_providers.PlayerQuestSuggestionProvider;
+import k4k.travelcorequesting.infra.suggestion_providers.QuestTaskSuggestionProvider;
+import k4k.travelcorequesting.questing.services.ServerQuestManager;
+
 import static com.mojang.brigadier.arguments.StringArgumentType.*;
 import static k4k.travelcorequesting.infra.command_argument_types.QuestGeneralStatusArgumentType.*;
 import static k4k.travelcorequesting.infra.command_argument_types.TaskGeneralStatusArgumentType.*;
@@ -53,6 +57,7 @@ public class ExecuteCommandExtension {
         return literal("quest")
                 .then(argument(ARG_PLAYER, player())
                         .then(argument(ARG_QUEST_ID, identifier())
+                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, ServerQuestManager::isQuestTracked, true))
                                 .then(argument(ARG_QUEST_STATUS, questGeneralStatus())
                                         .fork(node, context -> {
                                             int result = TestSubCommand.checkQuest(
@@ -86,7 +91,9 @@ public class ExecuteCommandExtension {
         return literal("task")
                 .then(argument(ARG_PLAYER, player())
                         .then(argument(ARG_QUEST_ID, identifier())
+                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, ServerQuestManager::isQuestTracked, true))
                                 .then(argument(ARG_TASK_ID, word())
+                                        .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID))
                                         .then(argument(ARG_TASK_STATUS, taskGeneralStatus())
                                                 .fork(node, context -> {
                                                     int result = TestSubCommand.checkTask(
