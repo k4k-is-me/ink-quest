@@ -1,6 +1,7 @@
 package k4k.travelcorequesting.domain.abstractions;
 
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
+import k4k.travelcorequesting.domain.models.QuestRequirement;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +16,7 @@ public interface Quest {
     int index();
     boolean background();
     QuestPinMode getPinMode();
+    @Nullable QuestRequirement getRequire();
 
     // Methods to work with collections that do not require copying
 

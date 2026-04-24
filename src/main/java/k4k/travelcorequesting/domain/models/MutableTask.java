@@ -6,59 +6,53 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 public final class MutableTask implements Task {
     private Text title;
     private @Nullable Text description;
-    private @Nullable Identifier loadFunction;
-    private @Nullable Identifier tickFunction;
-    private @Nullable Identifier successFunction;
-    private @Nullable Identifier failureFunction;
-    private @Nullable Identifier unloadFunction;
+    private TaskEventActions onLoad;
+    private TaskEventActions onTick;
+    private TaskEventActions onUnload;
+    private TaskEventActions onSuccess;
+    private TaskEventActions onFailure;
     private @Nullable ITaskCondition successCondition;
     private @Nullable ITaskCondition failureCondition;
-    private boolean isManualSuccess;
-    private boolean isManualFailure;
 
     private MutableTask(
             Text title,
             @Nullable Text description,
-            @Nullable Identifier loadFunction,
-            @Nullable Identifier tickFunction,
-            @Nullable Identifier successFunction,
-            @Nullable Identifier failureFunction,
-            @Nullable Identifier completedFunction,
+            TaskEventActions onLoad,
+            TaskEventActions onTick,
+            TaskEventActions onUnload,
+            TaskEventActions onSuccess,
+            TaskEventActions onFailure,
             @Nullable ITaskCondition successCondition,
-            @Nullable ITaskCondition failureCondition,
-            boolean isManualSuccess,
-            boolean isManualFailure
-            // TaskReward reward
+            @Nullable ITaskCondition failureCondition
     ) {
         this.title = title;
         this.description = description;
-        this.loadFunction = loadFunction;
-        this.tickFunction = tickFunction;
-        this.successFunction = successFunction;
-        this.failureFunction = failureFunction;
-        this.unloadFunction = completedFunction;
+        this.onLoad = onLoad;
+        this.onTick = onTick;
+        this.onUnload = onUnload;
+        this.onSuccess = onSuccess;
+        this.onFailure = onFailure;
         this.successCondition = successCondition;
         this.failureCondition = failureCondition;
-        this.isManualSuccess = isManualSuccess;
-        this.isManualFailure = isManualFailure;
     }
 
+    /** Создаёт задачу с минимальным набором полей — только заголовком. */
     public static MutableTask create(Text title) {
         return new MutableTask(
                 title,
                 null,
+                TaskEventActions.EMPTY,
+                TaskEventActions.EMPTY,
+                TaskEventActions.EMPTY,
+                TaskEventActions.EMPTY,
+                TaskEventActions.EMPTY,
                 null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false
+                null
         );
     }
 
@@ -81,48 +75,73 @@ public final class MutableTask implements Task {
     }
 
     @Override
-    public @Nullable Identifier loadFunction() {
-        return loadFunction;
+    public TaskEventActions onLoad() {
+        return onLoad;
     }
 
-    public void setLoadFunction(@Nullable Identifier loadFunction) {
-        this.loadFunction = loadFunction;
+    /** Устанавливает единственную функцию on.load; null очищает действия. */
+    public void setLoadFunction(@Nullable Identifier function) {
+        this.onLoad = toSingleFunctionActions(function);
     }
 
-    @Override
-    public @Nullable Identifier tickFunction() {
-        return tickFunction;
-    }
-
-    public void setTickFunction(@Nullable Identifier tickFunction) {
-        this.tickFunction = tickFunction;
+    public void setOnLoad(TaskEventActions actions) {
+        this.onLoad = actions;
     }
 
     @Override
-    public @Nullable Identifier unloadFunction() {
-        return unloadFunction;
+    public TaskEventActions onTick() {
+        return onTick;
     }
 
-    public void setUnloadFunction(@Nullable Identifier unloadFunction) {
-        this.unloadFunction = unloadFunction;
+    /** Устанавливает единственную функцию on.tick; null очищает действия. */
+    public void setTickFunction(@Nullable Identifier function) {
+        this.onTick = toSingleFunctionActions(function);
     }
 
-    @Override
-    public @Nullable Identifier successFunction() {
-        return successFunction;
-    }
-
-    public void setSuccessFunction(@Nullable Identifier succeededFunction) {
-        this.successFunction = succeededFunction;
+    public void setOnTick(TaskEventActions actions) {
+        this.onTick = actions;
     }
 
     @Override
-    public boolean isManualSuccess() {
-        return this.isManualSuccess;
+    public TaskEventActions onUnload() {
+        return onUnload;
     }
 
-    public void setManualSuccess(boolean value) {
-        this.isManualSuccess = value;
+    /** Устанавливает единственную функцию on.unload; null очищает действия. */
+    public void setUnloadFunction(@Nullable Identifier function) {
+        this.onUnload = toSingleFunctionActions(function);
+    }
+
+    public void setOnUnload(TaskEventActions actions) {
+        this.onUnload = actions;
+    }
+
+    @Override
+    public TaskEventActions onSuccess() {
+        return onSuccess;
+    }
+
+    /** Устанавливает единственную функцию on.success; null очищает действия. */
+    public void setSuccessFunction(@Nullable Identifier function) {
+        this.onSuccess = toSingleFunctionActions(function);
+    }
+
+    public void setOnSuccess(TaskEventActions actions) {
+        this.onSuccess = actions;
+    }
+
+    @Override
+    public TaskEventActions onFailure() {
+        return onFailure;
+    }
+
+    /** Устанавливает единственную функцию on.failure; null очищает действия. */
+    public void setFailureFunction(@Nullable Identifier function) {
+        this.onFailure = toSingleFunctionActions(function);
+    }
+
+    public void setOnFailure(TaskEventActions actions) {
+        this.onFailure = actions;
     }
 
     @Override
@@ -135,29 +154,16 @@ public final class MutableTask implements Task {
     }
 
     @Override
-    public @Nullable Identifier failureFunction() {
-        return failureFunction;
-    }
-
-    public void setFailureFunction(@Nullable Identifier failedFunction) {
-        this.failureFunction = failedFunction;
-    }
-
-    @Override
-    public boolean isManualFailure() {
-        return this.isManualFailure;
-    }
-
-    public void setManualFailure(boolean value) {
-        this.isManualFailure = value;
-    }
-
-    @Override
     public @Nullable ITaskCondition failureCondition() {
         return failureCondition;
     }
 
     public void setFailureCondition(@Nullable ITaskCondition failureCondition) {
         this.failureCondition = failureCondition;
+    }
+
+    private static TaskEventActions toSingleFunctionActions(@Nullable Identifier function) {
+        if (function == null) return TaskEventActions.EMPTY;
+        return new TaskEventActions(List.of(function), List.of());
     }
 }

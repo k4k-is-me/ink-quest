@@ -8,6 +8,8 @@ import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
+import k4k.travelcorequesting.domain.models.QuestRequirement;
+import k4k.travelcorequesting.domain.models.TaskEventActions;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
@@ -18,6 +20,7 @@ import net.minecraft.util.Identifier;
 
 import java.io.Reader;
 import java.lang.reflect.Type;
+import java.util.List;
 
 /**
  *
@@ -28,8 +31,8 @@ public class QuestJsonSerializer {
     //   eg: added or removed an optional field, or added new enum value
     // Increase version if new changes are not compatible!
     //   eg: added or removed a required field, changed field type or enum value is removed
-    protected static final int VERSION = 1;
-    protected static final int VARIANT = 1;
+    protected static final int VERSION = 2;
+    protected static final int VARIANT = 0;
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeHierarchyAdapter(MutableQuest.class, new GsonSerializer())
@@ -64,7 +67,6 @@ public class QuestJsonSerializer {
         }
 
         private MutableQuest deserializeQuest(JsonElement json, JsonDeserializationContext context) {
-            // Основные поля квеста
             var title = JUtil.getRequiredMember(json, "title",
                     element -> (Text) context.deserialize(element, Text.class));
 
@@ -89,35 +91,23 @@ public class QuestJsonSerializer {
                 };
             }, QuestPinMode.AUTO);
 
-            // Зависимости квеста
             var dependencies = JUtil.getMemberArray(
-                            json, "dependencies",
+                            json, "after",
                             element -> JUtil.readArray(element,
                                     subElement -> (Identifier) context.deserialize(subElement, Identifier.class)
                             )).stream()
                     .toList();
 
-            // Задачи квеста
+            var require = deserializeRequireIfPresent(json, context, dependencies);
+
             var tasks = JUtil.getMemberDictionary(json, "tasks",
                     element -> deserializeTask(element, context));
 
-            // Этапы квеста
             var stages = JUtil.getMemberArray(json, "stages",
                             element -> JUtil.readArray(element, JsonElement::getAsString)).stream()
                     .filter(stage -> !stage.isEmpty())
                     .toList();
 
-            // TODO: Test with empty and no stages
-//            if (stages.isEmpty())
-//                throw new JsonParseException("Quest must have at least one stage");
-//
-//            // Валидация: все задачи в этапах должны существовать
-//            for (var stage : stages)
-//                for (var taskId : stage)
-//                    if (!tasks.containsKey(taskId))
-//                        throw new JsonParseException("Stage must contain valid task ids");
-
-            // Создаем квест
             var quest = MutableQuest.create(title);
             description.ifPresent(quest::setDescription);
             quest.setIcon(icon);
@@ -125,15 +115,35 @@ public class QuestJsonSerializer {
             quest.setBackground(isBackground);
             quest.setPinMode(pinMode);
 
-            // Добавляем задачи
             for (var taskEntry : tasks.entrySet()) {
                 quest.setTask(taskEntry.getKey(), taskEntry.getValue());
             }
 
             quest.setDependencies(dependencies);
+            quest.setRequire(require);
             quest.setStages(stages);
 
             return quest;
+        }
+
+        /** Десериализует блок require, или возвращает null если его нет. Предупреждает если require есть, а after пустой. */
+        private QuestRequirement deserializeRequireIfPresent(JsonElement json, JsonDeserializationContext context, List<List<Identifier>> after) {
+            var requireElement = JUtil.getOptionalMember(json, "require", e -> e);
+            if (requireElement.isEmpty()) return null;
+
+            var elem = requireElement.get();
+
+            if (after.isEmpty()) {
+                TravelcoreQuesting.LOGGER.warn(
+                        "Quest has 'require' but no 'after' — require will be ignored (quest unlocks immediately)");
+            }
+
+            var tags = JUtil.getMemberArray(elem, "tags", JsonElement::getAsString);
+
+            var predicate = JUtil.getOptionalMember(elem, "predicate",
+                    element -> (Identifier) context.deserialize(element, Identifier.class));
+
+            return new QuestRequirement(predicate.orElse(null), tags);
         }
 
         private MutableTask deserializeTask(JsonElement json, JsonDeserializationContext context) {
@@ -143,52 +153,46 @@ public class QuestJsonSerializer {
             var description = JUtil.getOptionalMember(json, "description",
                     element -> (Text) context.deserialize(element, Text.class));
 
-            // Десериализация lifetime функций
-            var loadFunction = JUtil.getOptionalMember(json, "lifetime.load",
-                    element -> (Identifier) context.deserialize(element, Identifier.class));
-
-            var tickFunction = JUtil.getOptionalMember(json, "lifetime.tick",
-                    element -> (Identifier) context.deserialize(element, Identifier.class));
-
-            var unloadFunction = JUtil.getOptionalMember(json, "lifetime.unload",
-                    element -> (Identifier) context.deserialize(element, Identifier.class));
-
-            // Десериализация условия успеха
-            var successCondition = JUtil.getOptionalMember(json, "success.condition",
+            var successCondition = JUtil.getOptionalMember(json, "condition.success",
                     element -> deserializeTaskCondition(element, context));
 
-            var isManualSuccess = JUtil.getOptionalMember(json, "success.manual", JsonElement::getAsBoolean);
-
-            var successFunction = JUtil.getOptionalMember(json, "success.reward.function",
-                    element -> (Identifier) context.deserialize(element, Identifier.class));
-
-            // Десериализация условия провала (может отсутствовать)
-            var failureCondition = JUtil.getOptionalMember(json, "failure.condition",
+            var failureCondition = JUtil.getOptionalMember(json, "condition.failure",
                     element -> deserializeTaskCondition(element, context));
 
-            var isManualFailure = JUtil.getOptionalMember(json, "failure.manual", JsonElement::getAsBoolean);
+            var onLoad = deserializeEventActions(json, "on.load", context);
+            var onTick = deserializeEventActions(json, "on.tick", context);
+            var onUnload = deserializeEventActions(json, "on.unload", context);
+            var onSuccess = deserializeEventActions(json, "on.success", context);
+            var onFailure = deserializeEventActions(json, "on.failure", context);
 
-            var failureFunction = JUtil.getOptionalMember(json, "failure.reward.function",
-                    element -> (Identifier) context.deserialize(element, Identifier.class));
-
-            // Создаем задачу
             var task = MutableTask.create(title);
             description.ifPresent(task::setDescription);
-
-            loadFunction.ifPresent(task::setLoadFunction);
-            tickFunction.ifPresent(task::setTickFunction);
-            unloadFunction.ifPresent(task::setUnloadFunction);
 
             successCondition.ifPresent(task::setSuccessCondition);
             failureCondition.ifPresent(task::setFailureCondition);
 
-            isManualSuccess.ifPresent(task::setManualSuccess);
-            isManualFailure.ifPresent(task::setManualFailure);
-
-            successFunction.ifPresent(task::setSuccessFunction);
-            failureFunction.ifPresent(task::setFailureFunction);
+            task.setOnLoad(onLoad);
+            task.setOnTick(onTick);
+            task.setOnUnload(onUnload);
+            task.setOnSuccess(onSuccess);
+            task.setOnFailure(onFailure);
 
             return task;
+        }
+
+        /** Читает блок события (например on.load) в TaskEventActions. Возвращает EMPTY если блок отсутствует. */
+        private TaskEventActions deserializeEventActions(JsonElement json, String path, JsonDeserializationContext context) {
+            var eventElement = JUtil.getOptionalMember(json, path, e -> e);
+            if (eventElement.isEmpty()) return TaskEventActions.EMPTY;
+
+            var elem = eventElement.get();
+
+            var functions = JUtil.getMemberArray(elem, "functions",
+                    element -> (Identifier) context.deserialize(element, Identifier.class));
+
+            var tags = JUtil.getMemberArray(elem, "tags", JsonElement::getAsString);
+
+            return new TaskEventActions(functions, tags);
         }
 
         private ITaskCondition deserializeTaskCondition(JsonElement json, JsonDeserializationContext context) {

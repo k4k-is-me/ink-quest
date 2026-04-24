@@ -7,6 +7,8 @@ import k4k.travelcorequesting.domain.abstractions.Task;
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
+import k4k.travelcorequesting.domain.models.QuestRequirement;
+import k4k.travelcorequesting.domain.models.TaskEventActions;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
@@ -20,6 +22,8 @@ import net.minecraft.util.Identifier;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -63,6 +67,16 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         nbt.put("stages", stagesNbt);
         nbt.put("tasks", tasksNbt);
 
+        var require = quest.getRequire();
+        if (require != null) nbt.put("require", encodeRequire(require));
+
+        return nbt;
+    }
+
+    private NbtCompound encodeRequire(QuestRequirement require) {
+        var nbt = new NbtCompound();
+        if (require.predicate() != null) nbt.putString("predicate", require.predicate().toString());
+        nbt.put("tags", stringsToNbtList(require.tags()));
         return nbt;
     }
 
@@ -71,13 +85,12 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
 
         nbt.putString("title", Text.Serializer.toJson(task.title()));
         if (task.description() != null) nbt.putString("description", Text.Serializer.toJson(task.description()));
-        if (task.loadFunction() != null) nbt.putString("load", Objects.requireNonNull(task.loadFunction()).toString());
-        if (task.tickFunction() != null) nbt.putString("tick", Objects.requireNonNull(task.tickFunction()).toString());
-        if (task.successFunction() != null) nbt.putString("successFunction", Objects.requireNonNull(task.successFunction()).toString());
-        if (task.failureFunction() != null) nbt.putString("failureFunction", Objects.requireNonNull(task.failureFunction()).toString());
-        if (task.unloadFunction() != null) nbt.putString("unload", Objects.requireNonNull(task.unloadFunction()).toString());
-        nbt.putBoolean("successManual", task.isManualSuccess());
-        nbt.putBoolean("failureManual", task.isManualFailure());
+
+        nbt.put("onLoad", encodeEventActions(task.onLoad()));
+        nbt.put("onTick", encodeEventActions(task.onTick()));
+        nbt.put("onUnload", encodeEventActions(task.onUnload()));
+        nbt.put("onSuccess", encodeEventActions(task.onSuccess()));
+        nbt.put("onFailure", encodeEventActions(task.onFailure()));
 
         var successCondition = task.successCondition();
         if (successCondition != null) nbt.put("successCondition", encodeDynamicCondition(successCondition));
@@ -86,6 +99,21 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         if (failureCondition != null) nbt.put("failureCondition", encodeDynamicCondition(failureCondition));
 
         return nbt;
+    }
+
+    private NbtCompound encodeEventActions(TaskEventActions actions) {
+        var nbt = new NbtCompound();
+        nbt.put("functions", stringsToNbtList(
+                actions.functions().stream().map(Identifier::toString).toList()
+        ));
+        nbt.put("tags", stringsToNbtList(actions.tags()));
+        return nbt;
+    }
+
+    private NbtList stringsToNbtList(List<String> strings) {
+        var list = new NbtList();
+        strings.stream().map(NbtString::of).forEach(list::add);
+        return list;
     }
 
     private NbtCompound encodeDynamicCondition(@NotNull ITaskCondition condition) {
@@ -128,7 +156,6 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
             default -> QuestPinMode.AUTO;
         } : QuestPinMode.AUTO;
 
-        // Декодируем зависимости
         var dependenciesNbt = nbt.getList("dependencies", NbtElement.LIST_TYPE);
         var dependencies = IntStream.range(0, dependenciesNbt.size())
                 .mapToObj(dependenciesNbt::getList)
@@ -138,7 +165,6 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
                         .toList())
                 .toList();
 
-        // Декодируем этапы
         var stagesNbt = nbt.getList("stages", NbtElement.LIST_TYPE);
         var stages = IntStream.range(0, stagesNbt.size())
                 .mapToObj(stagesNbt::getList)
@@ -147,7 +173,6 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
                         .toList())
                 .toList();
 
-        // Декодируем задачи
         var tasksNbt = nbt.getCompound("tasks");
         var tasks = tasksNbt.getKeys().stream()
                 .collect(Collectors.toMap(
@@ -155,7 +180,6 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
                         taskId -> decodeDynamicTask(tasksNbt.getCompound(taskId))
                 ));
 
-        // Создаём квест через фабричный метод и затем настраиваем
         var quest = MutableQuest.create(title);
         quest.setDescription(description);
         quest.setIcon(icon);
@@ -163,12 +187,18 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         quest.setBackground(background);
         quest.setPinMode(pinMode);
         quest.setDependencies(dependencies);
-        // Добавляем задачи
         tasks.forEach(quest::setTask);
-
         quest.setStages(stages);
 
+        if (nbt.contains("require")) quest.setRequire(decodeRequire(nbt.getCompound("require")));
+
         return quest;
+    }
+
+    private QuestRequirement decodeRequire(NbtCompound nbt) {
+        var predicate = nbt.contains("predicate") ? Identifier.tryParse(nbt.getString("predicate")) : null;
+        var tags = nbtListToStrings(nbt.getList("tags", NbtElement.STRING_TYPE));
+        return new QuestRequirement(predicate, tags);
     }
 
     private MutableTask decodeDynamicTask(NbtCompound nbt) {
@@ -177,25 +207,35 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
 
         if (nbt.contains("description"))
             task.setDescription(Text.Serializer.fromJson(nbt.getString("description")));
-        if (nbt.contains("load"))
-            task.setLoadFunction(Identifier.tryParse(nbt.getString("load")));
-        if (nbt.contains("tick"))
-            task.setTickFunction(Identifier.tryParse(nbt.getString("tick")));
-        if (nbt.contains("successFunction"))
-            task.setSuccessFunction(Identifier.tryParse(nbt.getString("successFunction")));
-        if (nbt.contains("failureFunction"))
-            task.setFailureFunction(Identifier.tryParse(nbt.getString("failureFunction")));
-        if (nbt.contains("unload"))
-            task.setUnloadFunction(Identifier.tryParse(nbt.getString("unload")));
-        if (nbt.contains("successCondition"))
-            task.setSuccessCondition(nbt.contains("successCondition") ? decodeDynamicCondition(nbt.getCompound("successCondition")) : null);
-        if (nbt.contains("failureCondition"))
-            task.setFailureCondition(nbt.contains("failureCondition") ? decodeDynamicCondition(nbt.getCompound("failureCondition")) : null);
 
-        task.setManualSuccess(nbt.getBoolean("successManual"));
-        task.setManualFailure(nbt.getBoolean("failureManual"));
+        if (nbt.contains("onLoad")) task.setOnLoad(decodeEventActions(nbt.getCompound("onLoad")));
+        if (nbt.contains("onTick")) task.setOnTick(decodeEventActions(nbt.getCompound("onTick")));
+        if (nbt.contains("onUnload")) task.setOnUnload(decodeEventActions(nbt.getCompound("onUnload")));
+        if (nbt.contains("onSuccess")) task.setOnSuccess(decodeEventActions(nbt.getCompound("onSuccess")));
+        if (nbt.contains("onFailure")) task.setOnFailure(decodeEventActions(nbt.getCompound("onFailure")));
+
+        if (nbt.contains("successCondition"))
+            task.setSuccessCondition(decodeDynamicCondition(nbt.getCompound("successCondition")));
+        if (nbt.contains("failureCondition"))
+            task.setFailureCondition(decodeDynamicCondition(nbt.getCompound("failureCondition")));
 
         return task;
+    }
+
+    private TaskEventActions decodeEventActions(NbtCompound nbt) {
+        var functions = nbtListToStrings(nbt.getList("functions", NbtElement.STRING_TYPE))
+                .stream()
+                .map(Identifier::tryParse)
+                .filter(id -> id != null)
+                .toList();
+        var tags = nbtListToStrings(nbt.getList("tags", NbtElement.STRING_TYPE));
+        return new TaskEventActions(functions, tags);
+    }
+
+    private List<String> nbtListToStrings(NbtList list) {
+        var result = new ArrayList<String>(list.size());
+        for (var i = 0; i < list.size(); i++) result.add(list.getString(i));
+        return result;
     }
 
     private ITaskCondition decodeDynamicCondition(NbtCompound nbt) {

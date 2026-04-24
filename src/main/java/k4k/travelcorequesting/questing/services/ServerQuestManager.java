@@ -8,6 +8,7 @@ import k4k.travelcorequesting.domain.enums.QuestPinMode;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
+import k4k.travelcorequesting.questing.abstractions.IQuestRequirementChecker;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 import k4k.travelcorequesting.questing.abstractions.QuestModifier;
 import k4k.travelcorequesting.questing.abstractions.QuestResolver;
@@ -61,16 +62,18 @@ import java.util.stream.Collectors;
 public class ServerQuestManager {
     private final QuestRepository questRepository = new QuestRepository();
     private final ITaskConditionHandler<ITaskCondition> conditionDispatcher;  // TODO: extract instantiation
+    private final IQuestRequirementChecker requirementChecker;
     private final Map<UUID, PlayerProgressTracker> trackedPlayers = new HashMap<>();
     private boolean isDirty = false;
 
-    public ServerQuestManager() {
+    public ServerQuestManager(IQuestRequirementChecker requirementChecker) {
         var dispatcher = new TaskConditionDispatcher()
                 .register(ScoreCondition.class, new ScoreConditionHandler())
                 .register(PredicateCondition.class, new PredicateConditionHandler());
         dispatcher
                 .register(AllCondition.class, new AllConditionHandler(dispatcher));
         this.conditionDispatcher = dispatcher;
+        this.requirementChecker = requirementChecker;
     }
 
     /**
@@ -877,18 +880,22 @@ public class ServerQuestManager {
                 var isGroupComplete = dependentQuest.getDependencyGroup(groupIndex).stream()
                         .allMatch(depId -> playerTracker.isComplete(depId, CompletionStatus.SUCCESS));
 
-                if (isGroupComplete) {
-                    this.giveQuest(dependentQuestId, player);
+                if (!isGroupComplete)
+                    continue;
 
-                    boolean shouldPin = switch (dependentQuest.getPinMode()) {
-                        case FORCE -> true;
-                        case AUTO -> wasParentPinned;
-                        case OFF -> false;
-                    };
-                    if (shouldPin) this.pinRequiredTask(dependentQuestId, player);
+                var require = dependentQuest.getRequire();
+                if (require != null && !this.requirementChecker.check(require, player)) break;
 
-                    break;
-                }
+                this.giveQuest(dependentQuestId, player);
+
+                boolean shouldPin = switch (dependentQuest.getPinMode()) {
+                    case FORCE -> true;
+                    case AUTO -> wasParentPinned;
+                    case OFF -> false;
+                };
+                if (shouldPin) this.pinRequiredTask(dependentQuestId, player);
+
+                break;
             }
         }
     }
@@ -943,8 +950,5 @@ public class ServerQuestManager {
     public void loadQuests(Map<Identifier, Quest> quests) {
         this.questRepository.replaceStaticQuests(quests);
         QuestEvents.QUESTS_RELOADED.invoker().onReload();
-
-        // TODO: После перезагрузки должно отправляться событие клиентам, если у кого-то из клиентов открыт
-        //  список квестов, он должен запросить список снова
     }
 }

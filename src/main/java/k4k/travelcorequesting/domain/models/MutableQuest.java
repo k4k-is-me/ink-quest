@@ -5,6 +5,7 @@ import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.domain.abstractions.Quest;
 import k4k.travelcorequesting.domain.abstractions.Task;
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
+import k4k.travelcorequesting.domain.models.QuestRequirement;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -22,6 +23,7 @@ public final class MutableQuest implements Quest {
     private int index;
     private boolean background;
     private QuestPinMode pinMode = QuestPinMode.AUTO;
+    private @Nullable QuestRequirement require;
     private final List<List<Identifier>> dependencies;
     private final Map<String, MutableTask> tasks;
     private final List<List<String>> stages;  // NOTE: Should not have duplicate tasks in any one stage
@@ -116,6 +118,15 @@ public final class MutableQuest implements Quest {
 
     public void setPinMode(QuestPinMode pinMode) {
         this.pinMode = pinMode;
+    }
+
+    @Override
+    public @Nullable QuestRequirement getRequire() {
+        return this.require;
+    }
+
+    public void setRequire(@Nullable QuestRequirement require) {
+        this.require = require;
     }
 
     @Override

@@ -1,52 +1,66 @@
 package k4k.travelcorequesting.infra.handlers;
 
+import k4k.travelcorequesting.domain.models.TaskEventActions;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * Инфраструктурный обработчик, выполняющий Minecraft-функции из lifecycle-хуков задачи.
+ * Инфраструктурный обработчик, выполняющий Minecraft-функции и применяющий
+ * scoreboard-теги из lifecycle-хуков задачи.
  *
- * <p>Слушает события {@link QuestProgressEvents} и вызывает соответствующие функции
+ * <p>Слушает события {@link QuestProgressEvents} и вызывает соответствующие действия
  * через {@code CommandFunctionManager} сервера.
  */
 public class QuestLifecycleFunctionExecutor {
 
-    /** Регистрирует все обработчики lifecycle-функций задач. */
+    /** Регистрирует все обработчики lifecycle-действий задач. */
     public static void register() {
         QuestProgressEvents.TASK_LOADED.register((taskEntry, player, stageChanged) ->
-                executeFunction(taskEntry.task().loadFunction(), player)
+                executeActions(taskEntry.task().onLoad(), player)
         );
 
         QuestProgressEvents.TASK_TICKED.register((taskEntry, player) ->
-                executeFunction(taskEntry.task().tickFunction(), player)
+                executeActions(taskEntry.task().onTick(), player)
         );
 
         QuestProgressEvents.TASK_UNLOADED.register((taskEntry, player, stageChanged) ->
-                executeFunction(taskEntry.task().unloadFunction(), player)
+                executeActions(taskEntry.task().onUnload(), player)
         );
 
         QuestProgressEvents.TASK_COMPLETED.register((taskEntry, player, status) -> {
             if (taskEntry == null) return;
-            var fn = switch (status) {
-                case SUCCESS -> taskEntry.task().successFunction();
-                case FAILURE -> taskEntry.task().failureFunction();
-                case SKIPPED -> null;
+            var actions = switch (status) {
+                case SUCCESS -> taskEntry.task().onSuccess();
+                case FAILURE -> taskEntry.task().onFailure();
+                case SKIPPED -> TaskEventActions.EMPTY;
             };
-            executeFunction(fn, player);
+            executeActions(actions, player);
         });
+    }
+
+    /**
+     * Выполняет все функции и применяет все теги из набора действий события.
+     *
+     * @param actions набор действий события
+     * @param player  игрок, чей {@code CommandSource} будет executor-ом функций
+     */
+    private static void executeActions(TaskEventActions actions, ServerPlayerEntity player) {
+        for (var id : actions.functions()) {
+            executeFunction(id, player);
+        }
+        for (var tag : actions.tags()) {
+            player.addCommandTag(tag);
+        }
     }
 
     /**
      * Выполняет Minecraft-функцию с источником команды игрока.
      *
-     * @param id     идентификатор функции, {@code null} — нет функции
+     * @param id     идентификатор функции
      * @param player игрок, чей {@code CommandSource} будет executor-ом функции
      */
-    private static void executeFunction(@Nullable Identifier id, ServerPlayerEntity player) {
-        if (id == null) return;
-
+    private static void executeFunction(Identifier id, ServerPlayerEntity player) {
         var server = player.getServer();
         if (server == null) return;
 
