@@ -244,7 +244,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         var functions = nbtListToStrings(nbt.getList("functions", NbtElement.STRING_TYPE))
                 .stream()
                 .map(Identifier::tryParse)
-                .filter(id -> id != null)
+                .filter(Objects::nonNull)
                 .toList();
         var tags = nbtListToStrings(nbt.getList("tags", NbtElement.STRING_TYPE));
         return new TaskEventActions(functions, tags);
