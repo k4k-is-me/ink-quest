@@ -2,9 +2,8 @@ package k4k.travelcorequesting.questing.services.taskConditionTesters;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
+import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 
 /** Обработчик {@link AnyCondition}: условие выполнено, если хотя бы одно подусловие выполнено. */
 public class AnyConditionHandler implements ITaskConditionHandler<AnyCondition> {
@@ -15,13 +14,13 @@ public class AnyConditionHandler implements ITaskConditionHandler<AnyCondition> 
     }
 
     @Override
-    public boolean test(AnyCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    public boolean test(AnyCondition condition, IConditionContext context) {
         return condition.subConditions().stream()
-                .anyMatch(subCondition -> this.dispatcher.test(subCondition, player, questId, taskId));
+                .anyMatch(subCondition -> this.dispatcher.test(subCondition, context));
     }
 
     @Override
-    public int getCurrentValue(AnyCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
-        return this.test(condition, player, questId, taskId) ? 1 : 0;
+    public int getCurrentValue(AnyCondition condition, IConditionContext context) {
+        return this.test(condition, context) ? 1 : 0;
     }
 }

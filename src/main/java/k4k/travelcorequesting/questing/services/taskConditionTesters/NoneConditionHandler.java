@@ -2,9 +2,8 @@ package k4k.travelcorequesting.questing.services.taskConditionTesters;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
+import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 
 /** Обработчик {@link NoneCondition}: условие выполнено, если ни одно подусловие не выполнено. */
 public class NoneConditionHandler implements ITaskConditionHandler<NoneCondition> {
@@ -15,13 +14,13 @@ public class NoneConditionHandler implements ITaskConditionHandler<NoneCondition
     }
 
     @Override
-    public boolean test(NoneCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    public boolean test(NoneCondition condition, IConditionContext context) {
         return condition.subConditions().stream()
-                .noneMatch(subCondition -> this.dispatcher.test(subCondition, player, questId, taskId));
+                .noneMatch(subCondition -> this.dispatcher.test(subCondition, context));
     }
 
     @Override
-    public int getCurrentValue(NoneCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
-        return this.test(condition, player, questId, taskId) ? 1 : 0;
+    public int getCurrentValue(NoneCondition condition, IConditionContext context) {
+        return this.test(condition, context) ? 1 : 0;
     }
 }

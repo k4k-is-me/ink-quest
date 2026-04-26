@@ -2,10 +2,13 @@ package k4k.travelcorequesting.questing.services.taskConditionTesters;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
+import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 
+/**
+ * Обработчик {@link AllCondition}: условие выполнено только если все подусловия выполнены.
+ * Прогресс — число выполненных подусловий.
+ */
 public class AllConditionHandler implements ITaskConditionHandler<AllCondition> {
     private final ITaskConditionHandler<ITaskCondition> dispatcher;
 
@@ -14,16 +17,15 @@ public class AllConditionHandler implements ITaskConditionHandler<AllCondition> 
     }
 
     @Override
-    public boolean test(AllCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    public boolean test(AllCondition condition, IConditionContext context) {
         return condition.subConditions().stream()
-                .allMatch(subCondition -> this.dispatcher.test(subCondition, player, questId, taskId));
+                .allMatch(subCondition -> this.dispatcher.test(subCondition, context));
     }
 
     @Override
-    public int getCurrentValue(AllCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    public int getCurrentValue(AllCondition condition, IConditionContext context) {
         return (int) condition.subConditions().stream()
-                .map(subCondition -> this.dispatcher.test(subCondition, player, questId, taskId))
-                .filter(result -> result)
+                .filter(subCondition -> this.dispatcher.test(subCondition, context))
                 .count();
     }
 }

@@ -1,24 +1,38 @@
 package k4k.travelcorequesting.questing.services;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
+import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Диспетчер обработчиков условий задач (паттерн Strategy).
+ *
+ * <p>Хранит реестр обработчиков, сопоставленных с типами условий.
+ * При вызове делегирует выполнение в зарегистрированный обработчик.
+ * Сам реализует {@link ITaskConditionHandler} для использования как единственная
+ * точка входа для проверки любого условия.
+ */
 public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondition> {
     private final Map<Class<?>, RegistryEntry> registry = new HashMap<>();
 
+    /**
+     * Регистрирует обработчик для конкретного типа условия.
+     *
+     * @param type    класс типа условия
+     * @param handler обработчик для этого типа
+     * @return this (fluent API)
+     */
     public <T extends ITaskCondition> TaskConditionDispatcher register(Class<T> type, ITaskConditionHandler<T> handler) {
         registry.put(type, new RegistryEntry(
-                (condition, player, questId, taskId) -> handler.load(type.cast(condition), player, questId, taskId),
-                (condition, player, questId, taskId) -> handler.tick(type.cast(condition), player, questId, taskId),
-                (condition, player, questId, taskId) -> handler.test(type.cast(condition), player, questId, taskId),
-                (condition, player, questId, taskId) -> handler.getCurrentValue(type.cast(condition), player, questId, taskId)
+                (condition, context) -> handler.load(type.cast(condition), context),
+                (condition, context) -> handler.tick(type.cast(condition), context),
+                (condition, context) -> handler.test(type.cast(condition), context),
+                (condition, context) -> handler.getCurrentValue(type.cast(condition), context)
         ));
         return this;
     }
@@ -31,39 +45,39 @@ public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondi
     }
 
     @Override
-    public void load(@Nullable ITaskCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    public void load(@Nullable ITaskCondition condition, IConditionContext context) {
         if (condition == null) return;
-        this.getRegistryEntry(condition).load.accept(condition, player, questId, taskId);
+        this.getRegistryEntry(condition).load.accept(condition, context);
     }
 
     @Override
-    public void tick(@Nullable ITaskCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    public void tick(@Nullable ITaskCondition condition, IConditionContext context) {
         if (condition == null) return;
-        this.getRegistryEntry(condition).tick.accept(condition, player, questId, taskId);
+        this.getRegistryEntry(condition).tick.accept(condition, context);
     }
 
     @Override
-    public boolean test(@Nullable ITaskCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    public boolean test(@Nullable ITaskCondition condition, IConditionContext context) {
         if (condition == null) return false;
-        return this.getRegistryEntry(condition).test.test(condition, player, questId, taskId);
+        return this.getRegistryEntry(condition).test.test(condition, context);
     }
 
     @Override
-    public int getCurrentValue(@Nullable ITaskCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    public int getCurrentValue(@Nullable ITaskCondition condition, IConditionContext context) {
         if (condition == null) return 0;
-        return this.getRegistryEntry(condition).getCurrentValue.get(condition, player, questId, taskId);
+        return this.getRegistryEntry(condition).getCurrentValue.get(condition, context);
     }
 
     @FunctionalInterface private interface ConditionConsumer {
-        void accept(ITaskCondition condition, ServerPlayerEntity player, Identifier questId, String taskId);
+        void accept(ITaskCondition condition, IConditionContext context);
     }
 
     @FunctionalInterface private interface ConditionTestFn {
-        boolean test(ITaskCondition condition, ServerPlayerEntity player, Identifier questId, String taskId);
+        boolean test(ITaskCondition condition, IConditionContext context);
     }
 
     @FunctionalInterface private interface ConditionValueFn {
-        int get(ITaskCondition condition, ServerPlayerEntity player, Identifier questId, String taskId);
+        int get(ITaskCondition condition, IConditionContext context);
     }
 
     private record RegistryEntry(

@@ -2,79 +2,57 @@ package k4k.travelcorequesting.questing.services.taskConditionTesters;
 
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.models.taskConditions.TasksCondition;
+import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
-import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
-import k4k.travelcorequesting.questing.services.ServerQuestManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Обработчик {@link TasksCondition}: считает задачи из пула, у которых статус совпадает с ожидаемым.
  *
- * <p>Пул — явный список task ID или, если он не задан, задачи активного этапа.
+ * <p>Пул — явный список task ID или, если он не задан, задачи активного этапа
+ * (за исключением задачи, которой принадлежит условие).
  * Цель — поле {@code count} или размер пула.
  */
 public class TasksConditionHandler implements ITaskConditionHandler<TasksCondition> {
 
     @Override
-    public boolean test(TasksCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
-        return getCurrentValue(condition, player, questId, taskId) >= resolveTarget(condition, player, questId, taskId);
+    public boolean test(TasksCondition condition, IConditionContext context) {
+        return getCurrentValue(condition, context) >= resolveTarget(condition, context);
     }
 
     @Override
-    public int getCurrentValue(TasksCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
-        var pool = resolvePool(condition, player, questId, taskId);
-        var manager = getQuestManager(player);
+    public int getCurrentValue(TasksCondition condition, IConditionContext context) {
+        var pool = resolvePool(condition, context);
         return (int) pool.stream()
-                .filter(tid -> matchesStatus(manager, player, questId, tid, condition.status()))
+                .filter(taskId -> matchesStatus(context, taskId, condition.status()))
                 .count();
     }
 
     /**
      * Возвращает пул задач: явный список из условия или задачи активного этапа.
      */
-    private List<String> resolvePool(TasksCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    private List<String> resolvePool(TasksCondition condition, IConditionContext context) {
         var tasks = condition.tasks();
         if (tasks != null && !tasks.isEmpty()) return tasks;
-
-        var manager = getQuestManager(player);
-        var quest = manager.getQuestResolver().getQuest(questId);
-        if (quest == null) return List.of();
-
-        return manager.getActiveStage(questId, player)
-                .map(quest::getStage)
-                .map(ts -> ts.stream().filter(tid -> !Objects.equals(tid, taskId)).toList())
-                .orElse(List.of());
+        return context.getActiveStageTaskIds();
     }
 
     /**
      * Фактическая цель: {@code count} из условия или размер пула.
      */
-    private int resolveTarget(TasksCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
+    private int resolveTarget(TasksCondition condition, IConditionContext context) {
         if (condition.count() != null) return condition.count();
-        return resolvePool(condition, player, questId, taskId).size();
+        return resolvePool(condition, context).size();
     }
 
     /**
      * Проверяет, соответствует ли статус задачи ожидаемому.
-     * {@code null} статус = любой терминальный статус.
+     * {@code null} статус — любой терминальный.
      */
-    private boolean matchesStatus(
-            ServerQuestManager manager,
-            ServerPlayerEntity player,
-            Identifier questId,
-            String taskId,
-            @Nullable CompletionStatus expected
-    ) {
-        if (expected == null) return manager.isTaskComplete(questId, taskId, player);
-        return manager.isTaskComplete(questId, taskId, player, expected);
-    }
-
-    private ServerQuestManager getQuestManager(ServerPlayerEntity player) {
-        return ServerQuestManagerContainer.getQuestManager(Objects.requireNonNull(player.getServer()));
+    private boolean matchesStatus(IConditionContext context, String taskId, @Nullable CompletionStatus expected) {
+        if (expected == null) return context.isTaskComplete(taskId);
+        return context.isTaskComplete(taskId, expected);
     }
 }

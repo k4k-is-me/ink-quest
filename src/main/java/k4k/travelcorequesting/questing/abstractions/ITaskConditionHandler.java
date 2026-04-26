@@ -1,12 +1,39 @@
 package k4k.travelcorequesting.questing.abstractions;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 
+/**
+ * Обработчик условия задачи конкретного типа.
+ *
+ * <p>Все методы принимают {@link IConditionContext} вместо {@code ServerPlayerEntity},
+ * что позволяет тестировать обработчики без запущенного Minecraft-сервера.
+ *
+ * @param <T> тип условия, которое обрабатывает данный обработчик
+ */
 public interface ITaskConditionHandler<T extends ITaskCondition> {
-    default void load(T condition, ServerPlayerEntity player, Identifier questId, String taskId) {}
-    default void tick(T condition, ServerPlayerEntity player, Identifier questId, String taskId) {}
-    boolean test(T condition, ServerPlayerEntity player, Identifier questId, String taskId);
-    int getCurrentValue(T condition, ServerPlayerEntity player, Identifier questId, String taskId);
+
+    /**
+     * Вызывается один раз при переходе задачи в активный этап.
+     * Используется для подготовки внешнего состояния (например, создания scoreboard objective).
+     */
+    default void load(T condition, IConditionContext context) {}
+
+    /**
+     * Вызывается каждый тик, пока задача активна.
+     * Используется для обновления вспомогательного состояния условия.
+     */
+    default void tick(T condition, IConditionContext context) {}
+
+    /**
+     * Проверяет, выполнено ли условие.
+     *
+     * @return {@code true} если условие выполнено
+     */
+    boolean test(T condition, IConditionContext context);
+
+    /**
+     * Возвращает текущий прогресс выполнения условия.
+     * Для бинарных условий — 0 или 1. Для градуальных — значение от 0 до target.
+     */
+    int getCurrentValue(T condition, IConditionContext context);
 }

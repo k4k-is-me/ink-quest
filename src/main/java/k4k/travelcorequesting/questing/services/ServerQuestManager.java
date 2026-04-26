@@ -11,6 +11,8 @@ import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.TasksCondition;
+import k4k.travelcorequesting.questing.abstractions.IConditionContext;
+import k4k.travelcorequesting.questing.abstractions.IConditionContextFactory;
 import k4k.travelcorequesting.questing.abstractions.IQuestRequirementChecker;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 import k4k.travelcorequesting.questing.abstractions.QuestModifier;
@@ -27,6 +29,7 @@ import k4k.travelcorequesting.questing.services.taskConditionTesters.TasksCondit
 import k4k.travelcorequesting.questing.states.ServerQuestManagerState;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -67,12 +70,13 @@ import java.util.stream.Collectors;
  */
 public class ServerQuestManager {
     private final QuestRepository questRepository = new QuestRepository();
-    private final ITaskConditionHandler<ITaskCondition> conditionDispatcher;  // TODO: extract instantiation
+    private final ITaskConditionHandler<ITaskCondition> conditionDispatcher;
+    private final IConditionContextFactory conditionContextFactory;
     private final IQuestRequirementChecker requirementChecker;
     private final Map<UUID, PlayerProgressTracker> trackedPlayers = new HashMap<>();
     private boolean isDirty = false;
 
-    public ServerQuestManager(IQuestRequirementChecker requirementChecker) {
+    public ServerQuestManager(IQuestRequirementChecker requirementChecker, IConditionContextFactory conditionContextFactory) {
         var dispatcher = new TaskConditionDispatcher()
                 .register(ScoreCondition.class, new ScoreConditionHandler())
                 .register(PredicateCondition.class, new PredicateConditionHandler());
@@ -82,6 +86,7 @@ public class ServerQuestManager {
                 .register(NoneCondition.class, new NoneConditionHandler(dispatcher))
                 .register(TasksCondition.class, new TasksConditionHandler());
         this.conditionDispatcher = dispatcher;
+        this.conditionContextFactory = conditionContextFactory;
         this.requirementChecker = requirementChecker;
     }
 
@@ -689,7 +694,7 @@ public class ServerQuestManager {
     public int getTaskSuccessCompletion(Identifier questId, String taskId, ServerPlayerEntity player) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 0;
-        return this.conditionDispatcher.getCurrentValue(task.successCondition(), player, questId, taskId);
+        return this.conditionDispatcher.getCurrentValue(task.successCondition(), this.createContext(player, questId, taskId));
     }
 
     /** Целевое значение условия успеха задачи. 1 если задача или условие не найдены. */
@@ -705,7 +710,7 @@ public class ServerQuestManager {
     public int getTaskFailureCompletion(Identifier questId, String taskId, ServerPlayerEntity player) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 0;
-        return this.conditionDispatcher.getCurrentValue(task.failureCondition(), player, questId, taskId);
+        return this.conditionDispatcher.getCurrentValue(task.failureCondition(), this.createContext(player, questId, taskId));
     }
 
     /** Целевое значение условия провала задачи. 1 если задача или условие не найдены. */
@@ -802,13 +807,14 @@ public class ServerQuestManager {
             if (taskEntry == null) continue;
 
             var task = taskEntry.task();
+            var context = this.createContext(player, questId, taskId);
 
-            this.conditionDispatcher.tick(task.successCondition(), player, questId, taskId);
-            this.conditionDispatcher.tick(task.failureCondition(), player, questId, taskId);
+            this.conditionDispatcher.tick(task.successCondition(), context);
+            this.conditionDispatcher.tick(task.failureCondition(), context);
             QuestProgressEvents.TASK_TICKED.invoker().onTaskTick(taskEntry, player);
 
-            var successValue = this.conditionDispatcher.getCurrentValue(task.successCondition(), player, questId, taskId);
-            var failureValue = this.conditionDispatcher.getCurrentValue(task.failureCondition(), player, questId, taskId);
+            var successValue = this.conditionDispatcher.getCurrentValue(task.successCondition(), context);
+            var failureValue = this.conditionDispatcher.getCurrentValue(task.failureCondition(), context);
 
             var successChanged = questTracker.updateSuccessValue(taskId, successValue);
 
@@ -826,9 +832,9 @@ public class ServerQuestManager {
                 this.isDirty = true;
             }
 
-            if (successChanged && this.conditionDispatcher.test(task.successCondition(), player, questId, taskId)) {
+            if (successChanged && this.conditionDispatcher.test(task.successCondition(), context)) {
                 this.completeTask(questId, taskId, player, CompletionStatus.SUCCESS);
-            } else if (failureChanged && this.conditionDispatcher.test(task.failureCondition(), player, questId, taskId)) {
+            } else if (failureChanged && this.conditionDispatcher.test(task.failureCondition(), context)) {
                 this.completeTask(questId, taskId, player, CompletionStatus.FAILURE);
             }
         }
@@ -846,8 +852,8 @@ public class ServerQuestManager {
         var questId = questTracker.getQuestId();
         var loadedTasks = new HashSet<>(questTracker.getLoadedTasks());
         questTracker.loadActiveStage(
-                (tid, task) -> this.conditionDispatcher.getCurrentValue(task.successCondition(), player, questId, tid),
-                (tid, task) -> this.conditionDispatcher.getCurrentValue(task.failureCondition(), player, questId, tid)
+                (tid, task) -> this.conditionDispatcher.getCurrentValue(task.successCondition(), this.createContext(player, questId, tid)),
+                (tid, task) -> this.conditionDispatcher.getCurrentValue(task.failureCondition(), this.createContext(player, questId, tid))
         );
 
         var shouldBeLoaded = questTracker.getActiveTasks();
@@ -866,8 +872,9 @@ public class ServerQuestManager {
             var taskEntry = this.questRepository.getTaskEntry(questTracker.getQuestId(), taskId);
             if (taskEntry == null) return;
 
-            this.conditionDispatcher.load(taskEntry.task().successCondition(), player, questId, taskId);
-            this.conditionDispatcher.load(taskEntry.task().failureCondition(), player, questId, taskId);
+            var context = this.createContext(player, questId, taskId);
+            this.conditionDispatcher.load(taskEntry.task().successCondition(), context);
+            this.conditionDispatcher.load(taskEntry.task().failureCondition(), context);
 
             QuestProgressEvents.TASK_LOADED.invoker().onTaskLoad(taskEntry, player, stageChanged);
             questTracker.markLoaded(taskId);
@@ -919,6 +926,15 @@ public class ServerQuestManager {
     private Optional<QuestProgressTracker> getQuestTracker(ServerPlayerEntity player, Identifier questId) {
         return this.getPlayerTracker(player)
                 .flatMap(tracker -> tracker.getQuestTracker(questId));
+    }
+
+    /**
+     * Создаёт контекст условия для конкретного игрока, квеста и задачи.
+     * Трекер квеста получается из текущего состояния трекера игрока.
+     */
+    private IConditionContext createContext(ServerPlayerEntity player, Identifier questId, String taskId) {
+        @Nullable var questTracker = this.getQuestTracker(player, questId).orElse(null);
+        return this.conditionContextFactory.create(player, questTracker, this.questRepository, questId, taskId);
     }
 
     /**
