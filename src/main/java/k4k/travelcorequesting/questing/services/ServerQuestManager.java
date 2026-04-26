@@ -5,12 +5,6 @@ import k4k.travelcorequesting.domain.abstractions.Quest;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
-import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
-import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
-import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
-import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
-import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
-import k4k.travelcorequesting.domain.models.taskConditions.TasksCondition;
 import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.IConditionContextFactory;
 import k4k.travelcorequesting.questing.abstractions.IQuestRequirementChecker;
@@ -20,12 +14,6 @@ import k4k.travelcorequesting.questing.abstractions.QuestResolver;
 import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.QuestEntry;
-import k4k.travelcorequesting.questing.services.taskConditionTesters.AllConditionHandler;
-import k4k.travelcorequesting.questing.services.taskConditionTesters.AnyConditionHandler;
-import k4k.travelcorequesting.questing.services.taskConditionTesters.NoneConditionHandler;
-import k4k.travelcorequesting.questing.services.taskConditionTesters.PredicateConditionHandler;
-import k4k.travelcorequesting.questing.services.taskConditionTesters.ScoreConditionHandler;
-import k4k.travelcorequesting.questing.services.taskConditionTesters.TasksConditionHandler;
 import k4k.travelcorequesting.questing.states.ServerQuestManagerState;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
@@ -76,16 +64,12 @@ public class ServerQuestManager {
     private final Map<UUID, PlayerProgressTracker> trackedPlayers = new HashMap<>();
     private boolean isDirty = false;
 
-    public ServerQuestManager(IQuestRequirementChecker requirementChecker, IConditionContextFactory conditionContextFactory) {
-        var dispatcher = new TaskConditionDispatcher()
-                .register(ScoreCondition.class, new ScoreConditionHandler())
-                .register(PredicateCondition.class, new PredicateConditionHandler());
-        dispatcher
-                .register(AllCondition.class, new AllConditionHandler(dispatcher))
-                .register(AnyCondition.class, new AnyConditionHandler(dispatcher))
-                .register(NoneCondition.class, new NoneConditionHandler(dispatcher))
-                .register(TasksCondition.class, new TasksConditionHandler());
-        this.conditionDispatcher = dispatcher;
+    public ServerQuestManager(
+            IQuestRequirementChecker requirementChecker,
+            IConditionContextFactory conditionContextFactory,
+            ITaskConditionHandler<ITaskCondition> conditionDispatcher
+    ) {
+        this.conditionDispatcher = conditionDispatcher;
         this.conditionContextFactory = conditionContextFactory;
         this.requirementChecker = requirementChecker;
     }
@@ -378,58 +362,9 @@ public class ServerQuestManager {
                 .orElseGet(ArrayList::new);
     }
 
-    /** Идентификаторы всех квестов игрока — активных и завершённых. */
-    public List<Identifier> getTrackedQuestIds(ServerPlayerEntity player) {
-        Objects.requireNonNull(player);
-        return this.getPlayerTracker(player)
-                .map(PlayerProgressTracker::getTrackedQuests)
-                .orElseGet(ArrayList::new);
-    }
-
     /** Резолвер для чтения квестов и задач по идентификатору. */
     public QuestResolver getQuestResolver() {
         return this.questRepository;
-    }
-
-    /** Активные (ещё не завершённые) квесты игрока. */
-    public List<Quest> getActiveQuests(ServerPlayerEntity player) {
-        Objects.requireNonNull(player);
-
-        var playerProgressTracker = this.trackedPlayers.get(player.getUuid());
-        if (playerProgressTracker == null) return new ArrayList<>();
-
-        return playerProgressTracker.getActiveQuests().stream()
-                .map(this.questRepository::getQuest)
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    /** Все завершённые квесты игрока (любой статус). */
-    public List<QuestEntry> getCompleteQuests(ServerPlayerEntity player) {
-        Objects.requireNonNull(player);
-
-        var playerProgressTracker = this.trackedPlayers.get(player.getUuid());
-        if (playerProgressTracker == null) return new ArrayList<>();
-
-        return playerProgressTracker.getCompleteQuests().stream()
-                .map(this.questRepository::getQuestEntry)
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    /** Завершённые квесты игрока с указанным статусом. */
-    public List<Quest> getCompleteQuests(ServerPlayerEntity player, CompletionStatus status) {
-        Objects.requireNonNull(player);
-        Objects.requireNonNull(status);
-
-        var playerTracker = this.trackedPlayers.get(player.getUuid());
-        if (playerTracker == null) return new ArrayList<>();
-
-        return playerTracker.getCompleteQuests().stream()
-                .filter(questId -> playerTracker.getCompletionStatus(questId).map(questStatus -> questStatus == status).orElse(false))
-                .map(this.questRepository::getQuest)
-                .filter(Objects::nonNull)
-                .toList();
     }
 
     /** Выдан ли квест хотя бы одному игроку (активный или завершённый). */
