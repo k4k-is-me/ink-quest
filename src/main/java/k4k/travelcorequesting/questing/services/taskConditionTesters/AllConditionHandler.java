@@ -4,6 +4,7 @@ import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.util.Identifier;
 
 public class AllConditionHandler implements ITaskConditionHandler<AllCondition> {
     private final ITaskConditionHandler<ITaskCondition> dispatcher;
@@ -13,15 +14,15 @@ public class AllConditionHandler implements ITaskConditionHandler<AllCondition> 
     }
 
     @Override
-    public boolean test(AllCondition condition, ServerPlayerEntity player) {
+    public boolean test(AllCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
         return condition.subConditions().stream()
-                .allMatch(subCondition -> this.dispatcher.test(subCondition, player));
+                .allMatch(subCondition -> this.dispatcher.test(subCondition, player, questId, taskId));
     }
 
     @Override
-    public int getCurrentValue(AllCondition condition, ServerPlayerEntity player) {
+    public int getCurrentValue(AllCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
         return (int) condition.subConditions().stream()
-                .map(subCondition -> this.dispatcher.test(subCondition, player))
+                .map(subCondition -> this.dispatcher.test(subCondition, player, questId, taskId))
                 .filter(result -> result)
                 .count();
     }

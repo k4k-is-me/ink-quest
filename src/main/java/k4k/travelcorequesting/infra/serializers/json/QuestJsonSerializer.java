@@ -10,11 +10,13 @@ import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.models.QuestRequirement;
 import k4k.travelcorequesting.domain.models.TaskEventActions;
+import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.TasksCondition;
 import k4k.travelcorequesting.questing.exceptions.IncompatibleQuestVersionException;
 import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.text.Text;
@@ -242,6 +244,18 @@ public class QuestJsonSerializer {
                     var noneSubConditions = JUtil.getMemberArray(json, "conditions",
                             element -> deserializeTaskCondition(element, context));
                     return new NoneCondition(noneSubConditions);
+
+                case "tasks":
+                    var tasksStatus = JUtil.getOptionalMember(json, "status",
+                            e -> CompletionStatus.valueOf(e.getAsString().toUpperCase()));
+                    var tasksCount = JUtil.getOptionalMember(json, "count", JsonElement::getAsInt);
+                    var tasksList = JUtil.getOptionalMember(json, "tasks",
+                            e -> JUtil.readArray(e, JsonElement::getAsString));
+                    return new TasksCondition(
+                            tasksStatus.orElse(null),
+                            tasksCount.orElse(null),
+                            tasksList.orElse(null)
+                    );
 
                 default:
                     throw new JsonParseException(

@@ -9,11 +9,13 @@ import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.models.QuestRequirement;
 import k4k.travelcorequesting.domain.models.TaskEventActions;
+import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.TasksCondition;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -157,6 +159,15 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
                     .forEach(subConditions::add);
             nbt.put("conditions", subConditions);
         }
+        else if (condition instanceof TasksCondition tasksCondition) {
+            nbt.putString("type", "tasks");
+            if (tasksCondition.status() != null)
+                nbt.putString("status", tasksCondition.status().name().toLowerCase());
+            if (tasksCondition.count() != null)
+                nbt.putInt("count", tasksCondition.count());
+            if (tasksCondition.tasks() != null && !tasksCondition.tasks().isEmpty())
+                nbt.put("tasks", stringsToNbtList(tasksCondition.tasks()));
+        }
         else throw new NotImplementedException("Conversion of %s to nbt is not implemented".formatted(condition.getClass().getSimpleName()));
 
         return nbt;
@@ -294,6 +305,13 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
                         .map(this::decodeDynamicCondition)
                         .collect(Collectors.toList());
                 return new NoneCondition(noneSubConditions);
+            case "tasks":
+                var taskStatus = nbt.contains("status")
+                        ? CompletionStatus.valueOf(nbt.getString("status").toUpperCase()) : null;
+                var taskCount = nbt.contains("count") ? nbt.getInt("count") : null;
+                var taskPool = nbt.contains("tasks")
+                        ? nbtListToStrings(nbt.getList("tasks", NbtElement.STRING_TYPE)) : null;
+                return new TasksCondition(taskStatus, taskCount, taskPool);
             default:
                 throw new NotImplementedException("Decoding of condition type %s is not implemented".formatted(type));
         }

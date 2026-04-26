@@ -10,6 +10,7 @@ import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.NoneCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.PredicateCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
+import k4k.travelcorequesting.domain.models.taskConditions.TasksCondition;
 import k4k.travelcorequesting.questing.abstractions.IQuestRequirementChecker;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 import k4k.travelcorequesting.questing.abstractions.QuestModifier;
@@ -22,6 +23,7 @@ import k4k.travelcorequesting.questing.services.taskConditionTesters.AnyConditio
 import k4k.travelcorequesting.questing.services.taskConditionTesters.NoneConditionHandler;
 import k4k.travelcorequesting.questing.services.taskConditionTesters.PredicateConditionHandler;
 import k4k.travelcorequesting.questing.services.taskConditionTesters.ScoreConditionHandler;
+import k4k.travelcorequesting.questing.services.taskConditionTesters.TasksConditionHandler;
 import k4k.travelcorequesting.questing.states.ServerQuestManagerState;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
@@ -77,7 +79,8 @@ public class ServerQuestManager {
         dispatcher
                 .register(AllCondition.class, new AllConditionHandler(dispatcher))
                 .register(AnyCondition.class, new AnyConditionHandler(dispatcher))
-                .register(NoneCondition.class, new NoneConditionHandler(dispatcher));
+                .register(NoneCondition.class, new NoneConditionHandler(dispatcher))
+                .register(TasksCondition.class, new TasksConditionHandler());
         this.conditionDispatcher = dispatcher;
         this.requirementChecker = requirementChecker;
     }
@@ -686,7 +689,7 @@ public class ServerQuestManager {
     public int getTaskSuccessCompletion(Identifier questId, String taskId, ServerPlayerEntity player) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 0;
-        return this.conditionDispatcher.getCurrentValue(task.successCondition(), player);
+        return this.conditionDispatcher.getCurrentValue(task.successCondition(), player, questId, taskId);
     }
 
     /** Целевое значение условия успеха задачи. 1 если задача или условие не найдены. */
@@ -702,7 +705,7 @@ public class ServerQuestManager {
     public int getTaskFailureCompletion(Identifier questId, String taskId, ServerPlayerEntity player) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 0;
-        return this.conditionDispatcher.getCurrentValue(task.failureCondition(), player);
+        return this.conditionDispatcher.getCurrentValue(task.failureCondition(), player, questId, taskId);
     }
 
     /** Целевое значение условия провала задачи. 1 если задача или условие не найдены. */
@@ -800,12 +803,12 @@ public class ServerQuestManager {
 
             var task = taskEntry.task();
 
-            this.conditionDispatcher.tick(task.successCondition(), player);
-            this.conditionDispatcher.tick(task.failureCondition(), player);
+            this.conditionDispatcher.tick(task.successCondition(), player, questId, taskId);
+            this.conditionDispatcher.tick(task.failureCondition(), player, questId, taskId);
             QuestProgressEvents.TASK_TICKED.invoker().onTaskTick(taskEntry, player);
 
-            var successValue = this.conditionDispatcher.getCurrentValue(task.successCondition(), player);
-            var failureValue = this.conditionDispatcher.getCurrentValue(task.failureCondition(), player);
+            var successValue = this.conditionDispatcher.getCurrentValue(task.successCondition(), player, questId, taskId);
+            var failureValue = this.conditionDispatcher.getCurrentValue(task.failureCondition(), player, questId, taskId);
 
             var successChanged = questTracker.updateSuccessValue(taskId, successValue);
 
@@ -823,9 +826,9 @@ public class ServerQuestManager {
                 this.isDirty = true;
             }
 
-            if (successChanged && this.conditionDispatcher.test(task.successCondition(), player)) {
+            if (successChanged && this.conditionDispatcher.test(task.successCondition(), player, questId, taskId)) {
                 this.completeTask(questId, taskId, player, CompletionStatus.SUCCESS);
-            } else if (failureChanged && this.conditionDispatcher.test(task.failureCondition(), player)) {
+            } else if (failureChanged && this.conditionDispatcher.test(task.failureCondition(), player, questId, taskId)) {
                 this.completeTask(questId, taskId, player, CompletionStatus.FAILURE);
             }
         }
@@ -840,10 +843,11 @@ public class ServerQuestManager {
      * @param stageChanged Сменился ли активный этап в этом тике
      */
     private void ensureActiveStageLoaded(ServerPlayerEntity player, QuestProgressTracker questTracker, boolean stageChanged) {
+        var questId = questTracker.getQuestId();
         var loadedTasks = new HashSet<>(questTracker.getLoadedTasks());
         questTracker.loadActiveStage(
-                task -> this.conditionDispatcher.getCurrentValue(task.successCondition(), player),
-                task -> this.conditionDispatcher.getCurrentValue(task.failureCondition(), player)
+                (tid, task) -> this.conditionDispatcher.getCurrentValue(task.successCondition(), player, questId, tid),
+                (tid, task) -> this.conditionDispatcher.getCurrentValue(task.failureCondition(), player, questId, tid)
         );
 
         var shouldBeLoaded = questTracker.getActiveTasks();
@@ -862,8 +866,8 @@ public class ServerQuestManager {
             var taskEntry = this.questRepository.getTaskEntry(questTracker.getQuestId(), taskId);
             if (taskEntry == null) return;
 
-            this.conditionDispatcher.load(taskEntry.task().successCondition(), player);
-            this.conditionDispatcher.load(taskEntry.task().failureCondition(), player);
+            this.conditionDispatcher.load(taskEntry.task().successCondition(), player, questId, taskId);
+            this.conditionDispatcher.load(taskEntry.task().failureCondition(), player, questId, taskId);
 
             QuestProgressEvents.TASK_LOADED.invoker().onTaskLoad(taskEntry, player, stageChanged);
             questTracker.markLoaded(taskId);

@@ -238,8 +238,8 @@ public final class QuestProgressTracker {
             if (task == null) continue;
 
             this.activeTasks.computeIfAbsent(taskId, key -> new TaskProgressTracker(
-                    successProvider.getInitialProgress(task),
-                    failureProvider.getInitialProgress(task)
+                    successProvider.getInitialProgress(taskId, task),
+                    failureProvider.getInitialProgress(taskId, task)
             ));
         }
     }
@@ -288,7 +288,7 @@ public final class QuestProgressTracker {
 
     @FunctionalInterface
     public interface InitialProgressProvider {
-        Integer getInitialProgress(Task task);
+        Integer getInitialProgress(String taskId, Task task);
     }
 
 

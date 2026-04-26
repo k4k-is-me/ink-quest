@@ -4,11 +4,12 @@ import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
 import java.util.Objects;
 
 public class ScoreConditionHandler implements ITaskConditionHandler<ScoreCondition> {
-    public void load(ScoreCondition condition, ServerPlayerEntity player) {
+    public void load(ScoreCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
         var scoreboard = Objects.requireNonNull(player.getServer())
                 .getScoreboard();
 
@@ -24,13 +25,13 @@ public class ScoreConditionHandler implements ITaskConditionHandler<ScoreConditi
     }
 
     @Override
-    public boolean test(ScoreCondition condition, ServerPlayerEntity player) {
+    public boolean test(ScoreCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
         if (condition.initial() != null && condition.initial() > condition.target())
-            return this.getCurrentValue(condition, player) <= condition.target();
-        return this.getCurrentValue(condition, player) >= condition.target();
+            return this.getCurrentValue(condition, player, questId, taskId) <= condition.target();
+        return this.getCurrentValue(condition, player, questId, taskId) >= condition.target();
     }
 
-    public int getCurrentValue(ScoreCondition condition, ServerPlayerEntity player) {
+    public int getCurrentValue(ScoreCondition condition, ServerPlayerEntity player, Identifier questId, String taskId) {
         var scoreboard = Objects.requireNonNull(player.getServer())
                 .getScoreboard();
         var objective = scoreboard.getObjective(condition.objective());

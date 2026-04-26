@@ -87,7 +87,7 @@ class QuestProgressTrackerTest {
     }
 
     /** Провайдер начального прогресса, всегда возвращающий 0. */
-    private static final QuestProgressTracker.InitialProgressProvider ZERO_PROVIDER = task -> 0;
+    private static final QuestProgressTracker.InitialProgressProvider ZERO_PROVIDER = (taskId, task) -> 0;
 
     // ── Начальное состояние ───────────────────────────────────────────────────
 
