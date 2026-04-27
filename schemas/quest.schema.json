@@ -1,0 +1,256 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "quest.schema.json",
+  "title": "InkQuest — Quest Definition",
+  "description": "Format v2.0. Defines a quest for the InkQuest (TravelCore Questing) Minecraft mod.",
+  "type": "object",
+  "required": ["version", "variant", "title", "tasks", "stages"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference — used by IDEs for validation and autocompletion."
+    },
+    "version": {
+      "type": "integer",
+      "const": 2,
+      "description": "Format version. Must be 2."
+    },
+    "variant": {
+      "type": "integer",
+      "const": 0,
+      "description": "Format variant. Must be 0."
+    },
+    "title": {
+      "$ref": "#/$defs/text",
+      "description": "Display name of the quest."
+    },
+    "description": {
+      "$ref": "#/$defs/text",
+      "description": "Optional description shown in the quest book."
+    },
+    "icon": {
+      "$ref": "#/$defs/identifier",
+      "description": "Item or block identifier used as the quest icon. Default: travelcorequesting:default"
+    },
+    "index": {
+      "type": "integer",
+      "description": "Sort order in the quest book. Default: 0"
+    },
+    "background": {
+      "type": "boolean",
+      "description": "If true, task conditions are checked even when the quest is not pinned. Default: false"
+    },
+    "pin_mode": {
+      "type": "string",
+      "enum": ["auto", "force", "off"],
+      "description": "Pinning behaviour when the quest is given. auto — pin if nothing else is pinned; force — always pin; off — never pin. Default: auto"
+    },
+    "after": {
+      "type": "array",
+      "description": "Dependency groups. AND within a group, OR between groups. The quest unlocks when all quests in at least one group are completed successfully.",
+      "items": {
+        "type": "array",
+        "items": { "$ref": "#/$defs/identifier" },
+        "minItems": 1
+      }
+    },
+    "require": {
+      "$ref": "#/$defs/questRequirement",
+      "description": "Additional unlock conditions checked together with 'after'. Ignored if 'after' is absent."
+    },
+    "tasks": {
+      "type": "object",
+      "description": "Map of task ID → task definition. Keys are arbitrary identifiers used in 'stages' and condition references.",
+      "additionalProperties": { "$ref": "#/$defs/task" }
+    },
+    "stages": {
+      "type": "array",
+      "description": "Ordered list of stages. Each stage is an array of task IDs: the first is the required task, the rest are optional.",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "items": { "type": "string" },
+        "minItems": 1
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$",
+      "description": "Minecraft resource location — namespace:path"
+    },
+    "text": {
+      "description": "Minecraft text component — plain string or a JSON text object.",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "object" }
+      ]
+    },
+    "questRequirement": {
+      "type": "object",
+      "description": "Extra conditions evaluated once when a dependency quest completes.",
+      "additionalProperties": false,
+      "properties": {
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Scoreboard tags the player must have."
+        },
+        "predicate": {
+          "$ref": "#/$defs/identifier",
+          "description": "Minecraft predicate evaluated against the player."
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/text",
+          "description": "Display name of the task."
+        },
+        "description": {
+          "$ref": "#/$defs/text",
+          "description": "Optional description shown in the quest book."
+        },
+        "condition": {
+          "$ref": "#/$defs/taskConditionBlock",
+          "description": "Automatic completion conditions for this task."
+        },
+        "on": {
+          "$ref": "#/$defs/taskLifecycle",
+          "description": "Lifecycle hooks — functions and scoreboard tags triggered at task events."
+        }
+      }
+    },
+    "taskConditionBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "$ref": "#/$defs/condition",
+          "description": "Condition that, when met, completes the task as SUCCESS."
+        },
+        "failure": {
+          "$ref": "#/$defs/condition",
+          "description": "Condition that, when met, completes the task as FAILURE."
+        }
+      }
+    },
+    "taskLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "load":    { "$ref": "#/$defs/eventActions", "description": "Fired once when the task becomes active." },
+        "tick":    { "$ref": "#/$defs/eventActions", "description": "Fired every tick while the task is active (pinned or background quests only)." },
+        "unload":  { "$ref": "#/$defs/eventActions", "description": "Fired once when the task stops being active." },
+        "success": { "$ref": "#/$defs/eventActions", "description": "Fired when the task completes as SUCCESS." },
+        "failure": { "$ref": "#/$defs/eventActions", "description": "Fired when the task completes as FAILURE." }
+      }
+    },
+    "eventActions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "functions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "description": "Datapack functions to run."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Scoreboard tags to add to the player."
+        }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        { "$ref": "#/$defs/conditionPredicate" },
+        { "$ref": "#/$defs/conditionScore" },
+        { "$ref": "#/$defs/conditionAll" },
+        { "$ref": "#/$defs/conditionAny" },
+        { "$ref": "#/$defs/conditionNone" },
+        { "$ref": "#/$defs/conditionTasks" }
+      ]
+    },
+    "conditionPredicate": {
+      "type": "object",
+      "required": ["type", "predicate"],
+      "additionalProperties": false,
+      "properties": {
+        "type":      { "type": "string", "const": "predicate" },
+        "predicate": { "$ref": "#/$defs/identifier", "description": "Minecraft predicate to evaluate against the player." }
+      }
+    },
+    "conditionScore": {
+      "type": "object",
+      "required": ["type", "objective", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "type":      { "type": "string", "const": "score" },
+        "objective": { "type": "string", "description": "Scoreboard objective name. Created automatically if it does not exist." },
+        "criterion": { "type": "string", "description": "Objective criterion (e.g. 'dummy', 'minecraft.mined:minecraft.dirt'). Default: dummy" },
+        "player":    { "type": "string", "description": "Player or fake-player name. Default: the tracked player." },
+        "initial":   { "type": "integer", "description": "Starting value. If initial > target the condition counts down (score <= target)." },
+        "target":    { "type": "integer", "description": "Target value. Ascending: score >= target. Descending: score <= target (when initial > target)." }
+      }
+    },
+    "conditionAll": {
+      "type": "object",
+      "required": ["type", "conditions"],
+      "additionalProperties": false,
+      "properties": {
+        "type":       { "type": "string", "const": "all" },
+        "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "description": "All sub-conditions must be met." }
+      }
+    },
+    "conditionAny": {
+      "type": "object",
+      "required": ["type", "conditions"],
+      "additionalProperties": false,
+      "properties": {
+        "type":       { "type": "string", "const": "any" },
+        "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "description": "At least one sub-condition must be met." }
+      }
+    },
+    "conditionNone": {
+      "type": "object",
+      "required": ["type", "conditions"],
+      "additionalProperties": false,
+      "properties": {
+        "type":       { "type": "string", "const": "none" },
+        "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "description": "No sub-condition must be met." }
+      }
+    },
+    "conditionTasks": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type":   { "type": "string", "const": "tasks" },
+        "tasks":  {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Task IDs to check. Omit to use all tasks in the active stage."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["SUCCESS", "FAILURE", "SKIPPED"],
+          "description": "Expected completion status of the tasks. Omit to accept any terminal status."
+        },
+        "count":  {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minimum number of matching tasks. Omit to require all tasks in the pool."
+        }
+      }
+    }
+  }
+}

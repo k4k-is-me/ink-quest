@@ -25,6 +25,7 @@ import net.minecraft.util.Identifier;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -70,7 +71,23 @@ public class QuestJsonSerializer {
             return deserializeQuest(json, context);
         }
 
+        /** Logs a WARN for every key in {@code json} that is not in {@code known}. */
+        private static void warnUnknownKeys(JsonElement json, String context, Set<String> known) {
+            if (!json.isJsonObject()) return;
+            for (var key : json.getAsJsonObject().keySet()) {
+                if (!known.contains(key)) {
+                    TravelcoreQuesting.LOGGER.warn(
+                            "Unknown key \"{}\" in {} — it will be ignored", key, context);
+                }
+            }
+        }
+
         private MutableQuest deserializeQuest(JsonElement json, JsonDeserializationContext context) {
+            warnUnknownKeys(json, "quest", Set.of(
+                    "$schema", "version", "variant", "title", "description",
+                    "icon", "index", "background", "pin_mode",
+                    "after", "require", "tasks", "stages"));
+
             var title = JUtil.getRequiredMember(json, "title",
                     element -> (Text) context.deserialize(element, Text.class));
 
@@ -136,6 +153,7 @@ public class QuestJsonSerializer {
             if (requireElement.isEmpty()) return null;
 
             var elem = requireElement.get();
+            warnUnknownKeys(elem, "quest.require", Set.of("tags", "predicate"));
 
             if (after.isEmpty()) {
                 TravelcoreQuesting.LOGGER.warn(
@@ -151,6 +169,11 @@ public class QuestJsonSerializer {
         }
 
         private MutableTask deserializeTask(JsonElement json, JsonDeserializationContext context) {
+            warnUnknownKeys(json, "task", Set.of("title", "description", "condition", "on"));
+
+            JUtil.getOptionalMember(json, "condition", e -> e).ifPresent(condBlock ->
+                    warnUnknownKeys(condBlock, "task condition block", Set.of("success", "failure")));
+
             var title = JUtil.getRequiredMember(json, "title",
                     element -> (Text) context.deserialize(element, Text.class));
 
@@ -190,6 +213,7 @@ public class QuestJsonSerializer {
             if (eventElement.isEmpty()) return TaskEventActions.EMPTY;
 
             var elem = eventElement.get();
+            warnUnknownKeys(elem, "task " + path, Set.of("functions", "tags"));
 
             var functions = JUtil.getMemberArray(elem, "functions",
                     element -> (Identifier) context.deserialize(element, Identifier.class));
@@ -204,12 +228,14 @@ public class QuestJsonSerializer {
 
             switch (conditionType) {
                 case "predicate":
+                    warnUnknownKeys(json, "condition (predicate)", Set.of("type", "predicate"));
                     Identifier predicate = JUtil.getRequiredMember(json, "predicate",
                             element -> context.deserialize(element, Identifier.class));
 
                     return new PredicateCondition(predicate);
 
                 case "score":
+                    warnUnknownKeys(json, "condition (score)", Set.of("type", "objective", "criterion", "player", "initial", "target"));
                     var objective = JUtil.getRequiredMember(json, "objective", JsonElement::getAsString);
 
                     var criterionString = JUtil.getMemberWithDefault(json, "criterion", JsonElement::getAsString, "dummy");
@@ -231,21 +257,25 @@ public class QuestJsonSerializer {
                     );
 
                 case "all":
+                    warnUnknownKeys(json, "condition (all)", Set.of("type", "conditions"));
                     var subConditions = JUtil.getMemberArray(json, "conditions",
                             element -> deserializeTaskCondition(element, context));
                     return new AllCondition(subConditions);
 
                 case "any":
+                    warnUnknownKeys(json, "condition (any)", Set.of("type", "conditions"));
                     var anySubConditions = JUtil.getMemberArray(json, "conditions",
                             element -> deserializeTaskCondition(element, context));
                     return new AnyCondition(anySubConditions);
 
                 case "none":
+                    warnUnknownKeys(json, "condition (none)", Set.of("type", "conditions"));
                     var noneSubConditions = JUtil.getMemberArray(json, "conditions",
                             element -> deserializeTaskCondition(element, context));
                     return new NoneCondition(noneSubConditions);
 
                 case "tasks":
+                    warnUnknownKeys(json, "condition (tasks)", Set.of("type", "tasks", "status", "count"));
                     var tasksStatus = JUtil.getOptionalMember(json, "status",
                             e -> CompletionStatus.valueOf(e.getAsString().toUpperCase()));
                     var tasksCount = JUtil.getOptionalMember(json, "count", JsonElement::getAsInt);
