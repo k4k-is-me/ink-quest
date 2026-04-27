@@ -737,7 +737,7 @@ public class ServerQuestManager {
      * на том же тике.
      */
     private void processActiveTasks(ServerPlayerEntity player, Identifier questId, QuestProgressTracker questTracker) {
-        for (var taskId : questTracker.getActiveTasks()) {
+        for (var taskId : List.copyOf(questTracker.getActiveTasks())) {
             var taskEntry = this.questRepository.getTaskEntry(questId, taskId);
             if (taskEntry == null) continue;
 
