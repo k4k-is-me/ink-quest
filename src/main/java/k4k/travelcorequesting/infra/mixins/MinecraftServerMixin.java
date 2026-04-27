@@ -14,9 +14,10 @@ import org.spongepowered.asm.mixin.Unique;
 @Mixin(value = MinecraftServer.class)
 public abstract class MinecraftServerMixin implements ServerQuestManagerContainer {
     @Unique
-    private final ServerQuestManager questManager;
+    private ServerQuestManager questManager = travelcorequesting$createQuestManager();
 
-    public MinecraftServerMixin() {
+    @Unique
+    private static ServerQuestManager travelcorequesting$createQuestManager() {
         var dispatcher = new TaskConditionDispatcher();
         dispatcher
                 .register(ScoreCondition.class, new ScoreConditionHandler())
@@ -26,7 +27,7 @@ public abstract class MinecraftServerMixin implements ServerQuestManagerContaine
                 .register(AnyCondition.class, new AnyConditionHandler(dispatcher))
                 .register(NoneCondition.class, new NoneConditionHandler(dispatcher));
 
-        this.questManager = new ServerQuestManager(
+        return new ServerQuestManager(
                 new QuestRequirementChecker(),
                 MinecraftConditionContext::new,
                 dispatcher
