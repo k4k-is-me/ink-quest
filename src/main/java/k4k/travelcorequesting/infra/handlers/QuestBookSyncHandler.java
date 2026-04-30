@@ -1,19 +1,22 @@
 package k4k.travelcorequesting.infra.handlers;
 
 import k4k.travelcorequesting.infra.networking.QuestBookQuestListItemAddedS2CPacket;
+import k4k.travelcorequesting.infra.networking.QuestBookQuestListItemUpdatedS2CPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookQuestCompletedS2CPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookQuestPinS2CPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookQuestRemovedS2CPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookSyncS2CPacket;
-import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
+import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.QuestBookQuestListItem;
 import k4k.travelcorequesting.questing.models.QuestEntry;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Серверный обработчик, поддерживающий список квестов на клиенте в актуальном состоянии.
@@ -21,8 +24,17 @@ import net.minecraft.server.network.ServerPlayerEntity;
  */
 public class QuestBookSyncHandler {
 
+    /**
+     * Текущий активный сервер. Нужен для итерации по игрокам при {@code QUEST_MODIFIED},
+     * которое не несёт ни игрока, ни сервера в сигнатуре.
+     */
+    private static @Nullable MinecraftServer currentServer;
+
     /** Регистрирует все обработчики событий синхронизации квестовой книги. */
     public static void register() {
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> currentServer = server);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> currentServer = null);
+
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 syncFullList(handler.player));
 
@@ -50,6 +62,17 @@ public class QuestBookSyncHandler {
                 ServerPlayNetworking.send(player, new QuestBookQuestPinS2CPacket(
                         questId, false
                 )));
+
+        QuestEvents.QUEST_MODIFIED.register(questEntry -> {
+            if (currentServer == null) return;
+            var questManager = ServerQuestManagerContainer.getQuestManager(currentServer);
+            for (var player : currentServer.getPlayerManager().getPlayerList()) {
+                if (!questManager.isQuestTracked(questEntry.questId(), player)) continue;
+                ServerPlayNetworking.send(player, new QuestBookQuestListItemUpdatedS2CPacket(
+                        toQuestBookQuestListItem(questEntry, player)
+                ));
+            }
+        });
     }
 
     /**

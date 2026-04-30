@@ -104,6 +104,12 @@ public class TravelcoreQuestingClient implements ClientModInitializer {
             client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
                     .onQuestCompleted(packet.questId(), packet.completionStatus()));
         });
+
+        ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestListItemUpdatedS2CPacket.TYPE, (packet, player, sender) -> {
+            var client = MinecraftClient.getInstance();
+            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
+                    .onQuestUpdated(packet.quest()));
+        });
     }
 
     private void registerKeybindings() {

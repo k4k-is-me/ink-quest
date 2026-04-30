@@ -87,6 +87,17 @@ public class ClientQuestBookManager {
     }
 
     /**
+     * Заменяет метаданные квеста в списке и инвалидирует кэш деталей.
+     * Вызывается при событии {@code QUEST_MODIFIED} ({@code QuestBookQuestListItemUpdatedS2CPacket}).
+     *
+     * @param item обновлённые данные квеста
+     */
+    public void onQuestUpdated(QuestBookQuestListItem item) {
+        this.quests.put(item.questId(), item);
+        this.detailsCache.remove(item.questId());
+    }
+
+    /**
      * Обновляет флаг закрепления квеста в списке.
      * Вызывается при событии {@code QUEST_PINNED} / {@code QUEST_UNPINNED} ({@code QuestBookQuestPinS2CPacket}).
      *

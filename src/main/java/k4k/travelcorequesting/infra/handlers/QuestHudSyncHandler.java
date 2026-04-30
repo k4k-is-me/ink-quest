@@ -14,10 +14,12 @@ import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.HudTask;
 import k4k.travelcorequesting.questing.models.QuestEntry;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Objects;
@@ -30,8 +32,17 @@ import java.util.stream.Collectors;
  */
 public class QuestHudSyncHandler {
 
+    /**
+     * Текущий активный сервер. Нужен для итерации по игрокам при {@code QUEST_MODIFIED},
+     * которое не несёт ни игрока, ни сервера в сигнатуре.
+     */
+    private static @Nullable MinecraftServer currentServer;
+
     /** Регистрирует все обработчики событий синхронизации HUD. */
     public static void register() {
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> currentServer = server);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> currentServer = null);
+
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 resyncPlayer(handler.player));
 
@@ -102,6 +113,13 @@ public class QuestHudSyncHandler {
                     taskEntry.taskId()
             ));
         });
+
+        QuestEvents.QUEST_MODIFIED.register(questEntry -> {
+            if (currentServer == null) return;
+            for (var player : currentServer.getPlayerManager().getPlayerList()) {
+                resyncQuestForPlayer(player, questEntry);
+            }
+        });
     }
 
     /**
@@ -117,7 +135,7 @@ public class QuestHudSyncHandler {
     }
 
     /**
-     * Синхронизирует HUD конкретного игрока: отправляет данные этапа и закреплённой задачи
+     * Синхронизирует HUD конкретного игрока: переотправляет данные этапа и закреплённой задачи
      * для каждого закреплённого квеста. Вызывается при входе игрока и после перезагрузки датапаков.
      *
      * @param player игрок
@@ -126,13 +144,24 @@ public class QuestHudSyncHandler {
         var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
         questManager.getTrackedQuests(player).stream()
                 .filter(entry -> questManager.isQuestPinned(entry.questId(), player))
-                .forEach(entry -> {
-                    var stage = questManager.getActiveStage(entry.questId(), player).orElse(null);
-                    sendQuestStagePacket(player, entry, stage);
-                    questManager.getPinnedTaskId(entry.questId(), player).ifPresent(taskId ->
-                            ServerPlayNetworking.send(player, new HudTaskPinS2CPacket(entry.questId(), taskId))
-                    );
-                });
+                .forEach(entry -> resyncQuestForPlayer(player, entry));
+    }
+
+    /**
+     * Синхронизирует HUD конкретного игрока для одного квеста: отправляет данные активного этапа
+     * и закреплённой задачи, если квест закреплён у этого игрока.
+     *
+     * @param player игрок
+     * @param entry  запись квеста
+     */
+    private static void resyncQuestForPlayer(ServerPlayerEntity player, QuestEntry entry) {
+        var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
+        if (!questManager.isQuestPinned(entry.questId(), player)) return;
+        var stage = questManager.getActiveStage(entry.questId(), player).orElse(null);
+        sendQuestStagePacket(player, entry, stage);
+        questManager.getPinnedTaskId(entry.questId(), player).ifPresent(taskId ->
+                ServerPlayNetworking.send(player, new HudTaskPinS2CPacket(entry.questId(), taskId))
+        );
     }
 
     /**
