@@ -37,100 +37,93 @@ public class TravelcoreQuestingClient implements ClientModInitializer {
                 QUEST_HUD_OVERLAY = null);
 
         ClientPlayNetworking.registerGlobalReceiver(HudSetQuestStageS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> {
-                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
-                if (QUEST_HUD_OVERLAY == null) return;
-                QUEST_HUD_OVERLAY.addQuest(packet.questId(), packet.quest(), packet.tasks());
-            });
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .invalidateDetail(packet.questId());
+
+            if (QUEST_HUD_OVERLAY == null) return;
+            QUEST_HUD_OVERLAY.addQuest(packet.questId(), packet.quest(), packet.tasks());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskAddS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> {
-                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
-                if (QUEST_HUD_OVERLAY == null) return;
-                QUEST_HUD_OVERLAY.addTask(packet.questId(), packet.taskId(), packet.task());
-            });
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .invalidateDetail(packet.questId());
+
+            if (QUEST_HUD_OVERLAY == null) return;
+            QUEST_HUD_OVERLAY.addTask(packet.questId(), packet.taskId(), packet.task());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskRemoveS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> {
-                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
-                if (QUEST_HUD_OVERLAY == null) return;
-                QUEST_HUD_OVERLAY.removeTask(packet.questId(), packet.taskId());
-            });
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .invalidateDetail(packet.questId());
+
+            if (QUEST_HUD_OVERLAY == null) return;
+            QUEST_HUD_OVERLAY.removeTask(packet.questId(), packet.taskId());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskCompleteS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> {
-                if (QUEST_HUD_OVERLAY == null) return;
-                QUEST_HUD_OVERLAY.completeTask(packet.questId(), packet.taskId(), packet.status());
-            });
+            if (QUEST_HUD_OVERLAY == null) return;
+            QUEST_HUD_OVERLAY.completeTask(packet.questId(), packet.taskId(), packet.status());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudQuestRemoveS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> {
-                if (QUEST_HUD_OVERLAY == null) return;
-                QUEST_HUD_OVERLAY.removeQuest(packet.questId());
-            });
+            if (QUEST_HUD_OVERLAY == null) return;
+            QUEST_HUD_OVERLAY.removeQuest(packet.questId());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskSetProgressS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> {
-                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
-                if (QUEST_HUD_OVERLAY == null) return;
-                QUEST_HUD_OVERLAY.setTaskProgress(packet.questId(), packet.taskId(), packet.value(), packet.isSuccessProgress());
-            });
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .invalidateDetail(packet.questId());
+
+            if (QUEST_HUD_OVERLAY == null) return;
+            QUEST_HUD_OVERLAY.setTaskProgress(packet.questId(), packet.taskId(), packet.value(), packet.isSuccessProgress());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(HudTaskPinS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> {
-                ClientQuestBookManagerContainer.getQuestManager(client).invalidateDetail(packet.questId());
-                if (QUEST_HUD_OVERLAY == null) return;
-                QUEST_HUD_OVERLAY.setTaskPin(packet.questId(), packet.taskId());
-            });
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .invalidateDetail(packet.questId());
+
+            if (QUEST_HUD_OVERLAY == null) return;
+            QUEST_HUD_OVERLAY.setTaskPin(packet.questId(), packet.taskId());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestPinS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
-                    .onQuestPinChanged(packet.questId(), packet.isPinned()));
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .onQuestPinChanged(packet.questId(), packet.isPinned());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookSyncS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
-                    .onListSync(packet.quests()));
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .onListSync(packet.quests());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestListItemAddedS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
-                    .onQuestAdded(packet.quest()));
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .onQuestAdded(packet.quest());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestRemovedS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
-                    .onQuestRemoved(packet.questId()));
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .onQuestRemoved(packet.questId());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestCompletedS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
-                    .onQuestCompleted(packet.questId(), packet.completionStatus()));
+            ClientQuestBookManagerContainer
+                    .getQuestManager(MinecraftClient.getInstance())
+                    .onQuestCompleted(packet.questId(), packet.completionStatus());
         });
 
         ClientPlayNetworking.registerGlobalReceiver(QuestBookQuestListItemUpdatedS2CPacket.TYPE, (packet, player, sender) -> {
-            var client = MinecraftClient.getInstance();
-            client.execute(() -> ClientQuestBookManagerContainer.getQuestManager(client)
-                    .onQuestUpdated(packet.quest()));
+            ClientQuestBookManagerContainer.getQuestManager(MinecraftClient.getInstance())
+                    .onQuestUpdated(packet.quest());
         });
     }
 
