@@ -1,7 +1,9 @@
 package k4k.travelcorequesting.infra.items;
 
+import k4k.travelcorequesting.infra.networking.QuestBookOpenAtQuestS2CPacket;
 import k4k.travelcorequesting.infra.sounds.ModSounds;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -75,6 +77,7 @@ public class QuestScrollItem extends Item {
         }
 
         manager.giveQuest(questId, serverPlayer);
+        ServerPlayNetworking.send(serverPlayer, new QuestBookOpenAtQuestS2CPacket(questId));
         world.playSound(null, user.getX(), user.getY(), user.getZ(),
                 ModSounds.QUEST_SCROLL_UNFURL, SoundCategory.PLAYERS, 1.0f, 1.0f);
         if (!user.getAbilities().creativeMode) stack.decrement(1);

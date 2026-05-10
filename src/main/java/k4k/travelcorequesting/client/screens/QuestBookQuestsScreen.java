@@ -111,14 +111,30 @@ public class QuestBookQuestsScreen extends Screen {
     private @Nullable Identifier focusedQuestId = null;
     private int focusedTaskIndex = -1;
 
+    /** Идентификатор квеста для выбора при первом открытии экрана. */
+    private @Nullable Identifier preselectQuestId;
+
     public QuestBookQuestsScreen() {
+        this(null);
+    }
+
+    /**
+     * @param preselectQuestId квест, который будет выбран при первом открытии;
+     *                         {@code null} — без предварительного выбора
+     */
+    public QuestBookQuestsScreen(@Nullable Identifier preselectQuestId) {
         super(Text.translatable("gui.quest_book"));
+        this.preselectQuestId = preselectQuestId;
     }
 
     @Override
     protected void init() {
         super.init();
         loadColors();
+        if (preselectQuestId != null) {
+            selectQuest(preselectQuestId);
+            preselectQuestId = null;
+        }
     }
 
     /**

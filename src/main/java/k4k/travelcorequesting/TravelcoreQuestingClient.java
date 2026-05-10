@@ -6,6 +6,7 @@ import k4k.travelcorequesting.infra.requests.GetQuestDetailsClientRequest;
 import k4k.travelcorequesting.client.handlers.QuestBookOpenEventHandler;
 import k4k.travelcorequesting.client.huds.QuestHudOverlay;
 import k4k.travelcorequesting.client.interfaces.ClientQuestBookManagerContainer;
+import k4k.travelcorequesting.client.screens.QuestBookQuestsScreen;
 import k4k.travelcorequesting.infra.networking.QuestBookQuestCompletedS2CPacket;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -125,6 +126,9 @@ public class TravelcoreQuestingClient implements ClientModInitializer {
             ClientQuestBookManagerContainer.getQuestManager(MinecraftClient.getInstance())
                     .onQuestUpdated(packet.quest());
         });
+
+        ClientPlayNetworking.registerGlobalReceiver(QuestBookOpenAtQuestS2CPacket.TYPE, (packet, player, sender) ->
+                MinecraftClient.getInstance().setScreen(new QuestBookQuestsScreen(packet.questId())));
     }
 
     private void registerKeybindings() {
