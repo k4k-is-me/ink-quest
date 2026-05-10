@@ -213,6 +213,122 @@ class AnimatorTest {
         assertTrue(startValue > 0.3f, "fadeIn должен начинать не с нуля: " + startValue);
     }
 
+    // --- callbacks ---
+
+    @Test
+    void play_onEnd_firesAfterDuration() {
+        boolean[] fired = {false};
+        animator.play(fadeIn500(), () -> fired[0] = true);
+        now = 600;
+        animator.tick();
+        assertTrue(fired[0], "колбэк должен сработать после истечения длительности");
+    }
+
+    @Test
+    void play_onEnd_firesOnceOnly() {
+        int[] fired = {0};
+        animator.play(fadeIn500(), () -> fired[0]++);
+        now = 600;
+        animator.tick();
+        now = 1500;
+        animator.tick();
+        assertEquals(1, fired[0], "колбэк должен сработать ровно один раз");
+    }
+
+    @Test
+    void play_onEnd_notFiredBeforeDuration() {
+        boolean[] fired = {false};
+        animator.play(fadeIn500(), () -> fired[0] = true);
+        now = 499;
+        animator.tick();
+        assertFalse(fired[0], "колбэк не должен сработать до истечения длительности");
+    }
+
+    @Test
+    void play_onEnd_notFiredAtExactDuration() {
+        // Граница строгая: now > animationStartTime + duration
+        boolean[] fired = {false};
+        animator.play(fadeIn500(), () -> fired[0] = true);
+        now = 500;
+        animator.tick();
+        assertFalse(fired[0], "колбэк не должен сработать ровно в момент окончания (граница строгая)");
+    }
+
+    @Test
+    void queue_onEnd_firesOnTransition() {
+        boolean[] firedA = {false};
+        boolean[] firedB = {false};
+        animator.play(fadeIn500(), () -> firedA[0] = true);
+        animator.queue(fadeIn500(), () -> firedB[0] = true);
+
+        now = 501;
+        animator.tick();
+        assertTrue(firedA[0], "cbA должен сработать при переходе на B");
+        assertFalse(firedB[0], "cbB не должен срабатывать пока B играет");
+
+        now = 1500;
+        animator.tick();
+        assertTrue(firedB[0], "cbB должен сработать после истечения длительности B");
+    }
+
+    @Test
+    void play_replacing_doesNotFireCallback() {
+        boolean[] fired = {false};
+        animator.play(fadeIn500(), () -> fired[0] = true);
+        now = 200;
+        animator.play(opacityStatic1());
+        now = 600;
+        animator.tick();
+        assertFalse(fired[0], "колбэк отменённой анимации не должен срабатывать");
+    }
+
+    @Test
+    void stop_doesNotFireCallback() {
+        boolean[] fired = {false};
+        animator.play(fadeIn500(), () -> fired[0] = true);
+        now = 200;
+        animator.stop();
+        now = 600;
+        animator.tick();
+        assertFalse(fired[0], "stop не должен вызывать колбэк");
+    }
+
+    @Test
+    void clear_doesNotFireCallback() {
+        boolean[] fired = {false};
+        animator.play(fadeIn500(), () -> fired[0] = true);
+        now = 200;
+        animator.clear();
+        now = 600;
+        animator.tick();
+        assertFalse(fired[0], "clear не должен вызывать колбэк");
+    }
+
+    @Test
+    void queue_whenIdle_callbackFiresOnEnd() {
+        boolean[] fired = {false};
+        animator.queue(fadeIn500(), () -> fired[0] = true);
+        assertFalse(animator.isIdle(), "queue на idle-аниматоре должен запустить анимацию");
+        now = 600;
+        animator.tick();
+        assertTrue(fired[0], "колбэк должен сработать после естественного окончания");
+    }
+
+    @Test
+    void play_callbackCanReplayInsideCallback() {
+        boolean[] aFired = {false};
+        animator.play(fadeIn500(), () -> {
+            aFired[0] = true;
+            animator.play(opacityStatic1());
+        });
+        now = 600;
+        animator.tick();
+        assertTrue(aFired[0], "cbA должен сработать");
+        // Внутри cbA запущен opacityStatic1 — он стал текущей анимацией
+        assertEquals(1f, animator.getParameter(OPACITY), 0.001f,
+                "после колбэка должна играть новая анимация (opacityStatic1)");
+    }
+
     // --- Вспомогательные анимации ---
 
     /** fadeIn по OPACITY за 500мс. */
