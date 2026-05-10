@@ -1,11 +1,13 @@
 package k4k.travelcorequesting.infra.items;
 
+import k4k.travelcorequesting.infra.sounds.ModSounds;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
@@ -73,6 +75,8 @@ public class QuestScrollItem extends Item {
         }
 
         manager.giveQuest(questId, serverPlayer);
+        world.playSound(null, user.getX(), user.getY(), user.getZ(),
+                ModSounds.QUEST_SCROLL_UNFURL, SoundCategory.PLAYERS, 1.0f, 1.0f);
         if (!user.getAbilities().creativeMode) stack.decrement(1);
         user.getItemCooldownManager().set(this, USE_COOLDOWN_TICKS);
         return TypedActionResult.success(stack, false);

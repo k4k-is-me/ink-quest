@@ -1,6 +1,7 @@
 package k4k.travelcorequesting;
 
 import k4k.travelcorequesting.infra.items.ModItems;
+import k4k.travelcorequesting.infra.sounds.ModSounds;
 import k4k.travelcorequesting.infra.handlers.QuestBookSyncHandler;
 import k4k.travelcorequesting.infra.handlers.QuestHudSyncHandler;
 import k4k.travelcorequesting.infra.handlers.QuestLifecycleFunctionExecutor;
@@ -38,6 +39,7 @@ public class TravelcoreQuesting implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		ModSounds.register();
 		ModItems.register();
 		registerQuestResourceLoader();
 		registerCommands();

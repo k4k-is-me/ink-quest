@@ -107,5 +107,6 @@
   "item.travelcorequesting.quest_scroll.error.invalid_id": "Scroll quest id is invalid",
   "item.travelcorequesting.quest_scroll.error.unknown_quest": "Unknown quest: %s",
   "item.travelcorequesting.quest_scroll.error.already_active": "You already have this quest",
-  "item.travelcorequesting.quest_scroll.error.already_complete": "You have already completed this quest"
+  "item.travelcorequesting.quest_scroll.error.already_complete": "You have already completed this quest",
+  "subtitles.travelcorequesting.quest_scroll.unfurl": "Quest scroll unfurls"
 }
