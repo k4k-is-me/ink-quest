@@ -98,5 +98,7 @@
   "quest.command.query.task.success.percent": "Task success percent for %s: %s%%",
   "quest.command.query.task.failure.value": "Task failure value for %s: %s",
   "quest.command.query.task.failure.target": "Task failure target for %s: %s",
-  "quest.command.query.task.failure.percent": "Task failure percent for %s: %s%%"
+  "quest.command.query.task.failure.percent": "Task failure percent for %s: %s%%",
+
+  "item.travelcorequesting.quest_book": "Quest Book"
 }
