@@ -5,15 +5,17 @@ import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
-import k4k.travelcorequesting.infra.abstractions.QuestStatusPredicate;
-import k4k.travelcorequesting.infra.enums.QuestGeneralStatus;
-import k4k.travelcorequesting.infra.enums.TaskGeneralStatus;
 import k4k.travelcorequesting.infra.enums.CompletionLevel;
+import k4k.travelcorequesting.infra.items.ModItems;
 import k4k.travelcorequesting.infra.suggestion_providers.*;
 import k4k.travelcorequesting.infra.utils.QuestTexts;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import k4k.travelcorequesting.questing.models.QuestEntry;
 import k4k.travelcorequesting.questing.services.ServerQuestManager;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -22,7 +24,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.Function;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
@@ -40,6 +41,7 @@ public class QuestCommand {
     private static final String ARG_QUEST_ID = "questId";
     private static final String ARG_TASK_ID = "taskId";
     private static final String ARG_PLAYER = "player";
+    private static final String ARG_PLAYERS = "players";
     private static final String ARG_COMPLETION_STATUS = "completionStatus";
     private static final String ARG_COMPLETION_LEVEL = "completionLevel";
 
@@ -102,6 +104,7 @@ public class QuestCommand {
                 .then(addRemoveSubCommand())
                 .then(addPurgeSubCommand())
                 .then(QuerySubCommand.getNodeTree())
+                .then(addScrollSubCommand())
         );
     }
 
@@ -320,7 +323,23 @@ public class QuestCommand {
                         .then(argument(ARG_QUEST_ID, identifier())
                                 .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, ServerQuestManager::isQuestActive, true))
 
+                                .executes(context -> completeQuest(
+                                        context,
+                                        getPlayer(context, ARG_PLAYER),
+                                        getIdentifier(context, ARG_QUEST_ID),
+                                        CompletionStatus.SUCCESS,
+                                        CompletionLevel.REQUIRED
+                                ))
+
                                 .then(argument(ARG_COMPLETION_STATUS, completionStatus())
+                                        .executes(context -> completeQuest(
+                                                context,
+                                                getPlayer(context, ARG_PLAYER),
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                getCompletionStatus(context, ARG_COMPLETION_STATUS),
+                                                CompletionLevel.REQUIRED
+                                        ))
+
                                         .then(argument(ARG_COMPLETION_LEVEL, completionLevel())
                                                 .executes(context -> completeQuest(
                                                         context,
@@ -333,7 +352,23 @@ public class QuestCommand {
                                 )
 
                                 .then(literal("stage")
+                                        .executes(context -> completeActiveStage(
+                                                context,
+                                                getPlayer(context, ARG_PLAYER),
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                CompletionStatus.SUCCESS,
+                                                CompletionLevel.REQUIRED
+                                        ))
+
                                         .then(argument(ARG_COMPLETION_STATUS, completionStatus())
+                                                .executes(context -> completeActiveStage(
+                                                        context,
+                                                        getPlayer(context, ARG_PLAYER),
+                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                        getCompletionStatus(context, ARG_COMPLETION_STATUS),
+                                                        CompletionLevel.REQUIRED
+                                                ))
+
                                                 .then(argument(ARG_COMPLETION_LEVEL, completionLevel())
                                                         .executes(context -> completeActiveStage(
                                                                 context,
@@ -349,6 +384,15 @@ public class QuestCommand {
                                 .then(literal("task")
                                         .then(argument(ARG_TASK_ID, word())
                                                 .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID, ARG_PLAYER, (qm, qId, tId, p) -> !qm.isTaskComplete(qId, tId, p), true))
+
+                                                .executes(context -> completeTask(
+                                                        context,
+                                                        getPlayer(context, ARG_PLAYER),
+                                                        getIdentifier(context, ARG_QUEST_ID),
+                                                        getString(context, ARG_TASK_ID),
+                                                        CompletionStatus.SUCCESS
+                                                ))
+
                                                 .then(argument(ARG_COMPLETION_STATUS, completionStatus())
                                                         .executes(context -> completeTask(
                                                                 context,
@@ -397,6 +441,41 @@ public class QuestCommand {
                                         context,
                                         getIdentifier(context, ARG_QUEST_ID),
                                         getPlayer(context, ARG_PLAYER)
+                                ))
+                        )
+                );
+    }
+
+    /// quest purge <questId: Identifier>
+    private static ArgumentBuilder<ServerCommandSource, ?> addPurgeSubCommand() {
+        return literal("purge")
+                .then(argument(ARG_QUEST_ID, identifier())
+                        .suggests(new RegisteredQuestSuggestionProvider())
+                        .executes(context -> dropQuestForAll(
+                                context,
+                                getIdentifier(context, ARG_QUEST_ID)
+                        ))
+                );
+    }
+
+    private static ArgumentBuilder<ServerCommandSource, ?> addScrollSubCommand() {
+        return literal("scroll")
+                .then(argument(ARG_QUEST_ID, identifier())
+                        .suggests(new RegisteredQuestSuggestionProvider())
+
+                        .executes(context -> giveScrollItem(
+                                context,
+                                getIdentifier(context, ARG_QUEST_ID),
+                                context.getSource().isExecutedByPlayer()
+                                        ? Collections.singletonList(context.getSource().getPlayer())
+                                        : Collections.emptyList()
+                        ))
+
+                        .then(argument(ARG_PLAYERS, players())
+                                .executes(context -> giveScrollItem(
+                                        context,
+                                        getIdentifier(context, ARG_QUEST_ID),
+                                        getPlayers(context, ARG_PLAYERS)
                                 ))
                         )
                 );
@@ -864,18 +943,6 @@ public class QuestCommand {
         return 1;
     }
 
-    /// quest purge <questId: Identifier>
-    private static ArgumentBuilder<ServerCommandSource, ?> addPurgeSubCommand() {
-        return literal("purge")
-                .then(argument(ARG_QUEST_ID, identifier())
-                        .suggests(new RegisteredQuestSuggestionProvider())
-                        .executes(context -> dropQuestForAll(
-                                context,
-                                getIdentifier(context, ARG_QUEST_ID)
-                        ))
-                );
-    }
-
     private static int dropQuestForAll(CommandContext<ServerCommandSource> context, Identifier questId) {
         var server = context.getSource().getServer();
         var questManager = ServerQuestManagerContainer.getQuestManager(server);
@@ -903,5 +970,35 @@ public class QuestCommand {
                 true
         );
         return online + offlineDropped;
+    }
+
+    private static int giveScrollItem(CommandContext<ServerCommandSource> context, Identifier questId, Collection<ServerPlayerEntity> players) {
+        var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
+        var entry = questManager.getQuestResolver().getQuestEntry(questId);
+
+        if (!questManager.isQuestExists(questId) || entry == null) {
+            context.getSource().sendError(Text.translatable(ERR_QUEST_MISSING));
+            return 0;
+        }
+
+        ItemStack stack = new ItemStack(ModItems.QUEST_SCROLL, 1);
+        var title = Text.translatable("quest.command.scroll.item.name")
+                .append(entry.quest().title());
+
+        NbtCompound nbt = stack.getOrCreateNbt();
+        NbtCompound displayNbt = nbt.getCompound("display");
+        NbtList loreList = new NbtList();
+
+        loreList.add(NbtString.of(Text.Serializer.toJson(entry.quest().description())));
+
+        displayNbt.putString("Name", Text.Serializer.toJson(title));
+        displayNbt.put("Lore", loreList);
+        nbt.put("display", displayNbt);
+        nbt.put("Quest", NbtString.of(questId.toString()));
+
+        for (var player : players)
+            player.getInventory().offerOrDrop(stack);
+
+        return players.size();
     }
 }
