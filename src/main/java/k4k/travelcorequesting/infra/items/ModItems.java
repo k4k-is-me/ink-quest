@@ -15,11 +15,17 @@ public final class ModItems {
     /** Книга квестов — открывает экран квестов по ПКМ. */
     public static final Item QUEST_BOOK = new QuestBookItem(new FabricItemSettings().maxCount(1));
 
+    /** Свиток квеста — выдаёт квест из NBT-поля Quest по ПКМ; стакается до 16. */
+    public static final Item QUEST_SCROLL = new QuestScrollItem(new FabricItemSettings().maxCount(16));
+
     private ModItems() {}
 
     /** Регистрирует предметы и добавляет их в группы creative-инвентаря. */
     public static void register() {
         Registry.register(Registries.ITEM, Identifier.of(TravelcoreQuesting.MOD_ID, "quest_book"), QUEST_BOOK);
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> entries.add(QUEST_BOOK));
+
+        Registry.register(Registries.ITEM, Identifier.of(TravelcoreQuesting.MOD_ID, "quest_scroll"), QUEST_SCROLL);
+        ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> entries.add(QUEST_SCROLL));
     }
 }

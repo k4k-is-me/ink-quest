@@ -100,5 +100,12 @@
   "quest.command.query.task.failure.target": "Task failure target for %s: %s",
   "quest.command.query.task.failure.percent": "Task failure percent for %s: %s%%",
 
-  "item.travelcorequesting.quest_book": "Quest Book"
+  "item.travelcorequesting.quest_book": "Quest Book",
+
+  "item.travelcorequesting.quest_scroll": "Quest Scroll",
+  "item.travelcorequesting.quest_scroll.error.no_quest": "This scroll has no quest",
+  "item.travelcorequesting.quest_scroll.error.invalid_id": "Scroll quest id is invalid",
+  "item.travelcorequesting.quest_scroll.error.unknown_quest": "Unknown quest: %s",
+  "item.travelcorequesting.quest_scroll.error.already_active": "You already have this quest",
+  "item.travelcorequesting.quest_scroll.error.already_complete": "You have already completed this quest"
 }

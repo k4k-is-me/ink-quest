@@ -16,6 +16,7 @@ import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.QuestEntry;
 import k4k.travelcorequesting.questing.states.ServerQuestManagerState;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
