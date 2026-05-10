@@ -127,8 +127,11 @@ public class TravelcoreQuestingClient implements ClientModInitializer {
                     .onQuestUpdated(packet.quest());
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(QuestBookOpenAtQuestS2CPacket.TYPE, (packet, player, sender) ->
-                MinecraftClient.getInstance().setScreen(new QuestBookQuestsScreen(packet.questId())));
+        ClientPlayNetworking.registerGlobalReceiver(QuestBookOpenAtQuestS2CPacket.TYPE, (packet, player, sender) -> {
+            var questId = packet.questId();
+            MinecraftClient.getInstance().setScreen(
+                    questId == null ? new QuestBookQuestsScreen() : new QuestBookQuestsScreen(questId));
+        });
     }
 
     private void registerKeybindings() {

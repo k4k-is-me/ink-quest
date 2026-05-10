@@ -1,5 +1,6 @@
 package k4k.travelcorequesting;
 
+import k4k.travelcorequesting.infra.gamerules.ModGameRules;
 import k4k.travelcorequesting.infra.items.ModItems;
 import k4k.travelcorequesting.infra.sounds.ModSounds;
 import k4k.travelcorequesting.infra.handlers.QuestBookSyncHandler;
@@ -12,11 +13,14 @@ import k4k.travelcorequesting.infra.command_argument_types.QuestGeneralStatusArg
 import k4k.travelcorequesting.infra.command_argument_types.TaskGeneralStatusArgumentType;
 import k4k.travelcorequesting.infra.commands.ExecuteCommandExtension;
 import k4k.travelcorequesting.infra.loaders.QuestingPersistentStateAdapter;
+import k4k.travelcorequesting.infra.networking.QuestBookOpenAtQuestS2CPacket;
+import k4k.travelcorequesting.infra.networking.QuestBookOpenRequestC2SPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookTaskPinC2SPacket;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import k4k.travelcorequesting.infra.loaders.QuestResourceLoader;
 import k4k.travelcorequesting.infra.commands.QuestCommand;
 import net.fabricmc.api.ModInitializer;
+import net.minecraft.text.Text;
 
 import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -39,6 +43,7 @@ public class TravelcoreQuesting implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		ModGameRules.register();
 		ModSounds.register();
 		ModItems.register();
 		registerQuestResourceLoader();
@@ -49,6 +54,17 @@ public class TravelcoreQuesting implements ModInitializer {
 		QuestHudSyncHandler.register();
 		QuestLifecycleFunctionExecutor.register();
 		GetQuestDetailsClientRequest.INSTANCE.registerServer();
+		ServerPlayNetworking.registerGlobalReceiver(QuestBookOpenRequestC2SPacket.TYPE, (packet, player, sender) -> {
+			if (ModGameRules.canPlayerOpenQuestBook(player)) {
+				ServerPlayNetworking.send(player, new QuestBookOpenAtQuestS2CPacket(null));
+			} else {
+				player.sendMessage(
+						Text.translatable("travelcorequesting.quest_book.error.no_book_in_inventory"),
+						true
+				);
+			}
+		});
+
 		ServerPlayNetworking.registerGlobalReceiver(QuestBookTaskPinC2SPacket.TYPE, (packet, player, sender) -> {
 			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
 			try {

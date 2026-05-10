@@ -104,10 +104,14 @@
   "item.travelcorequesting.quest_book": "Quest Book",
 
   "item.travelcorequesting.quest_scroll": "Quest Scroll",
-  "item.travelcorequesting.quest_scroll.error.no_quest": "This scroll has no quest",
-  "item.travelcorequesting.quest_scroll.error.invalid_id": "Scroll quest id is invalid",
-  "item.travelcorequesting.quest_scroll.error.unknown_quest": "Unknown quest: %s",
-  "item.travelcorequesting.quest_scroll.error.already_active": "You already have this quest",
-  "item.travelcorequesting.quest_scroll.error.already_complete": "You have already completed this quest",
+  "item.travelcorequesting.quest_scroll.error.no_quest": "Hmm... this scroll seems to be blank",
+  "item.travelcorequesting.quest_scroll.error.invalid_id": "Hmm... I can't make sense of these markings",
+  "item.travelcorequesting.quest_scroll.error.unknown_quest": "I've never heard of such a quest... (%s)",
+  "item.travelcorequesting.quest_scroll.error.no_book": "Hmm... I have nowhere to put it. Some kind of book would be useful",
+  "item.travelcorequesting.quest_scroll.error.already_active": "Seems like I'm already on this one",
+  "item.travelcorequesting.quest_scroll.error.already_complete": "I've already done this one",
+
+  "travelcorequesting.quest_book.error.no_book_in_inventory": "I'd need a book to keep track of my quests",
+
   "subtitles.travelcorequesting.quest_scroll.unfurl": "Quest scroll unfurls"
 }

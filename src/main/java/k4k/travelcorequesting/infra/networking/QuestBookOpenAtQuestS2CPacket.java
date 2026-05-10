@@ -5,15 +5,17 @@ import net.fabricmc.fabric.api.networking.v1.FabricPacket;
 import net.fabricmc.fabric.api.networking.v1.PacketType;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * S2C пакет, инструктирующий клиента открыть книгу квестов на конкретном квесте.
- * Отправляется сервером при успешном использовании {@code QuestScrollItem}.
+ * S2C пакет, инструктирующий клиента открыть книгу квестов.
+ * Отправляется сервером при успешном использовании {@code QuestScrollItem} или при запросе
+ * клавишей J (если gamerule и инвентарь позволяют).
  *
- * @param questId идентификатор квеста для предварительного выбора
+ * @param questId идентификатор квеста для предварительного выбора, или {@code null} — открыть без выбора
  */
 public record QuestBookOpenAtQuestS2CPacket(
-        Identifier questId
+        @Nullable Identifier questId
 ) implements FabricPacket {
 
     @Override
@@ -28,11 +30,11 @@ public record QuestBookOpenAtQuestS2CPacket(
 
     /** Читает пакет из буфера. */
     public static QuestBookOpenAtQuestS2CPacket read(PacketByteBuf buf) {
-        return new QuestBookOpenAtQuestS2CPacket(buf.readIdentifier());
+        return new QuestBookOpenAtQuestS2CPacket(buf.readNullable(PacketByteBuf::readIdentifier));
     }
 
     @Override
     public void write(PacketByteBuf buf) {
-        buf.writeIdentifier(questId);
+        buf.writeNullable(questId, PacketByteBuf::writeIdentifier);
     }
 }

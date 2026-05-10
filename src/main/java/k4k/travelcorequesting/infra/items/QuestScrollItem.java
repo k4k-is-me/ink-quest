@@ -1,5 +1,6 @@
 package k4k.travelcorequesting.infra.items;
 
+import k4k.travelcorequesting.infra.gamerules.ModGameRules;
 import k4k.travelcorequesting.infra.networking.QuestBookOpenAtQuestS2CPacket;
 import k4k.travelcorequesting.infra.sounds.ModSounds;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
@@ -62,6 +63,11 @@ public class QuestScrollItem extends Item {
 
         if (!manager.isQuestExists(questId)) {
             user.sendMessage(Text.translatable("item.travelcorequesting.quest_scroll.error.unknown_quest", questId.toString()), true);
+            return TypedActionResult.fail(stack);
+        }
+
+        if (!ModGameRules.canPlayerOpenQuestBook(serverPlayer)) {
+            user.sendMessage(Text.translatable("item.travelcorequesting.quest_scroll.error.no_book"), true);
             return TypedActionResult.fail(stack);
         }
 
