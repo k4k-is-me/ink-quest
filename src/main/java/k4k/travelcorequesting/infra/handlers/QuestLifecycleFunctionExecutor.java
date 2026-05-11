@@ -24,6 +24,10 @@ public class QuestLifecycleFunctionExecutor {
                 executeActions(taskEntry.task().onTick(), player)
         );
 
+        QuestProgressEvents.PINNED_TASK_TICKED.register((taskEntry, player) ->
+                executeActions(taskEntry.task().onPinnedTick(), player)
+        );
+
         QuestProgressEvents.TASK_UNLOADED.register((taskEntry, player, stageChanged) ->
                 executeActions(taskEntry.task().onUnload(), player)
         );

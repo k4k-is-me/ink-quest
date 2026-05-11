@@ -320,17 +320,6 @@ public final class QuestRepository implements QuestResolver {
         }
 
         /**
-         * Устанавливает признак фонового квеста. Ошибка, если квеста не существует
-         * @param isBackground Признак
-         */
-        @Override
-        public Quest setBackground(boolean isBackground) {
-            quest.setBackground(isBackground);
-            this.isDirty = true;
-            return quest;
-        }
-
-        /**
          * Устанавливает признак повторяемого квеста. Ошибка, если квеста не существует
          * @param isRepeatable Признак
          */

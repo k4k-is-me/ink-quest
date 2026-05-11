@@ -685,8 +685,6 @@ public class ServerQuestManager {
             var questTracker = playerTracker.getQuestTracker(questId).orElse(null);
             if (questTracker == null) continue;
 
-            if (!entry.quest().background() && !questTracker.isPinned()) continue;
-
             this.updatePlayerQuest(player, playerTracker, questTracker, entry);
         }
     }
@@ -752,6 +750,8 @@ public class ServerQuestManager {
             this.conditionDispatcher.tick(task.successCondition(), context);
             this.conditionDispatcher.tick(task.failureCondition(), context);
             QuestProgressEvents.TASK_TICKED.invoker().onTaskTick(taskEntry, player);
+            if (questTracker.isPinned())
+                QuestProgressEvents.PINNED_TASK_TICKED.invoker().onTaskTick(taskEntry, player);
 
             var successValue = this.conditionDispatcher.getCurrentValue(task.successCondition(), context);
             var failureValue = this.conditionDispatcher.getCurrentValue(task.failureCondition(), context);

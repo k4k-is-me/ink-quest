@@ -47,6 +47,12 @@ public class QuestProgressEvents {
         }
     });
 
+    public static final Event<TaskTick> PINNED_TASK_TICKED = EventFactory.createArrayBacked(TaskTick.class, (callbacks) -> (taskEntry, player) -> {
+        for (var event : callbacks) {
+            event.onTaskTick(taskEntry, player);
+        }
+    });
+
     // С unload могут быть технические трудности. Дело в том, что для выполнения unload нужен игрок, а его
     // может не быть на момент выполнения remove задачи (когда unload бы вызывался), а на момент автоматического
     // вызова unload (как это происходит с load) задачи уже не будет.

@@ -21,7 +21,6 @@ public final class MutableQuest implements Quest {
     private @Nullable Text description;
     private Identifier icon;
     private int index;
-    private boolean background;
     private boolean repeatable;
     private QuestPinMode pinMode = QuestPinMode.AUTO;
     private @Nullable QuestRequirement require;
@@ -36,7 +35,6 @@ public final class MutableQuest implements Quest {
             @Nullable Text description,
             Identifier icon,
             int index,
-            boolean background,
             boolean repeatable,
             List<List<Identifier>> dependencies,
             Map<String, MutableTask> tasks,
@@ -46,7 +44,6 @@ public final class MutableQuest implements Quest {
         this.description = description;
         this.icon = icon;
         this.index = index;
-        this.background = background;
         this.repeatable = repeatable;
         this.dependencies = dependencies;
         this.tasks = tasks;
@@ -62,7 +59,6 @@ public final class MutableQuest implements Quest {
                 null,
                 DEFAULT_QUEST_ICON,
                 0,
-                true,
                 false,
                 new ArrayList<>(),
                 new HashMap<>(),
@@ -104,15 +100,6 @@ public final class MutableQuest implements Quest {
 
     public void setIndex(int index) {
         this.index = index;
-    }
-
-    @Override
-    public boolean background() {
-        return this.background;
-    }
-
-    public void setBackground(boolean background) {
-        this.background = background;
     }
 
     @Override

@@ -36,8 +36,8 @@ public class QuestJsonSerializer {
     //   eg: added or removed an optional field, or added new enum value
     // Increase version if new changes are not compatible!
     //   eg: added or removed a required field, changed field type or enum value is removed
-    protected static final int VERSION = 2;
-    protected static final int VARIANT = 1;
+    protected static final int VERSION = 3;
+    protected static final int VARIANT = 0;
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeHierarchyAdapter(MutableQuest.class, new GsonSerializer())
@@ -85,7 +85,7 @@ public class QuestJsonSerializer {
         private MutableQuest deserializeQuest(JsonElement json, JsonDeserializationContext context) {
             warnUnknownKeys(json, "quest", Set.of(
                     "$schema", "version", "variant", "title", "description",
-                    "icon", "index", "background", "repeatable", "pin_mode",
+                    "icon", "index", "repeatable", "pin_mode",
                     "after", "require", "tasks", "stages"));
 
             var title = JUtil.getRequiredMember(json, "title",
@@ -100,7 +100,6 @@ public class QuestJsonSerializer {
 
             var index = JUtil.getMemberWithDefault(json, "index", JsonElement::getAsInt, 0);
 
-            var isBackground = JUtil.getMemberWithDefault(json, "background", JsonElement::getAsBoolean, false);
             var isRepeatable = JUtil.getMemberWithDefault(json, "repeatable", JsonElement::getAsBoolean, false);
 
             var pinMode = JUtil.getMemberWithDefault(json, "pin_mode", element -> {
@@ -134,7 +133,6 @@ public class QuestJsonSerializer {
             description.ifPresent(quest::setDescription);
             quest.setIcon(icon);
             quest.setIndex(index);
-            quest.setBackground(isBackground);
             quest.setRepeatable(isRepeatable);
             quest.setPinMode(pinMode);
 
@@ -190,6 +188,7 @@ public class QuestJsonSerializer {
 
             var onLoad = deserializeEventActions(json, "on.load", context);
             var onTick = deserializeEventActions(json, "on.tick", context);
+            var onPinnedTick = deserializeEventActions(json, "on.pinned_tick", context);
             var onUnload = deserializeEventActions(json, "on.unload", context);
             var onSuccess = deserializeEventActions(json, "on.success", context);
             var onFailure = deserializeEventActions(json, "on.failure", context);
@@ -202,6 +201,7 @@ public class QuestJsonSerializer {
 
             task.setOnLoad(onLoad);
             task.setOnTick(onTick);
+            task.setOnPinnedTick(onPinnedTick);
             task.setOnUnload(onUnload);
             task.setOnSuccess(onSuccess);
             task.setOnFailure(onFailure);

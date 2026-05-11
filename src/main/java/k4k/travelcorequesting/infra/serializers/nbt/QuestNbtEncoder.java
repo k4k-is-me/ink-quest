@@ -65,7 +65,6 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         if (quest.description() != null) nbt.putString("description", Text.Serializer.toJson(quest.description()));
         nbt.putString("icon", quest.icon().toString());
         nbt.putInt("index", quest.index());
-        nbt.putBoolean("background", quest.background());
         nbt.putBoolean("repeatable", quest.repeatable());
         nbt.putString("pin_mode", quest.getPinMode().name().toLowerCase());
         nbt.put("dependencies", dependenciesNbt);
@@ -93,6 +92,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
 
         nbt.put("onLoad", encodeEventActions(task.onLoad()));
         nbt.put("onTick", encodeEventActions(task.onTick()));
+        nbt.put("onPinnedTick", encodeEventActions(task.onPinnedTick()));
         nbt.put("onUnload", encodeEventActions(task.onUnload()));
         nbt.put("onSuccess", encodeEventActions(task.onSuccess()));
         nbt.put("onFailure", encodeEventActions(task.onFailure()));
@@ -179,7 +179,6 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         var description = nbt.contains("description") ? Text.Serializer.fromJson(nbt.getString("description")) : null;
         var icon = Identifier.tryParse(nbt.getString("icon"));
         var index = nbt.getInt("index");
-        var background = nbt.getBoolean("background");
         var repeatable = nbt.getBoolean("repeatable");
         var pinMode = nbt.contains("pin_mode") ? switch (nbt.getString("pin_mode")) {
             case "force" -> QuestPinMode.FORCE;
@@ -215,7 +214,6 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         quest.setDescription(description);
         quest.setIcon(icon);
         quest.setIndex(index);
-        quest.setBackground(background);
         quest.setRepeatable(repeatable);
         quest.setPinMode(pinMode);
         quest.setDependencies(dependencies);
@@ -242,6 +240,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
 
         if (nbt.contains("onLoad")) task.setOnLoad(decodeEventActions(nbt.getCompound("onLoad")));
         if (nbt.contains("onTick")) task.setOnTick(decodeEventActions(nbt.getCompound("onTick")));
+        if (nbt.contains("onPinnedTick")) task.setOnPinnedTick(decodeEventActions(nbt.getCompound("onPinnedTick")));
         if (nbt.contains("onUnload")) task.setOnUnload(decodeEventActions(nbt.getCompound("onUnload")));
         if (nbt.contains("onSuccess")) task.setOnSuccess(decodeEventActions(nbt.getCompound("onSuccess")));
         if (nbt.contains("onFailure")) task.setOnFailure(decodeEventActions(nbt.getCompound("onFailure")));

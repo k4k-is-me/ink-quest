@@ -10,6 +10,7 @@ public interface Task {
 
     TaskEventActions onLoad();
     TaskEventActions onTick();
+    TaskEventActions onPinnedTick();
     TaskEventActions onUnload();
     TaskEventActions onSuccess();
     TaskEventActions onFailure();

@@ -1,12 +1,11 @@
 {
   "$schema": "../../../../../../schemas/quest.schema.json",
-  "version": 2,
-  "variant": 1,
+  "version": 3,
+  "variant": 0,
 
   "title": "Title",
   "description": "Description",
   "after": [],
-  "background": true,
 
   "tasks": {
     "required": {

@@ -13,6 +13,7 @@ public final class MutableTask implements Task {
     private @Nullable Text description;
     private TaskEventActions onLoad;
     private TaskEventActions onTick;
+    private TaskEventActions onPinnedTick;
     private TaskEventActions onUnload;
     private TaskEventActions onSuccess;
     private TaskEventActions onFailure;
@@ -24,6 +25,7 @@ public final class MutableTask implements Task {
             @Nullable Text description,
             TaskEventActions onLoad,
             TaskEventActions onTick,
+            TaskEventActions onPinnedTick,
             TaskEventActions onUnload,
             TaskEventActions onSuccess,
             TaskEventActions onFailure,
@@ -34,6 +36,7 @@ public final class MutableTask implements Task {
         this.description = description;
         this.onLoad = onLoad;
         this.onTick = onTick;
+        this.onPinnedTick = onPinnedTick;
         this.onUnload = onUnload;
         this.onSuccess = onSuccess;
         this.onFailure = onFailure;
@@ -46,6 +49,7 @@ public final class MutableTask implements Task {
         return new MutableTask(
                 title,
                 null,
+                TaskEventActions.EMPTY,
                 TaskEventActions.EMPTY,
                 TaskEventActions.EMPTY,
                 TaskEventActions.EMPTY,
@@ -100,6 +104,20 @@ public final class MutableTask implements Task {
 
     public void setOnTick(TaskEventActions actions) {
         this.onTick = actions;
+    }
+
+    @Override
+    public TaskEventActions onPinnedTick() {
+        return onPinnedTick;
+    }
+
+    /** Устанавливает единственную функцию on.pinned_tick; null очищает действия. */
+    public void setPinnedTickFunction(@Nullable Identifier function) {
+        this.onPinnedTick = toSingleFunctionActions(function);
+    }
+
+    public void setOnPinnedTick(TaskEventActions actions) {
+        this.onPinnedTick = actions;
     }
 
     @Override

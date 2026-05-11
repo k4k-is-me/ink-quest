@@ -75,7 +75,6 @@ public class QuestCommand {
     private static final String MSG_QUEST_MODIFY_DESCRIPTION = "quest.command.modify.description";
     private static final String MSG_QUEST_MODIFY_ICON = "quest.command.modify.icon";
     private static final String MSG_QUEST_MODIFY_INDEX = "quest.command.modify.index";
-    private static final String MSG_QUEST_MODIFY_BACKGROUND = "quest.command.modify.background";
     private static final String MSG_QUEST_MODIFY_REPEATABLE = "quest.command.modify.repeatable";
     private static final String MSG_QUEST_MODIFY_PIN_MODE = "quest.command.modify.pin_mode";
     private static final String MSG_QUEST_MODIFY_TASK_ADD = "quest.command.modify.task.add";
@@ -182,24 +181,6 @@ public class QuestCommand {
                                         .executes(context -> modifyQuestIndex(
                                                 context,
                                                 getIdentifier(context, ARG_QUEST_ID)
-                                        ))
-                                )
-                        )
-
-                        // ... background true|false
-                        .then(literal("background")
-                                .then(literal("true")
-                                        .executes(context -> modifyQuestBackground(
-                                                context,
-                                                getIdentifier(context, ARG_QUEST_ID),
-                                                true
-                                        ))
-                                )
-                                .then(literal("false")
-                                        .executes(context -> modifyQuestBackground(
-                                                context,
-                                                getIdentifier(context, ARG_QUEST_ID),
-                                                false
                                         ))
                                 )
                         )
@@ -557,14 +538,6 @@ public class QuestCommand {
             var index = getInteger(context, ARG_INDEX);
             questManager.modifyQuest(questId, quest -> quest.setIndex(index));
             source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_INDEX), true);
-            return 1;
-        });
-    }
-
-    private static int modifyQuestBackground(CommandContext<ServerCommandSource> context, Identifier questId, boolean background) {
-        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
-            questManager.modifyQuest(questId, quest -> quest.setBackground(background));
-            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_BACKGROUND), true);
             return 1;
         });
     }

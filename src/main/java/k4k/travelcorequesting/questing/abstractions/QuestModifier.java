@@ -12,7 +12,6 @@ public interface QuestModifier {
     Quest setDescription(@Nullable Text description);
     Quest setIcon(Identifier icon);
     Quest setIndex(int index);
-    Quest setBackground(boolean isBackground);
     Quest setRepeatable(boolean isRepeatable);
     Quest setPinMode(QuestPinMode pinMode);
     Quest addAndDependency(Identifier dependency);

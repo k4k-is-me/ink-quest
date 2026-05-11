@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "quest.schema.json",
   "title": "InkQuest — Quest Definition",
-  "description": "Format v2.1. Defines a quest for the InkQuest (TravelCore Questing) Minecraft mod.",
+  "description": "Format v3.0. Defines a quest for the InkQuest (TravelCore Questing) Minecraft mod.",
   "type": "object",
   "required": ["version", "variant", "title", "tasks", "stages"],
   "additionalProperties": false,
@@ -13,13 +13,13 @@
     },
     "version": {
       "type": "integer",
-      "const": 2,
-      "description": "Format version. Must be 2."
+      "const": 3,
+      "description": "Format version. Must be 3."
     },
     "variant": {
       "type": "integer",
-      "const": 1,
-      "description": "Format variant. Must be 1."
+      "const": 0,
+      "description": "Format variant. Must be 0."
     },
     "title": {
       "$ref": "#/$defs/text",
@@ -36,10 +36,6 @@
     "index": {
       "type": "integer",
       "description": "Sort order in the quest book. Default: 0"
-    },
-    "background": {
-      "type": "boolean",
-      "description": "If true, task conditions are checked even when the quest is not pinned. Default: false"
     },
     "repeatable": {
       "type": "boolean",
@@ -149,11 +145,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "load":    { "$ref": "#/$defs/eventActions", "description": "Fired once when the task becomes active." },
-        "tick":    { "$ref": "#/$defs/eventActions", "description": "Fired every tick while the task is active (pinned or background quests only)." },
-        "unload":  { "$ref": "#/$defs/eventActions", "description": "Fired once when the task stops being active." },
-        "success": { "$ref": "#/$defs/eventActions", "description": "Fired when the task completes as SUCCESS." },
-        "failure": { "$ref": "#/$defs/eventActions", "description": "Fired when the task completes as FAILURE." }
+        "load":        { "$ref": "#/$defs/eventActions", "description": "Fired once when the task becomes active." },
+        "tick":        { "$ref": "#/$defs/eventActions", "description": "Fired every tick while the task is active." },
+        "pinned_tick": { "$ref": "#/$defs/eventActions", "description": "Fired every tick while the task is active and its quest is pinned." },
+        "unload":      { "$ref": "#/$defs/eventActions", "description": "Fired once when the task stops being active." },
+        "success":     { "$ref": "#/$defs/eventActions", "description": "Fired when the task completes as SUCCESS." },
+        "failure":     { "$ref": "#/$defs/eventActions", "description": "Fired when the task completes as FAILURE." }
       }
     },
     "eventActions": {

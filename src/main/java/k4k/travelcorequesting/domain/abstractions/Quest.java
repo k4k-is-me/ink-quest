@@ -14,7 +14,6 @@ public interface Quest {
     @Nullable Text description();
     Identifier icon();
     int index();
-    boolean background();
     boolean repeatable();
     QuestPinMode getPinMode();
     @Nullable QuestRequirement getRequire();
