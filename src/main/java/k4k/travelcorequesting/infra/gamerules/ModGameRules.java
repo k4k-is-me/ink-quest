@@ -16,6 +16,13 @@ public final class ModGameRules {
                     GameRuleFactory.createBooleanRule(false)
             );
 
+    public static final GameRules.Key<GameRules.BooleanRule> ALLOW_MANUAL_QUEST_PIN =
+            GameRuleRegistry.register(
+                    "allowManualQuestPin",
+                    GameRules.Category.PLAYER,
+                    GameRuleFactory.createBooleanRule(true)
+            );
+
     private ModGameRules() {}
 
     /** Инициализирует класс, регистрируя все gamerule мода. */
@@ -28,5 +35,15 @@ public final class ModGameRules {
     public static boolean canPlayerOpenQuestBook(PlayerEntity player) {
         if (!player.getWorld().getGameRules().getBoolean(DO_QUEST_BOOK_ITEM_CHECK)) return true;
         return player.getInventory().count(ModItems.QUEST_BOOK) > 0;
+    }
+
+    /**
+     * Возвращает {@code true}, если игрок может вручную закрепить или снять закрепление задачи
+     * через квестовую книгу. При {@code allowManualQuestPin = false} обе ветки toggle-handler'а
+     * {@code QuestBookTaskPinC2SPacket} блокируются молча.
+     * Команды операторов и автоматический пин правилом не затрагиваются.
+     */
+    public static boolean canPlayerManuallyPinTask(PlayerEntity player) {
+        return player.getWorld().getGameRules().getBoolean(ALLOW_MANUAL_QUEST_PIN);
     }
 }

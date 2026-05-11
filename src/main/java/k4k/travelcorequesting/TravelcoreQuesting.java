@@ -66,6 +66,7 @@ public class TravelcoreQuesting implements ModInitializer {
 		});
 
 		ServerPlayNetworking.registerGlobalReceiver(QuestBookTaskPinC2SPacket.TYPE, (packet, player, sender) -> {
+			if (!ModGameRules.canPlayerManuallyPinTask(player)) return;
 			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
 			try {
 				// Повторный клик по уже закреплённой задаче снимает пин с квеста

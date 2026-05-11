@@ -113,5 +113,11 @@
 
   "travelcorequesting.quest_book.error.no_book_in_inventory": "I'd need a book to keep track of my quests",
 
+  "gamerule.doQuestBookItemCheck": "Require Quest Book in inventory",
+  "gamerule.doQuestBookItemCheck.description": "If enabled, players must have a Quest Book in their inventory to open the quest book via keybind or Quest Scroll.",
+
+  "gamerule.allowManualQuestPin": "Allow manual quest pinning",
+  "gamerule.allowManualQuestPin.description": "Players can pin or unpin tasks via the quest book.",
+
   "subtitles.travelcorequesting.quest_scroll.unfurl": "Quest scroll unfurls"
 }
