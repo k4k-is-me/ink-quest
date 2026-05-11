@@ -16,7 +16,6 @@ import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.QuestEntry;
 import k4k.travelcorequesting.questing.states.ServerQuestManagerState;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -149,6 +148,11 @@ public class ServerQuestManager {
 
         var playerTracker = this.trackedPlayers.computeIfAbsent(
                 player.getUuid(), item -> new PlayerProgressTracker(this.questRepository));
+
+        // Repeatable: если квест завершён — сбрасываем прогресс перед повторной выдачей
+        if (entry.quest().repeatable() && playerTracker.isComplete(questId)) {
+            this.dropQuest(questId, player);
+        }
 
         var questTracker = playerTracker.startTracking(questId);
         if (questTracker.isEmpty()) return;

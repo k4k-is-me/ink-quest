@@ -76,6 +76,7 @@ public class QuestCommand {
     private static final String MSG_QUEST_MODIFY_ICON = "quest.command.modify.icon";
     private static final String MSG_QUEST_MODIFY_INDEX = "quest.command.modify.index";
     private static final String MSG_QUEST_MODIFY_BACKGROUND = "quest.command.modify.background";
+    private static final String MSG_QUEST_MODIFY_REPEATABLE = "quest.command.modify.repeatable";
     private static final String MSG_QUEST_MODIFY_PIN_MODE = "quest.command.modify.pin_mode";
     private static final String MSG_QUEST_MODIFY_TASK_ADD = "quest.command.modify.task.add";
     private static final String MSG_QUEST_MODIFY_TASK_REMOVE = "quest.command.modify.task.remove";
@@ -203,6 +204,24 @@ public class QuestCommand {
                                 )
                         )
 
+                        // ... repeatable true|false
+                        .then(literal("repeatable")
+                                .then(literal("true")
+                                        .executes(context -> modifyQuestRepeatable(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                true
+                                        ))
+                                )
+                                .then(literal("false")
+                                        .executes(context -> modifyQuestRepeatable(
+                                                context,
+                                                getIdentifier(context, ARG_QUEST_ID),
+                                                false
+                                        ))
+                                )
+                        )
+
                         // ... pin_mode auto|off|force
                         .then(literal("pin_mode")
                                 .then(literal("auto")
@@ -283,7 +302,9 @@ public class QuestCommand {
         return literal("give")
                 .then(argument(ARG_PLAYER, player())
                         .then(argument(ARG_QUEST_ID, identifier())
-                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER, ServerQuestManager::isQuestTracked, false))
+                                .suggests(new PlayerQuestSuggestionProvider(ARG_PLAYER,
+                                        (qm, qId, p) -> !qm.isQuestActive(qId, p) && !(qm.isQuestComplete(qId, p) && isQuestNonRepeatable(qm, qId)),
+                                        true))
                                 .executes(context -> giveQuest(
                                         context,
                                         getIdentifier(context, ARG_QUEST_ID),
@@ -548,6 +569,20 @@ public class QuestCommand {
         });
     }
 
+    private static int modifyQuestRepeatable(CommandContext<ServerCommandSource> context, Identifier questId, boolean repeatable) {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
+            questManager.modifyQuest(questId, quest -> quest.setRepeatable(repeatable));
+            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_REPEATABLE), true);
+            return 1;
+        });
+    }
+
+    /** Возвращает true если квест не является повторяемым (или не найден). */
+    private static boolean isQuestNonRepeatable(ServerQuestManager questManager, Identifier questId) {
+        var quest = questManager.getQuestResolver().getQuest(questId);
+        return quest == null || !quest.repeatable();
+    }
+
     private static int modifyQuestPinMode(CommandContext<ServerCommandSource> context, Identifier questId, QuestPinMode pinMode) {
         return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
             questManager.modifyQuest(questId, quest -> quest.setPinMode(pinMode));
@@ -643,8 +678,14 @@ public class QuestCommand {
             return 0;
         }
 
-        if (questManager.isQuestTracked(questId, player)) {
+        if (questManager.isQuestActive(questId, player)) {
             source.sendError(Text.translatable(ERR_QUEST_TRACKING, player.getName()));
+            return 0;
+        }
+
+        var quest = entry.quest();
+        if (questManager.isQuestComplete(questId, player) && !quest.repeatable()) {
+            source.sendError(Text.translatable(ERR_QUEST_COMPLETE));
             return 0;
         }
 

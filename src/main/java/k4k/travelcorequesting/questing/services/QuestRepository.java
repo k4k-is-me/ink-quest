@@ -331,6 +331,17 @@ public final class QuestRepository implements QuestResolver {
         }
 
         /**
+         * Устанавливает признак повторяемого квеста. Ошибка, если квеста не существует
+         * @param isRepeatable Признак
+         */
+        @Override
+        public Quest setRepeatable(boolean isRepeatable) {
+            quest.setRepeatable(isRepeatable);
+            this.isDirty = true;
+            return quest;
+        }
+
+        /**
          * Устанавливает режим автозакрепления квеста. Ошибка, если квеста не существует
          * @param pinMode Режим
          */

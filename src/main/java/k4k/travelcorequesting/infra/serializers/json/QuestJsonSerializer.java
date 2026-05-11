@@ -37,7 +37,7 @@ public class QuestJsonSerializer {
     // Increase version if new changes are not compatible!
     //   eg: added or removed a required field, changed field type or enum value is removed
     protected static final int VERSION = 2;
-    protected static final int VARIANT = 0;
+    protected static final int VARIANT = 1;
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeHierarchyAdapter(MutableQuest.class, new GsonSerializer())
@@ -85,7 +85,7 @@ public class QuestJsonSerializer {
         private MutableQuest deserializeQuest(JsonElement json, JsonDeserializationContext context) {
             warnUnknownKeys(json, "quest", Set.of(
                     "$schema", "version", "variant", "title", "description",
-                    "icon", "index", "background", "pin_mode",
+                    "icon", "index", "background", "repeatable", "pin_mode",
                     "after", "require", "tasks", "stages"));
 
             var title = JUtil.getRequiredMember(json, "title",
@@ -101,6 +101,7 @@ public class QuestJsonSerializer {
             var index = JUtil.getMemberWithDefault(json, "index", JsonElement::getAsInt, 0);
 
             var isBackground = JUtil.getMemberWithDefault(json, "background", JsonElement::getAsBoolean, false);
+            var isRepeatable = JUtil.getMemberWithDefault(json, "repeatable", JsonElement::getAsBoolean, false);
 
             var pinMode = JUtil.getMemberWithDefault(json, "pin_mode", element -> {
                 String smth = element.getAsString().toLowerCase();
@@ -134,6 +135,7 @@ public class QuestJsonSerializer {
             quest.setIcon(icon);
             quest.setIndex(index);
             quest.setBackground(isBackground);
+            quest.setRepeatable(isRepeatable);
             quest.setPinMode(pinMode);
 
             for (var taskEntry : tasks.entrySet()) {

@@ -32,6 +32,7 @@
   "quest.command.modify.icon": "Quest icon updated",
   "quest.command.modify.index": "Quest index updated",
   "quest.command.modify.background": "Quest background updated",
+  "quest.command.modify.repeatable": "Quest repeatable flag updated",
   "quest.command.modify.pin_mode": "Quest pin mode updated",
   "quest.command.modify.task.add": "Task added",
   "quest.command.modify.task.remove": "Task removed",

@@ -66,6 +66,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         nbt.putString("icon", quest.icon().toString());
         nbt.putInt("index", quest.index());
         nbt.putBoolean("background", quest.background());
+        nbt.putBoolean("repeatable", quest.repeatable());
         nbt.putString("pin_mode", quest.getPinMode().name().toLowerCase());
         nbt.put("dependencies", dependenciesNbt);
         nbt.put("stages", stagesNbt);
@@ -179,6 +180,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         var icon = Identifier.tryParse(nbt.getString("icon"));
         var index = nbt.getInt("index");
         var background = nbt.getBoolean("background");
+        var repeatable = nbt.getBoolean("repeatable");
         var pinMode = nbt.contains("pin_mode") ? switch (nbt.getString("pin_mode")) {
             case "force" -> QuestPinMode.FORCE;
             case "off" -> QuestPinMode.OFF;
@@ -214,6 +216,7 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         quest.setIcon(icon);
         quest.setIndex(index);
         quest.setBackground(background);
+        quest.setRepeatable(repeatable);
         quest.setPinMode(pinMode);
         quest.setDependencies(dependencies);
         tasks.forEach(quest::setTask);

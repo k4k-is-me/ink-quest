@@ -71,8 +71,11 @@ public class QuestScrollItem extends Item {
             return TypedActionResult.fail(stack);
         }
 
-        // complete проверяется раньше active: если квест завершён, сообщение точнее
-        if (manager.isQuestComplete(questId, serverPlayer)) {
+        var quest = manager.getQuestResolver().getQuest(questId);
+
+        // complete проверяется раньше active: если квест завершён, сообщение точнее.
+        // Для repeatable завершение не является ошибкой — giveQuest сбросит прогресс сам.
+        if (manager.isQuestComplete(questId, serverPlayer) && (quest == null || !quest.repeatable())) {
             user.sendMessage(Text.translatable("item.travelcorequesting.quest_scroll.error.already_complete"), true);
             return TypedActionResult.fail(stack);
         }
