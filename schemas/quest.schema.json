@@ -67,7 +67,6 @@
     "stages": {
       "type": "array",
       "description": "Ordered list of stages. Each stage is an array of task IDs: the first is the required task, the rest are optional.",
-      "minItems": 1,
       "items": {
         "type": "array",
         "items": { "type": "string" },

@@ -273,80 +273,81 @@ public final class QuestRepository implements QuestResolver {
 
         /**
          * Устанавливает заголовок квеста. Ошибка, если квеста не существует
+         *
          * @param title Заголовок
          */
         @Override
-        public Quest setTitle(Text title) {
+        public void setTitle(Text title) {
             Objects.requireNonNull(title);
 
             quest.setTitle(title);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Устанавливает описание квеста. Ошибка, если квеста не существует
+         *
          * @param description Описание
          */
         @Override
-        public Quest setDescription(@Nullable Text description) {
+        public void setDescription(@Nullable Text description) {
             quest.setDescription(description);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Устанавливает иконку квеста. Ошибка, если квеста не существует
+         *
          * @param icon Иконка
          */
         @Override
-        public Quest setIcon(Identifier icon) {
+        public void setIcon(Identifier icon) {
             Objects.requireNonNull(icon);
 
             quest.setIcon(icon);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Устанавливает индекс сортировки квеста. Ошибка, если квеста не существует
+         *
          * @param index Индекс сортировки
          */
         @Override
-        public Quest setIndex(int index) {
+        public void setIndex(int index) {
             quest.setIndex(index);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Устанавливает признак повторяемого квеста. Ошибка, если квеста не существует
+         *
          * @param isRepeatable Признак
          */
         @Override
-        public Quest setRepeatable(boolean isRepeatable) {
+        public void setRepeatable(boolean isRepeatable) {
             quest.setRepeatable(isRepeatable);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Устанавливает режим автозакрепления квеста. Ошибка, если квеста не существует
+         *
          * @param pinMode Режим
          */
         @Override
-        public Quest setPinMode(QuestPinMode pinMode) {
+        public void setPinMode(QuestPinMode pinMode) {
             quest.setPinMode(pinMode);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Добавляет зависимость в последний блок зависимостей квеста. Ошибка, если квеста не существует
+         *
          * @param dependency Зависимость
          */
         @Override
-        public Quest addAndDependency(Identifier dependency) {
+        public void addAndDependency(Identifier dependency) {
             Objects.requireNonNull(dependency);
 
             var lastGroupIndex = quest.getDependencyGroupsCount() - 1;
@@ -355,15 +356,15 @@ public final class QuestRepository implements QuestResolver {
             dependants.computeIfAbsent(dependency, depId -> new ArrayList<>())
                     .add(questId);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Добавляет зависимость в новый блок зависимостей квеста. Ошибка, если квеста не существует
+         *
          * @param dependency Зависимость
          */
         @Override
-        public Quest addOrDependency(Identifier dependency) {
+        public void addOrDependency(Identifier dependency) {
             Objects.requireNonNull(dependency);
 
             quest.addDependency(dependency);
@@ -371,14 +372,13 @@ public final class QuestRepository implements QuestResolver {
             dependants.computeIfAbsent(dependency, depId -> new ArrayList<>())
                     .add(questId);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Удаляет все зависимости квеста. Ошибка, если квеста не существует
          */
         @Override
-        public Quest removeDependencies() {
+        public void removeDependencies() {
             for (var depGroupIndex = 0; depGroupIndex < quest.getDependencyGroupsCount(); depGroupIndex++) {
                 for (var depId : quest.getDependencyGroup(depGroupIndex)) {
                     if (!dependants.containsKey(depId)) continue;
@@ -388,16 +388,16 @@ public final class QuestRepository implements QuestResolver {
 
             quest.removeDependencies();
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Добавляет новый этап в квест и создаёт в нём задачу. Ошибка, если квеста не существует или задача с таким
          * идентификатором уже существует в квесте
+         *
          * @param taskId Идентификатор задачи
          */
         @Override
-        public Quest addTaskRequired(String taskId) {
+        public void addTaskRequired(String taskId) {
             Objects.requireNonNull(taskId);
 
             if (quest.containsTask(taskId))
@@ -406,16 +406,16 @@ public final class QuestRepository implements QuestResolver {
             quest.setTask(taskId, MutableTask.create(Text.literal(taskId)));
             quest.addTaskToStage(taskId);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Добавляет задачу в последний этап квеста. Ошибка, если квеста не существует, задача с таким идентификатором
          * уже существует в квесте или квест не имеет этапов
+         *
          * @param taskId Идентификатор задачи
          */
         @Override
-        public Quest addTaskOptional(String taskId) {
+        public void addTaskOptional(String taskId) {
             Objects.requireNonNull(taskId);
 
             if (quest.containsTask(taskId))
@@ -425,49 +425,47 @@ public final class QuestRepository implements QuestResolver {
             var lastStageIndex = quest.getStageCount() - 1;
             quest.addTaskToStage(lastStageIndex, taskId);
             this.isDirty = true;
-            return quest;
         }
 
         @Override
-        public Quest removeTask(String taskId) {
+        public void removeTask(String taskId) {
             Objects.requireNonNull(taskId);
 
             quest.removeTask(taskId);
             this.isDirty = true;
-            return quest;
         }
 
         /**
          * Устанавливает заголовок задачи квеста. Ошибка, если квеста не существует или задача с таким идентификатором уже
          * существует в квесте
+         *
          * @param taskId Идентификатор задачи
-         * @param title Заголовок
+         * @param title  Заголовок
          */
         @Override
-        public Quest setTaskTitle(String taskId, Text title) {
+        public void setTaskTitle(String taskId, Text title) {
             Objects.requireNonNull(taskId);
             Objects.requireNonNull(title);
 
             var task = requireTaskMutable(questId, taskId);
             task.setTitle(title);
             this.isDirty = true;
-            return requireQuest(questId);
         }
 
         /**
          * Устанавливает описание задачи квеста. Ошибка, если квеста не существует или задача с таким идентификатором уже
          * существует в квесте
-         * @param taskId Идентификатор задачи
+         *
+         * @param taskId      Идентификатор задачи
          * @param description Заголовок
          */
         @Override
-        public Quest setTaskDescription(String taskId, @Nullable Text description) {
+        public void setTaskDescription(String taskId, @Nullable Text description) {
             Objects.requireNonNull(taskId);
 
             var task = requireTaskMutable(questId, taskId);
             task.setDescription(description);
             this.isDirty = true;
-            return requireQuest(questId);
         }
 
         /**
