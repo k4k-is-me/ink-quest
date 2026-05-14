@@ -55,6 +55,11 @@ class StubConditionContext implements IConditionContext {
     }
 
     @Override
+    public void setScore(String objectiveName, @Nullable String playerOverride, int value) {
+        scores.put(objectiveName, value);
+    }
+
+    @Override
     public boolean testPredicate(Identifier predicateId) {
         return predicates.getOrDefault(predicateId, false);
     }

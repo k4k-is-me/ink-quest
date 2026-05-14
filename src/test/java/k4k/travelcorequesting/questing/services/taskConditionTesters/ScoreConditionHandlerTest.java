@@ -78,4 +78,18 @@ class ScoreConditionHandlerTest {
         var context = new StubConditionContext();
         assertDoesNotThrow(() -> handler.load(score("kills", 5), context));
     }
+
+    @Test
+    void load_withInitial_writesInitialIntoScore() {
+        var context = new StubConditionContext().withScore("countdown", 0);
+        handler.load(score("countdown", 0, 10), context);
+        assertEquals(10, handler.getCurrentValue(score("countdown", 0, 10), context));
+    }
+
+    @Test
+    void load_withoutInitial_keepsExistingScore() {
+        var context = new StubConditionContext().withScore("kills", 7);
+        handler.load(score("kills", 10), context);
+        assertEquals(7, handler.getCurrentValue(score("kills", 10), context));
+    }
 }

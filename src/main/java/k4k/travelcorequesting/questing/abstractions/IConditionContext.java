@@ -41,6 +41,19 @@ public interface IConditionContext {
      */
     int getScore(String objectiveName, @Nullable String playerOverride);
 
+    /**
+     * Устанавливает значение scoreboard score. Вызывается из {@code load()},
+     * когда условие требует переписать счёт начальным значением (например,
+     * {@code initial} у {@code ScoreCondition}). Если objective не существует —
+     * ничего не делает; перед вызовом должен быть {@link #ensureScoreboardObjective}.
+     *
+     * @param objectiveName  имя objective
+     * @param playerOverride имя игрока/сущности, чей score переписывается;
+     *                       {@code null} означает контекстного игрока
+     * @param value          новое значение score
+     */
+    void setScore(String objectiveName, @Nullable String playerOverride, int value);
+
     // ── Predicates ────────────────────────────────────────────────────────────
 
     /**

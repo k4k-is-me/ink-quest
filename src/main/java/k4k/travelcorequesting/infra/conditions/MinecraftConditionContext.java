@@ -67,6 +67,15 @@ public class MinecraftConditionContext implements IConditionContext {
     }
 
     @Override
+    public void setScore(String objectiveName, @Nullable String playerOverride, int value) {
+        var scoreboard = Objects.requireNonNull(player.getServer()).getScoreboard();
+        var objective = scoreboard.getObjective(objectiveName);
+        if (objective == null) return;
+        var name = Objects.requireNonNullElse(playerOverride, player.getEntityName());
+        scoreboard.getPlayerScore(name, objective).setScore(value);
+    }
+
+    @Override
     public boolean testPredicate(Identifier predicateId) {
         var server = Objects.requireNonNull(player.getServer());
         var predicate = server.getLootManager().getElement(LootDataType.PREDICATES, predicateId);

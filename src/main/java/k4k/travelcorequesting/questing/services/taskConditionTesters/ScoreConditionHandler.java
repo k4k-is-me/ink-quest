@@ -15,6 +15,9 @@ public class ScoreConditionHandler implements ITaskConditionHandler<ScoreConditi
     @Override
     public void load(ScoreCondition condition, IConditionContext context) {
         context.ensureScoreboardObjective(condition.objective(), condition.criterion());
+        if (condition.initial() != null) {
+            context.setScore(condition.objective(), condition.player(), condition.initial());
+        }
     }
 
     @Override
