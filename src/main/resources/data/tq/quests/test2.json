@@ -1,7 +1,7 @@
 {
   "$schema": "../../../../../../schemas/quest.schema.json",
   "version": 3,
-  "variant": 0,
+  "variant": 1,
 
   "title": "Another quest, probably need to cut this title",
   "description": "Descriptive description",

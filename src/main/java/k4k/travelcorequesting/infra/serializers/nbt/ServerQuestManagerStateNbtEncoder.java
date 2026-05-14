@@ -43,7 +43,7 @@ public class ServerQuestManagerStateNbtEncoder implements NbtEncoder<ServerQuest
         var playerNbt = nbt.getCompound("TrackedPlayers");
         var questsNbt = nbt.getCompound("DynamicQuests");
 
-        var players = new HashMap<UUID, PlayerTrackerState>(playerNbt.getSize());  // TODO: Check if getSize actually returns size
+        var players = new HashMap<UUID, PlayerTrackerState>(playerNbt.getSize());
         for (var playerKey : playerNbt.getKeys()) {
             players.put(UUID.fromString(playerKey), playerTrackerStateEncoder.decode(playerNbt.getCompound(playerKey)));
         }

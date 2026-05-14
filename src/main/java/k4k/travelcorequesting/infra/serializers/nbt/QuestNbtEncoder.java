@@ -5,6 +5,7 @@ import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.abstractions.Quest;
 import k4k.travelcorequesting.domain.abstractions.Task;
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
+import k4k.travelcorequesting.domain.enums.TaskButton;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.models.QuestRequirement;
@@ -27,6 +28,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -102,6 +104,9 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
 
         var failureCondition = task.failureCondition();
         if (failureCondition != null) nbt.put("failureCondition", encodeDynamicCondition(failureCondition));
+
+        nbt.put("buttons", stringsToNbtList(
+                task.buttons().stream().map(b -> b.name().toLowerCase()).toList()));
 
         return nbt;
     }
@@ -250,7 +255,23 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
         if (nbt.contains("failureCondition"))
             task.setFailureCondition(decodeDynamicCondition(nbt.getCompound("failureCondition")));
 
+        if (nbt.contains("buttons")) {
+            var buttonStrings = nbtListToStrings(nbt.getList("buttons", NbtElement.STRING_TYPE));
+            var buttons = EnumSet.noneOf(TaskButton.class);
+            for (var s : buttonStrings) buttons.add(parseTaskButton(s));
+            task.setButtons(buttons);
+        }
+
         return task;
+    }
+
+    private TaskButton parseTaskButton(String value) {
+        return switch (value) {
+            case "success" -> TaskButton.SUCCESS;
+            case "failure" -> TaskButton.FAILURE;
+            case "skip"    -> TaskButton.SKIP;
+            default -> throw new IllegalArgumentException("Unknown TaskButton value: " + value);
+        };
     }
 
     private TaskEventActions decodeEventActions(NbtCompound nbt) {

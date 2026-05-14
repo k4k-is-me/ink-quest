@@ -13,8 +13,10 @@ import k4k.travelcorequesting.infra.command_argument_types.QuestGeneralStatusArg
 import k4k.travelcorequesting.infra.command_argument_types.TaskGeneralStatusArgumentType;
 import k4k.travelcorequesting.infra.commands.ExecuteCommandExtension;
 import k4k.travelcorequesting.infra.loaders.QuestingPersistentStateAdapter;
+import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.infra.networking.QuestBookOpenAtQuestS2CPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookOpenRequestC2SPacket;
+import k4k.travelcorequesting.infra.networking.QuestBookTaskActionC2SPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookTaskPinC2SPacket;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import k4k.travelcorequesting.infra.loaders.QuestResourceLoader;
@@ -33,6 +35,10 @@ import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+
+// TODO: HudTask и HudQuest должны также содержать tracking-информацию, без этого при синхронизации hud при join-е
+//  статусы задач нифига не отображаются
 
 
 public class TravelcoreQuesting implements ModInitializer {
@@ -78,6 +84,22 @@ public class TravelcoreQuesting implements ModInitializer {
 			} catch (IllegalArgumentException ignored) {
 				// Квест или задача не существуют — игнорируем
 			}
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(QuestBookTaskActionC2SPacket.TYPE, (packet, player, sender) -> {
+			var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
+			var task = questManager.getQuestResolver().getTask(packet.questId(), packet.taskId());
+			// Авторитетная проверка: кнопка должна быть явно разрешена в конфиге задачи
+			if (task == null || !task.buttons().contains(packet.action())) return;
+			if (!questManager.isQuestTracked(packet.questId(), player)) return;
+			if (questManager.isQuestComplete(packet.questId(), player)) return;
+			if (questManager.isTaskComplete(packet.questId(), packet.taskId(), player)) return;
+			var status = switch (packet.action()) {
+				case SUCCESS -> CompletionStatus.SUCCESS;
+				case FAILURE -> CompletionStatus.FAILURE;
+				case SKIP    -> CompletionStatus.SKIPPED;
+			};
+			questManager.completeTask(packet.questId(), packet.taskId(), player, status);
 		});
 
 		ArgumentTypeRegistry.registerArgumentType(

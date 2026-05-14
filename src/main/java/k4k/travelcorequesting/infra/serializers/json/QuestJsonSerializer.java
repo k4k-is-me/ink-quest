@@ -5,6 +5,7 @@ import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.common.serialization.IdentifierSerializer;
 import k4k.travelcorequesting.common.serialization.JUtil;
 import k4k.travelcorequesting.domain.enums.QuestPinMode;
+import k4k.travelcorequesting.domain.enums.TaskButton;
 import k4k.travelcorequesting.domain.models.MutableQuest;
 import k4k.travelcorequesting.domain.models.MutableTask;
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
@@ -24,6 +25,7 @@ import net.minecraft.util.Identifier;
 
 import java.io.Reader;
 import java.lang.reflect.Type;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
@@ -37,7 +39,7 @@ public class QuestJsonSerializer {
     // Increase version if new changes are not compatible!
     //   eg: added or removed a required field, changed field type or enum value is removed
     protected static final int VERSION = 3;
-    protected static final int VARIANT = 0;
+    protected static final int VARIANT = 1;
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeHierarchyAdapter(MutableQuest.class, new GsonSerializer())
@@ -169,7 +171,7 @@ public class QuestJsonSerializer {
         }
 
         private MutableTask deserializeTask(JsonElement json, JsonDeserializationContext context) {
-            warnUnknownKeys(json, "task", Set.of("title", "description", "condition", "on"));
+            warnUnknownKeys(json, "task", Set.of("title", "description", "condition", "on", "buttons"));
 
             JUtil.getOptionalMember(json, "condition", e -> e).ifPresent(condBlock ->
                     warnUnknownKeys(condBlock, "task condition block", Set.of("success", "failure")));
@@ -193,6 +195,24 @@ public class QuestJsonSerializer {
             var onSuccess = deserializeEventActions(json, "on.success", context);
             var onFailure = deserializeEventActions(json, "on.failure", context);
 
+            var buttonsList = JUtil.getMemberArray(json, "buttons", el -> {
+                var raw = el.getAsString().toLowerCase();
+                return switch (raw) {
+                    case "success" -> TaskButton.SUCCESS;
+                    case "failure" -> TaskButton.FAILURE;
+                    case "skip"    -> TaskButton.SKIP;
+                    default -> throw new JsonParseException(
+                            "Unknown button '%s', expected: success, failure, skip".formatted(raw));
+                };
+            });
+            var buttons = EnumSet.noneOf(TaskButton.class);
+            for (var btn : buttonsList) {
+                if (!buttons.add(btn)) {
+                    TravelcoreQuesting.LOGGER.warn(
+                            "Duplicate button \"{}\" in task — it will be ignored", btn.name().toLowerCase());
+                }
+            }
+
             var task = MutableTask.create(title);
             description.ifPresent(task::setDescription);
 
@@ -205,6 +225,7 @@ public class QuestJsonSerializer {
             task.setOnUnload(onUnload);
             task.setOnSuccess(onSuccess);
             task.setOnFailure(onFailure);
+            task.setButtons(buttons);
 
             return task;
         }

@@ -1,8 +1,11 @@
 package k4k.travelcorequesting.questing.models;
 
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
+import k4k.travelcorequesting.domain.enums.TaskButton;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Set;
 
 /**
  * Детальные данные задачи для экрана квестовой книги.
@@ -13,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
  * @param isGradual        {@code true}, если условие постепенное (показывает прогресс-бар)
  * @param completionLevel  текущий прогресс от 0.0 до 1.0; значимо только при {@code isGradual == true}
  * @param completionStatus статус завершения; {@code null}, если задача ещё не завершена
+ * @param buttons          кнопки ручного завершения задачи; пустое множество — кнопок нет
  */
 public record QuestBookTask(
         String taskId,
@@ -20,7 +24,8 @@ public record QuestBookTask(
         @Nullable Text description,
         boolean isGradual,
         float completionLevel,
-        @Nullable CompletionStatus completionStatus
+        @Nullable CompletionStatus completionStatus,
+        Set<TaskButton> buttons
 ) {
     /** Возвращает {@code true}, если задача завершена (любым статусом). */
     public boolean isComplete() {

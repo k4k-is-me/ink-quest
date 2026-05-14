@@ -120,7 +120,7 @@ public final class QuestRepository implements QuestResolver {
      * @return Квест
      */
     @Override
-    public @Nullable Quest getQuest(Identifier questId) {  // TODO: return optional
+    public @Nullable Quest getQuest(Identifier questId) {
         var quest = this.dynamicQuests.get(questId);
         if (quest != null) return quest;
         return this.staticQuests.get(questId);

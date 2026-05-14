@@ -119,5 +119,9 @@
   "gamerule.allowManualQuestPin": "Allow manual quest pinning",
   "gamerule.allowManualQuestPin.description": "Players can pin or unpin tasks via the quest book.",
 
+  "gui.travelcorequesting.task_button.success": "Mark task as successful",
+  "gui.travelcorequesting.task_button.failure": "Mark task as failed",
+  "gui.travelcorequesting.task_button.skip": "Skip task",
+
   "subtitles.travelcorequesting.quest_scroll.unfurl": "Quest scroll unfurls"
 }

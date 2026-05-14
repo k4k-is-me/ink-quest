@@ -5,6 +5,7 @@ import k4k.travelcorequesting.common.requests.ClientRequest;
 import k4k.travelcorequesting.common.requests.ClientRequests;
 import k4k.travelcorequesting.common.requests.IPacketEncoder;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
+import k4k.travelcorequesting.domain.enums.TaskButton;
 import k4k.travelcorequesting.questing.abstractions.QuestResolver;
 import k4k.travelcorequesting.questing.abstractions.ServerQuestManagerContainer;
 import k4k.travelcorequesting.questing.models.QuestBookQuest;
@@ -15,6 +16,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -74,6 +76,13 @@ public class GetQuestDetailsClientRequest {
                 buf.writeFloat(task.completionLevel());
                 buf.writeBoolean(task.completionStatus() != null);
                 if (task.completionStatus() != null) buf.writeByte(task.completionStatus().ordinal());
+
+                // кнопки как 3-битная маска: bit0=SUCCESS, bit1=FAILURE, bit2=SKIP
+                int buttonMask = 0;
+                if (task.buttons().contains(TaskButton.SUCCESS)) buttonMask |= 1;
+                if (task.buttons().contains(TaskButton.FAILURE)) buttonMask |= 2;
+                if (task.buttons().contains(TaskButton.SKIP))    buttonMask |= 4;
+                buf.writeByte(buttonMask);
             }
         }
 
@@ -94,7 +103,12 @@ public class GetQuestDetailsClientRequest {
                 var isGradual = buf.readBoolean();
                 var completionLevel = buf.readFloat();
                 var completionStatus = buf.readBoolean() ? CompletionStatus.values()[buf.readByte()] : null;
-                tasks.add(new QuestBookTask(taskId, taskTitle, taskDescription, isGradual, completionLevel, completionStatus));
+                int buttonMask = buf.readByte() & 0xFF;
+                var buttons = EnumSet.noneOf(TaskButton.class);
+                if ((buttonMask & 1) != 0) buttons.add(TaskButton.SUCCESS);
+                if ((buttonMask & 2) != 0) buttons.add(TaskButton.FAILURE);
+                if ((buttonMask & 4) != 0) buttons.add(TaskButton.SKIP);
+                tasks.add(new QuestBookTask(taskId, taskTitle, taskDescription, isGradual, completionLevel, completionStatus, buttons));
             }
 
             return new GetQuestDetailResponse(new QuestBookQuest(title, description, tasks, pinnedTaskId));
@@ -201,7 +215,8 @@ public class GetQuestDetailsClientRequest {
 
         var title = task != null ? task.title() : Text.literal(taskId);
         var description = task != null ? task.description() : null;
+        var buttons = task != null ? task.buttons() : EnumSet.noneOf(TaskButton.class);
 
-        return new QuestBookTask(taskId, title, description, isGradual, completionLevel, completionStatus);
+        return new QuestBookTask(taskId, title, description, isGradual, completionLevel, completionStatus, buttons);
     }
 }

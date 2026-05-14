@@ -2,11 +2,15 @@ package k4k.travelcorequesting.domain.models;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.abstractions.Task;
+import k4k.travelcorequesting.domain.enums.TaskButton;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 public final class MutableTask implements Task {
     private Text title;
@@ -19,6 +23,7 @@ public final class MutableTask implements Task {
     private TaskEventActions onFailure;
     private @Nullable ITaskCondition successCondition;
     private @Nullable ITaskCondition failureCondition;
+    private Set<TaskButton> buttons;
 
     private MutableTask(
             Text title,
@@ -30,7 +35,8 @@ public final class MutableTask implements Task {
             TaskEventActions onSuccess,
             TaskEventActions onFailure,
             @Nullable ITaskCondition successCondition,
-            @Nullable ITaskCondition failureCondition
+            @Nullable ITaskCondition failureCondition,
+            Set<TaskButton> buttons
     ) {
         this.title = title;
         this.description = description;
@@ -42,6 +48,7 @@ public final class MutableTask implements Task {
         this.onFailure = onFailure;
         this.successCondition = successCondition;
         this.failureCondition = failureCondition;
+        this.buttons = EnumSet.copyOf(buttons.isEmpty() ? EnumSet.noneOf(TaskButton.class) : buttons);
     }
 
     /** Создаёт задачу с минимальным набором полей — только заголовком. */
@@ -56,7 +63,8 @@ public final class MutableTask implements Task {
                 TaskEventActions.EMPTY,
                 TaskEventActions.EMPTY,
                 null,
-                null
+                null,
+                EnumSet.noneOf(TaskButton.class)
         );
     }
 
@@ -178,6 +186,16 @@ public final class MutableTask implements Task {
 
     public void setFailureCondition(@Nullable ITaskCondition failureCondition) {
         this.failureCondition = failureCondition;
+    }
+
+    @Override
+    public Set<TaskButton> buttons() {
+        return Collections.unmodifiableSet(buttons);
+    }
+
+    /** Устанавливает набор кнопок ручного завершения. Дубликаты автоматически схлопываются. */
+    public void setButtons(Set<TaskButton> buttons) {
+        this.buttons = buttons.isEmpty() ? EnumSet.noneOf(TaskButton.class) : EnumSet.copyOf(buttons);
     }
 
     private static TaskEventActions toSingleFunctionActions(@Nullable Identifier function) {

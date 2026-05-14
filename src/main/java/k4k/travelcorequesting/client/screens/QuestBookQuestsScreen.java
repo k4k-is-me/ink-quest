@@ -3,6 +3,8 @@ package k4k.travelcorequesting.client.screens;
 import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.client.interfaces.ClientQuestBookManagerContainer;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
+import k4k.travelcorequesting.domain.enums.TaskButton;
+import k4k.travelcorequesting.infra.networking.QuestBookTaskActionC2SPacket;
 import k4k.travelcorequesting.infra.networking.QuestBookTaskPinC2SPacket;
 import k4k.travelcorequesting.questing.models.QuestBookQuestListItem;
 import k4k.travelcorequesting.questing.models.QuestBookQuest;
@@ -19,7 +21,9 @@ import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 import org.lwjgl.glfw.GLFW;
@@ -74,6 +78,16 @@ public class QuestBookQuestsScreen extends Screen {
     private static final int BAR_BG_V = 40;
     private static final int BAR_FILL_V = 41;
 
+    // Кнопки ручного завершения задачи
+    private static final int BUTTON_SIZE = 8;
+    private static final int BUTTON_GAP = 1;
+    private static final int BUTTONS_TOP_GAP = 2;
+    private static final int ICON_BUTTON_SUCCESS_U = 0;
+    private static final int ICON_BUTTON_FAILURE_U = 8;
+    private static final int ICON_BUTTON_SKIP_U = 16;
+    private static final int ICON_BUTTON_V = 216;
+    private static final int ICON_BUTTON_HOVER_V_OFFSET = 8;
+
     // Задачи в правой панели
     private static final int TASKS_SIDE_PADDING = 2;
     private static final int OPTIONAL_TASK_EXTRA_PADDING = 6;
@@ -104,6 +118,12 @@ public class QuestBookQuestsScreen extends Screen {
     private int hoveredTaskIndex = -1;
     private int mouseX;
     private int mouseY;
+
+    // Позиции кнопок задач: taskIndex → список слотов. Пересчитываются каждый кадр в drawRightPanel.
+    private final Map<Integer, List<ButtonSlot>> taskButtonSlots = new HashMap<>();
+
+    /** Позиция одной кнопки задачи на экране. */
+    private record ButtonSlot(TaskButton button, int x, int y) {}
 
     // Клавиатурный фокус
     private enum ActivePanel { LEFT, RIGHT }
@@ -213,6 +233,7 @@ public class QuestBookQuestsScreen extends Screen {
         drawTitle(context);
         drawLeftPanel(context);
         drawRightPanel(context);
+        drawButtonTooltip(context, mouseX, mouseY);
     }
 
     /** Рисует заголовок "QUESTS" по центру с декорациями по бокам. */
@@ -396,6 +417,7 @@ public class QuestBookQuestsScreen extends Screen {
         int px = bookX + RIGHT_X;
         int py = bookY + RIGHT_Y;
 
+        taskButtonSlots.clear();
         context.enableScissor(px, py, px + RIGHT_W, py + RIGHT_H);
 
         if (selectedQuestId == null) {
@@ -520,7 +542,8 @@ public class QuestBookQuestsScreen extends Screen {
                 ? textRenderer.wrapLines(task.description(), textW).size() * textRenderer.fontHeight
                 : 0;
         int barH = (task.isGradual() && !task.isComplete()) ? 3 : 0; // 1px бар + 1px тень + 1px отступ
-        int itemH = Math.max(ITEM_ICON, titleH) + (descH > 0 ? descH + 1 : 0) + barH;
+        int buttonsH = (task.buttons().isEmpty() || task.isComplete()) ? 0 : (BUTTONS_TOP_GAP + BUTTON_SIZE);
+        int itemH = Math.max(ITEM_ICON, titleH) + (descH > 0 ? descH + 1 : 0) + barH + buttonsH;
 
         // Рамка рисуется от drawX - 1, что >= scissors + 1 (не обрезается)
         int borderX = drawX - 2;
@@ -565,7 +588,50 @@ public class QuestBookQuestsScreen extends Screen {
             }
         }
 
+        // Кнопки ручного завершения задачи
+        if (!task.buttons().isEmpty() && !task.isComplete()) {
+            int btnY = y + itemH - BUTTON_SIZE;
+            int btnX = textX;
+            var slots = new ArrayList<ButtonSlot>();
+            for (var btn : List.of(TaskButton.SUCCESS, TaskButton.FAILURE, TaskButton.SKIP)) {
+                if (!task.buttons().contains(btn)) continue;
+                int btnU = switch (btn) {
+                    case SUCCESS -> ICON_BUTTON_SUCCESS_U;
+                    case FAILURE -> ICON_BUTTON_FAILURE_U;
+                    case SKIP    -> ICON_BUTTON_SKIP_U;
+                };
+                boolean btnHovered = mouseX >= btnX && mouseX < btnX + BUTTON_SIZE
+                        && mouseY >= btnY && mouseY < btnY + BUTTON_SIZE;
+                int btnV = ICON_BUTTON_V + (btnHovered ? ICON_BUTTON_HOVER_V_OFFSET : 0);
+                context.drawTexture(BACKGROUND_TEXTURE, btnX, btnY, btnU, btnV, BUTTON_SIZE, BUTTON_SIZE);
+                slots.add(new ButtonSlot(btn, btnX, btnY));
+                btnX += BUTTON_SIZE + BUTTON_GAP;
+            }
+            taskButtonSlots.put(originalIndex, slots);
+        }
+
         return y + itemH + ITEM_GAP;
+    }
+
+    /**
+     * Рисует tooltip для кнопки задачи, на которую наведён курсор.
+     * Вызывается после всех disableScissor, чтобы tooltip не обрезался.
+     */
+    private void drawButtonTooltip(DrawContext context, int mouseX, int mouseY) {
+        for (var slots : taskButtonSlots.values()) {
+            for (var slot : slots) {
+                if (mouseX >= slot.x() && mouseX < slot.x() + BUTTON_SIZE
+                        && mouseY >= slot.y() && mouseY < slot.y() + BUTTON_SIZE) {
+                    var key = switch (slot.button()) {
+                        case SUCCESS -> "gui.travelcorequesting.task_button.success";
+                        case FAILURE -> "gui.travelcorequesting.task_button.failure";
+                        case SKIP    -> "gui.travelcorequesting.task_button.skip";
+                    };
+                    context.drawTooltip(textRenderer, Text.translatable(key), mouseX, mouseY);
+                    return;
+                }
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -661,6 +727,31 @@ public class QuestBookQuestsScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
+        // Клик по кнопке ручного завершения задачи (проверяется до пина задачи)
+        if (selectedQuestId != null && detailData != null) {
+            for (var entry : taskButtonSlots.entrySet()) {
+                for (var slot : entry.getValue()) {
+                    if (mouseX >= slot.x() && mouseX < slot.x() + BUTTON_SIZE
+                            && mouseY >= slot.y() && mouseY < slot.y() + BUTTON_SIZE) {
+                        var tasks = detailData.tasks();
+                        int taskIdx = entry.getKey();
+                        if (taskIdx < tasks.size()) {
+                            ClientPlayNetworking.send(new QuestBookTaskActionC2SPacket(
+                                    selectedQuestId, tasks.get(taskIdx).taskId(), slot.button()));
+                            playClickSound();
+                            var status = switch (slot.button()) {
+                                case SUCCESS -> CompletionStatus.SUCCESS;
+                                case FAILURE -> CompletionStatus.FAILURE;
+                                case SKIP    -> CompletionStatus.SKIPPED;
+                            };
+                            applyOptimisticTaskCompletion(taskIdx, status);
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
         // Клик по квесту в левой панели
         if (hoveredQuestId != null) {
             activePanel = ActivePanel.LEFT;
@@ -708,6 +799,36 @@ public class QuestBookQuestsScreen extends Screen {
         }
 
         return super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    /**
+     * Помечает задачу указанным статусом локально (в detailData и в клиентском кэше),
+     * не дожидаясь подтверждения с сервера. Нужно для мгновенной UI-реакции
+     * на нажатие кнопки. Серверные S2C-пакеты (через invalidateDetail и автоматический
+     * re-fetch в render) перетрут оптимистичную правку, если состояние разойдётся.
+     *
+     * @param taskIndex индекс задачи в detailData.tasks()
+     * @param status    статус, которым нужно пометить задачу
+     */
+    private void applyOptimisticTaskCompletion(int taskIndex, CompletionStatus status) {
+        if (detailData == null || selectedQuestId == null || client == null) return;
+        var oldTasks = detailData.tasks();
+        if (taskIndex < 0 || taskIndex >= oldTasks.size()) return;
+        var oldTask = oldTasks.get(taskIndex);
+        if (oldTask.isComplete()) return;
+
+        var newTask = new QuestBookTask(
+                oldTask.taskId(), oldTask.title(), oldTask.description(),
+                oldTask.isGradual(), oldTask.completionLevel(),
+                status, oldTask.buttons()
+        );
+        var newTasks = new ArrayList<>(oldTasks);
+        newTasks.set(taskIndex, newTask);
+        var newDetail = new QuestBookQuest(
+                detailData.title(), detailData.description(), newTasks, detailData.pinnedTaskId()
+        );
+        detailData = newDetail;
+        ClientQuestBookManagerContainer.getQuestManager(client).cacheQuestDetails(selectedQuestId, newDetail);
     }
 
     /**
