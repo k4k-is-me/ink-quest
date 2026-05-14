@@ -232,8 +232,9 @@ public final class MutableQuest implements Quest {
     }
 
     @Override
-    public String getRequiredTask(int stage) {  // TODO: Return optional and fix all the places where absence of required tasks not handled
-        return this.stages.get(stage).get(0);
+    public Optional<String> getRequiredTask(int stage) {
+        var s = this.stages.get(stage);
+        return s.isEmpty() ? Optional.empty() : Optional.of(s.get(0));
     }
 
     public void addTaskToStage(int stage, String taskId) {

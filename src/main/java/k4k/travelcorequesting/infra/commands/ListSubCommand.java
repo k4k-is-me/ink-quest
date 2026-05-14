@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -317,6 +318,7 @@ public class ListSubCommand {
         var quest = entry.quest();
         var tasks = IntStream.range(0, quest.getStageCount())
                 .mapToObj(quest::getRequiredTask)
+                .flatMap(Optional::stream)
                 .map(taskId -> questResolver.getTaskEntry(questId, taskId))
                 .filter(Objects::nonNull)
                 .map(taskEntry -> QuestTexts.getTaskText(taskEntry, TaskType.REQUIRED))
@@ -347,6 +349,7 @@ public class ListSubCommand {
 
         var requiredTasks = IntStream.range(0, quest.getStageCount())
                 .mapToObj(quest::getRequiredTask)
+                .flatMap(Optional::stream)
                 .collect(Collectors.toSet());
 
         var unusedTasks = quest.getUnusedTasks();

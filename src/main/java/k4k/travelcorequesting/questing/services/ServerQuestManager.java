@@ -249,7 +249,8 @@ public class ServerQuestManager {
         var activeStage = tracker.getActiveStage().orElse(null);
         if (activeStage == null) return;
 
-        this.pinTaskInternal(questEntry, tracker, questEntry.quest().getRequiredTask(activeStage), player);
+        questEntry.quest().getRequiredTask(activeStage)
+                .ifPresent(taskId -> this.pinTaskInternal(questEntry, tracker, taskId, player));
     }
 
     /**
@@ -711,7 +712,7 @@ public class ServerQuestManager {
 
         if (stageChanged && questTracker.isPinned())
             questTracker.getActiveStage()
-                    .map(entry.quest()::getRequiredTask)
+                    .flatMap(entry.quest()::getRequiredTask)
                     .ifPresent(questTracker::setTaskPin);
 
         this.ensureActiveStageLoaded(player, questTracker, stageChanged);

@@ -194,7 +194,9 @@ public class PlayerProgressTracker {
         var allSkipped = true;
 
         for (var stageIndex = 0; stageIndex < quest.getStageCount(); stageIndex++) {
-            var requiredTaskId = quest.getRequiredTask(stageIndex);
+            var requiredTaskId = quest.getRequiredTask(stageIndex).orElse(null);
+            if (requiredTaskId == null) continue;
+
             var status = questTracker.getCompletionStatus(requiredTaskId)
                     .orElse(null);
 

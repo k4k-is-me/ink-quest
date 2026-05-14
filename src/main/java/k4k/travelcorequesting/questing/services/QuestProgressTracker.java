@@ -304,7 +304,8 @@ public final class QuestProgressTracker {
         if (quest == null) return null;
 
         for (var stageIndex = 0; stageIndex < quest.getStageCount(); stageIndex++) {
-            var requiredTaskId = quest.getRequiredTask(stageIndex);
+            var requiredTaskId = quest.getRequiredTask(stageIndex).orElse(null);
+            if (requiredTaskId == null) continue;
 
             // Обязательная задача этапа ещё не завершена - значит этап активный
             if (!this.completeTasks.containsKey(requiredTaskId))

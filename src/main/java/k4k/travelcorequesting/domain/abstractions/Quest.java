@@ -7,6 +7,7 @@ import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface Quest {
@@ -31,7 +32,7 @@ public interface Quest {
 
     int getStageCount();
     List<String> getStage(int stage);
-    String getRequiredTask(int stage);
+    Optional<String> getRequiredTask(int stage);
 
     Set<String> getUnusedTasks();
 }

@@ -756,7 +756,7 @@ public class QuestCommand {
         }
 
         var taskIds = level == CompletionLevel.REQUIRED
-                ? Collections.singletonList(entry.quest().getRequiredTask(activeStage))
+                ? entry.quest().getRequiredTask(activeStage).map(List::of).orElse(List.of())
                 : entry.quest().getStage(activeStage);
 
         var completedTasksCount = 0;
@@ -807,7 +807,7 @@ public class QuestCommand {
 
         for (var stageIndex = 0; stageIndex < entry.quest().getStageCount(); stageIndex++) {
             var taskIds = level == CompletionLevel.REQUIRED
-                    ? Collections.singletonList(entry.quest().getRequiredTask(stageIndex))
+                    ? entry.quest().getRequiredTask(stageIndex).map(List::of).orElse(List.of())
                     : entry.quest().getStage(stageIndex);
             totalTasksCount += taskIds.size();
 
