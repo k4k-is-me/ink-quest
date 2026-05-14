@@ -27,6 +27,9 @@ public class HudQuests {
 
         buf.writeInt(quest.tasks().size());
         quest.tasks().forEach(buf::writeString);
+
+        buf.writeBoolean(quest.pinnedTaskId() != null);
+        if (quest.pinnedTaskId() != null) buf.writeString(quest.pinnedTaskId());
     }
 
     /**
@@ -46,25 +49,30 @@ public class HudQuests {
         var tasks = IntStream.range(0, taskCount)
                 .mapToObj(i -> buf.readString())
                 .toList();
-        return new HudQuest(title, description, sortIndex, tasks);
+
+        var pinnedTaskId = buf.readBoolean() ? buf.readString() : null;
+
+        return new HudQuest(title, description, sortIndex, tasks, pinnedTaskId);
     }
 
     /**
-     * Создаёт {@link HudQuest} из доменной модели квеста.
+     * Создаёт {@link HudQuest} из доменной модели квеста с tracking-информацией.
      * Если этап не задан, список задач будет пустым.
      *
-     * @param quest квест
-     * @param stage индекс активного этапа; {@code null} — этап не определён
+     * @param quest        квест
+     * @param stage        индекс активного этапа; {@code null} — этап не определён
+     * @param pinnedTaskId закреплённая задача; {@code null} если первая или не задана
      * @return данные для HUD-виджета
      */
-    public static HudQuest fromQuest(Quest quest, @Nullable Integer stage) {
+    public static HudQuest fromQuest(Quest quest, @Nullable Integer stage, @Nullable String pinnedTaskId) {
         return new HudQuest(
                 quest.title(),
                 quest.description(),
                 quest.index(),
                 stage != null
                         ? quest.getStage(stage)
-                        : Collections.emptyList()
+                        : Collections.emptyList(),
+                pinnedTaskId
         );
     }
 }

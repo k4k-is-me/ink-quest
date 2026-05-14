@@ -49,6 +49,7 @@ public class HudQuestWidget {
     public HudQuestWidget(HudQuest display, Map<String, HudTask> tasks) {
         this.display = display;
         populateTasks(tasks);
+        if (display.pinnedTaskId() != null) setTaskPin(display.pinnedTaskId());
     }
 
     public void playInAnimation() {
@@ -74,6 +75,7 @@ public class HudQuestWidget {
         taskWidgets.clear();
         pinnedTaskId = null;
         populateTasks(tasks);
+        if (display.pinnedTaskId() != null) setTaskPin(display.pinnedTaskId());
     }
 
     public void removeTask(String taskId) {

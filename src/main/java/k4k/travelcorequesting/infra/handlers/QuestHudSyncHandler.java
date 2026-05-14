@@ -14,17 +14,18 @@ import k4k.travelcorequesting.questing.events.QuestEvents;
 import k4k.travelcorequesting.questing.events.QuestProgressEvents;
 import k4k.travelcorequesting.questing.models.HudTask;
 import k4k.travelcorequesting.questing.models.QuestEntry;
+import k4k.travelcorequesting.questing.services.ServerQuestManager;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Серверный обработчик, синхронизирующий состояние HUD-оверлея на клиенте.
@@ -49,14 +50,14 @@ public class QuestHudSyncHandler {
         QuestEvents.QUEST_PINNED.register((questEntry, player) -> {
             var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
             var stage = questManager.getActiveStage(questEntry.questId(), player).orElse(null);
-            sendQuestStagePacket(player, questEntry, stage);
+            sendQuestStagePacket(player, questManager, questEntry, stage);
         });
 
         QuestProgressEvents.STAGE_CHANGED.register((questEntry, stage, player) -> {
             if (stage == null) return;
             var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
             if (!questManager.isQuestPinned(questEntry.questId(), player)) return;
-            sendQuestStagePacket(player, questEntry, stage);
+            sendQuestStagePacket(player, questManager, questEntry, stage);
         });
 
         QuestProgressEvents.TASK_COMPLETED.register((taskEntry, player, status) -> {
@@ -148,8 +149,8 @@ public class QuestHudSyncHandler {
     }
 
     /**
-     * Синхронизирует HUD конкретного игрока для одного квеста: отправляет данные активного этапа
-     * и закреплённой задачи, если квест закреплён у этого игрока.
+     * Синхронизирует HUD конкретного игрока для одного квеста: отправляет пакет активного этапа
+     * с полным tracking-состоянием (прогресс, статусы завершения, pin).
      *
      * @param player игрок
      * @param entry  запись квеста
@@ -158,10 +159,7 @@ public class QuestHudSyncHandler {
         var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
         if (!questManager.isQuestPinned(entry.questId(), player)) return;
         var stage = questManager.getActiveStage(entry.questId(), player).orElse(null);
-        sendQuestStagePacket(player, entry, stage);
-        questManager.getPinnedTaskId(entry.questId(), player).ifPresent(taskId ->
-                ServerPlayNetworking.send(player, new HudTaskPinS2CPacket(entry.questId(), taskId))
-        );
+        sendQuestStagePacket(player, questManager, entry, stage);
     }
 
     /**
@@ -169,25 +167,57 @@ public class QuestHudSyncHandler {
      * Если {@code stage} равен {@code null} (квест завершён или нет активного этапа),
      * отправляет пакет удаления квеста из HUD.
      *
-     * @param player игрок-получатель
-     * @param entry  запись квеста
-     * @param stage  активный этап или {@code null}
+     * <p>Каждая задача этапа дополняется tracking-данными: текущим прогрессом (для gradual
+     * условий активных задач) и статусом завершения (для уже завершённых задач).
+     * {@code pinnedTaskId} упакован в {@link k4k.travelcorequesting.questing.models.HudQuest}.
+     *
+     * @param player       игрок-получатель
+     * @param questManager менеджер квестов
+     * @param entry        запись квеста
+     * @param stage        активный этап или {@code null}
      */
-    private static void sendQuestStagePacket(ServerPlayerEntity player, QuestEntry entry, Integer stage) {
+    private static void sendQuestStagePacket(
+            ServerPlayerEntity player,
+            ServerQuestManager questManager,
+            QuestEntry entry,
+            @Nullable Integer stage
+    ) {
         if (stage == null) {
             ServerPlayNetworking.send(player, new HudQuestRemoveS2CPacket(entry.questId()));
             return;
         }
 
-        Map<String, HudTask> tasks = entry.quest().getStage(stage).stream()
-                .collect(Collectors.toMap(
-                        Function.identity(),
-                        taskId -> HudTasks.fromTask(Objects.requireNonNull(entry.quest().getTask(taskId)))
-                ));
+        var questId = entry.questId();
+        Map<String, HudTask> tasks = new HashMap<>();
+
+        for (var taskId : entry.quest().getStage(stage)) {
+            var task = entry.quest().getTask(taskId);
+            if (task == null) continue;
+
+            var completionStatus = questManager.getTaskCompletionStatus(questId, taskId, player).orElse(null);
+
+            Integer currentSuccessProgress = null;
+            Integer currentFailureProgress = null;
+
+            if (completionStatus == null) {
+                var successCond = task.successCondition();
+                if (successCond != null && successCond.isGradual()) {
+                    currentSuccessProgress = questManager.getTaskSuccessCompletion(questId, taskId, player);
+                }
+                var failureCond = task.failureCondition();
+                if (failureCond != null && failureCond.isGradual()) {
+                    currentFailureProgress = questManager.getTaskFailureCompletion(questId, taskId, player);
+                }
+            }
+
+            tasks.put(taskId, HudTasks.fromTask(task, currentSuccessProgress, currentFailureProgress, completionStatus));
+        }
+
+        var pinnedTaskId = questManager.getPinnedTaskId(questId, player).orElse(null);
 
         ServerPlayNetworking.send(player, new HudSetQuestStageS2CPacket(
-                entry.questId(),
-                HudQuests.fromQuest(entry.quest(), stage),
+                questId,
+                HudQuests.fromQuest(entry.quest(), stage, pinnedTaskId),
                 tasks
         ));
     }

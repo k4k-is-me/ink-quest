@@ -63,6 +63,24 @@ public class HudTaskWidget {
             .addParameter(POSITION, bop(2), 0, 2000)
             .build();
 
+    // Мгновенные анимации для инициализации начального состояния на join (длительность 1 мс).
+    // Завершаются на первом tick() и схлопывают значения в snapshot аниматора.
+    private static final Animation INSTANT_SUCCESS = new Animation.Builder()
+            .addParameter(OPACITY, switchTo(1f), 1, 1)
+            .addParameter(ICON_U, switchTo(16), 1, 1)
+            .build();
+
+    private static final Animation INSTANT_FAILED = new Animation.Builder()
+            .addParameter(OPACITY, switchTo(1f), 1, 1)
+            .addParameter(ICON_U, switchTo(24), 1, 1)
+            .addParameter(STRIKETHROUGH, switchTo(true), 1, 1)
+            .build();
+
+    private static final Animation INSTANT_SKIPPED = new Animation.Builder()
+            .addParameter(OPACITY, switchTo(1f), 1, 1)
+            .addParameter(ICON_U, switchTo(32), 1, 1)
+            .build();
+
     private final MinecraftClient client = MinecraftClient.getInstance();
 
     private final HudTask display;
@@ -84,9 +102,28 @@ public class HudTaskWidget {
         this.successTarget = st != null ? st : 0;
         this.failureBar = ft != null ? new HudProgressBarWidget(HudProgressBarWidget.FAILURE_V) : null;
         this.failureTarget = ft != null ? ft : 0;
+
+        // Применяем начальное tracking-состояние при инициализации (join/resync).
+        var initialStatus = display.completionStatus();
+        if (initialStatus != null) {
+            this.completionStatus = initialStatus;
+            animator.play(switch (initialStatus) {
+                case SUCCESS -> INSTANT_SUCCESS;
+                case FAILURE -> INSTANT_FAILED;
+                case SKIPPED -> INSTANT_SKIPPED;
+            });
+        } else {
+            if (display.currentSuccessProgress() != null && successBar != null) {
+                successBar.setInitialProgress(display.currentSuccessProgress(), successTarget);
+            }
+            if (display.currentFailureProgress() != null && failureBar != null) {
+                failureBar.setInitialProgress(display.currentFailureProgress(), failureTarget);
+            }
+        }
     }
 
     public void playInAnimation() {
+        if (completionStatus != null) return;
         animator.play(IN_ANIMATION);
     }
 
@@ -104,6 +141,7 @@ public class HudTaskWidget {
     }
 
     public void playSwitchInAnimation() {
+        if (completionStatus != null) return;
         animator.play(SWITCH_IN_ANIMATION);
     }
 

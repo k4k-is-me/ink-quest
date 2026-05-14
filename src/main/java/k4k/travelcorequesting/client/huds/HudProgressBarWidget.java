@@ -39,6 +39,20 @@ public class HudProgressBarWidget {
         animator.play(FILL_ANIMATION.apply(newFill));
     }
 
+    /**
+     * Устанавливает начальное заполнение мгновенно, без slide-анимации.
+     * Используется при инициализации HUD на join, когда прогресс уже известен.
+     *
+     * @param value  текущее значение
+     * @param target целевое значение
+     */
+    public void setInitialProgress(int value, int target) {
+        float newFill = MathHelper.clamp((float) value / target, 0f, 1f);
+        animator.play(new Animation.Builder()
+                .addParameter(FILL, switchTo(newFill), 1, 1)
+                .build());
+    }
+
     public int getHeight() {
         return BAR_HEIGHT + 1; // 1px бар + 1px тень
     }
