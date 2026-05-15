@@ -20,8 +20,10 @@ import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.TasksCondition;
 import k4k.travelcorequesting.questing.exceptions.IncompatibleQuestVersionException;
 import net.minecraft.scoreboard.ScoreboardCriterion;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.LowercaseEnumTypeAdapterFactory;
 
 import java.io.Reader;
 import java.lang.reflect.Type;
@@ -44,6 +46,8 @@ public class QuestJsonSerializer {
     private static final Gson GSON = new GsonBuilder()
             .registerTypeHierarchyAdapter(MutableQuest.class, new GsonSerializer())
             .registerTypeHierarchyAdapter(Text.class, new Text.Serializer())
+            .registerTypeHierarchyAdapter(Style.class, new Style.Serializer())
+            .registerTypeAdapterFactory(new LowercaseEnumTypeAdapterFactory())
             .registerTypeAdapter(Identifier.class, new IdentifierSerializer())
             .disableHtmlEscaping()
             .create();
