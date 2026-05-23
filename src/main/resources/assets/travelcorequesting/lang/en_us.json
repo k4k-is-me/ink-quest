@@ -123,5 +123,9 @@
   "gui.travelcorequesting.task_button.failure": "Mark task as failed",
   "gui.travelcorequesting.task_button.skip": "Skip task",
 
+  "gui.travelcorequesting.new_quest_notification.single": "You have a new quest",
+  "gui.travelcorequesting.new_quest_notification.multiple": "You have %s new quests",
+  "gui.travelcorequesting.new_quest_notification.hint": "Press %s to open",
+
   "subtitles.travelcorequesting.quest_scroll.unfurl": "Quest scroll unfurls"
 }

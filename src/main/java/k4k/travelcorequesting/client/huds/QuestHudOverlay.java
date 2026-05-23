@@ -1,5 +1,6 @@
 package k4k.travelcorequesting.client.huds;
 
+import k4k.travelcorequesting.client.notifications.NewQuestNotificationWidget;
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.questing.models.HudQuest;
 import k4k.travelcorequesting.questing.models.HudTask;
@@ -8,6 +9,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -20,6 +22,8 @@ public class QuestHudOverlay implements HudRenderCallback {
     private final List<Identifier> questOrder = new ArrayList<>();
     private final Map<Identifier, HudQuestWidget> questWidgets = new HashMap<>();
     private final Set<Identifier> outgoingQuests = new HashSet<>();
+
+    private @Nullable NewQuestNotificationWidget notificationWidget = null;
 
     public QuestHudOverlay() {}
 
@@ -87,6 +91,32 @@ public class QuestHudOverlay implements HudRenderCallback {
         outgoingQuests.add(questId);
     }
 
+    /**
+     * Показывает виджет уведомления о новых квестах и запускает его анимацию.
+     * Вызывается из {@link k4k.travelcorequesting.client.notifications.NewQuestNotificationManager}.
+     */
+    public void showNotification(NewQuestNotificationWidget widget) {
+        notificationWidget = widget;
+        widget.playIn();
+    }
+
+    /**
+     * Запускает fade-out активного виджета уведомления (если есть).
+     * Вызывается при открытии книги квестов.
+     */
+    public void dismissNotification() {
+        if (notificationWidget == null) return;
+        notificationWidget.playOut();
+    }
+
+    /**
+     * Возвращает {@code true}, пока виджет уведомления присутствует (включая фазу fade-out).
+     * Используется менеджером для гейтинга settle-окна.
+     */
+    public boolean hasNotification() {
+        return notificationWidget != null;
+    }
+
     @Override
     public void onHudRender(DrawContext drawContext, float v) {
         if (client.player == null || client.world == null) return;
@@ -112,6 +142,10 @@ public class QuestHudOverlay implements HudRenderCallback {
                 height += widget.getHeight(HUD_WIDTH);
             }
         }
+        if (notificationWidget != null) {
+            if (height > 0) height += QUESTS_GAP;
+            height += notificationWidget.getHeight();
+        }
         return height;
     }
 
@@ -125,6 +159,10 @@ public class QuestHudOverlay implements HudRenderCallback {
             return true;
         });
 
+        if (notificationWidget != null && notificationWidget.isAnimatorIdle()) {
+            notificationWidget = null;
+        }
+
         for (var widget : questWidgets.values()) widget.update();
 
         int y = 0;
@@ -133,6 +171,10 @@ public class QuestHudOverlay implements HudRenderCallback {
             if (widget == null) continue;
 
             y += widget.render(drawContext, 0, y, HUD_WIDTH) + QUESTS_GAP;
+        }
+
+        if (notificationWidget != null) {
+            notificationWidget.render(drawContext, 0, y);
         }
     }
 }
