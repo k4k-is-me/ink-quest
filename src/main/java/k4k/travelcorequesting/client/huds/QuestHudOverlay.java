@@ -16,6 +16,7 @@ import java.util.*;
 public class QuestHudOverlay implements HudRenderCallback {
     private static final int HUD_WIDTH = 120;
     private static final int QUESTS_GAP = 10;
+    public static final int HUD_X = 4;
 
     private final MinecraftClient client = MinecraftClient.getInstance();
 
@@ -126,7 +127,7 @@ public class QuestHudOverlay implements HudRenderCallback {
 
         MatrixStack matrices = drawContext.getMatrices();
         matrices.push();
-        matrices.translate(1, (float) (screenHeight - hudHeight) / 2, 0);
+        matrices.translate(HUD_X, (float) (screenHeight - hudHeight) / 2, 0);
 
         renderHud(drawContext);
 
