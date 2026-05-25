@@ -782,28 +782,28 @@ public class ServerQuestManager {
             if (questTracker.isPinned())
                 QuestProgressEvents.PINNED_TASK_TICKED.invoker().onTaskTick(taskEntry, player);
 
-            var successValue = this.conditionDispatcher.getCurrentValue(task.successCondition(), context);
-            var failureValue = this.conditionDispatcher.getCurrentValue(task.failureCondition(), context);
+            var successResult = this.conditionDispatcher.evaluate(task.successCondition(), context);
+            var failureResult = this.conditionDispatcher.evaluate(task.failureCondition(), context);
 
-            var successChanged = questTracker.updateSuccessValue(taskId, successValue);
-
-            if (successChanged) {
+            if (questTracker.updateSuccessValue(taskId, successResult.value())) {
                 QuestProgressEvents.TASK_SUCCESS_PROGRESS_CHANGED.invoker()
-                        .onTaskProgressChange(taskEntry, player, successValue);
+                        .onTaskProgressChange(taskEntry, player, successResult.value());
                 this.isDirty = true;
             }
 
-            var failureChanged = questTracker.updateFailureValue(taskId, failureValue);
-
-            if (failureChanged) {
+            if (questTracker.updateFailureValue(taskId, failureResult.value())) {
                 QuestProgressEvents.TASK_FAILURE_PROGRESS_CHANGED.invoker()
-                        .onTaskProgressChange(taskEntry, player, failureValue);
+                        .onTaskProgressChange(taskEntry, player, failureResult.value());
                 this.isDirty = true;
             }
 
-            if (successChanged && this.conditionDispatcher.test(task.successCondition(), context)) {
+            // Условие проверяется на каждом тике, а не только при изменении значения — чтобы
+            // задача завершилась, даже если условие уже выполнено в момент load (например,
+            // score initial >= target, или predicate истинный с самого начала, или прогресс
+            // восстановлен из NBT в выполненном состоянии).
+            if (successResult.met()) {
                 this.completeTask(questId, taskId, player, CompletionStatus.SUCCESS);
-            } else if (failureChanged && this.conditionDispatcher.test(task.failureCondition(), context)) {
+            } else if (failureResult.met()) {
                 this.completeTask(questId, taskId, player, CompletionStatus.FAILURE);
             }
         }

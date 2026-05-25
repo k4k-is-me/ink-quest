@@ -2,6 +2,7 @@ package k4k.travelcorequesting.questing.services.taskConditionTesters;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.AllCondition;
+import k4k.travelcorequesting.questing.abstractions.EvalResult;
 import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 
@@ -27,5 +28,14 @@ public class AllConditionHandler implements ITaskConditionHandler<AllCondition> 
         return (int) condition.subConditions().stream()
                 .filter(subCondition -> this.dispatcher.test(subCondition, context))
                 .count();
+    }
+
+    @Override
+    public EvalResult evaluate(AllCondition condition, IConditionContext context) {
+        int satisfied = 0;
+        for (var sub : condition.subConditions()) {
+            if (this.dispatcher.evaluate(sub, context).met()) satisfied++;
+        }
+        return new EvalResult(satisfied, satisfied == condition.subConditions().size());
     }
 }

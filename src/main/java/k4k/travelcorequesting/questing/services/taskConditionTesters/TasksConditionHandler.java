@@ -2,6 +2,7 @@ package k4k.travelcorequesting.questing.services.taskConditionTesters;
 
 import k4k.travelcorequesting.domain.enums.CompletionStatus;
 import k4k.travelcorequesting.domain.models.taskConditions.TasksCondition;
+import k4k.travelcorequesting.questing.abstractions.EvalResult;
 import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 import org.jetbrains.annotations.Nullable;
@@ -28,6 +29,17 @@ public class TasksConditionHandler implements ITaskConditionHandler<TasksConditi
         return (int) pool.stream()
                 .filter(taskId -> matchesStatus(context, taskId, condition.status()))
                 .count();
+    }
+
+    @Override
+    public EvalResult evaluate(TasksCondition condition, IConditionContext context) {
+        var pool = resolvePool(condition, context);
+        int target = condition.count() != null ? condition.count() : pool.size();
+        int count = 0;
+        for (var taskId : pool) {
+            if (matchesStatus(context, taskId, condition.status())) count++;
+        }
+        return new EvalResult(count, count >= target);
     }
 
     /**

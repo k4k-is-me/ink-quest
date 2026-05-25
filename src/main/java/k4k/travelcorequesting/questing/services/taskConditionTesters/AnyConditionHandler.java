@@ -2,6 +2,7 @@ package k4k.travelcorequesting.questing.services.taskConditionTesters;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
 import k4k.travelcorequesting.domain.models.taskConditions.AnyCondition;
+import k4k.travelcorequesting.questing.abstractions.EvalResult;
 import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 
@@ -22,5 +23,13 @@ public class AnyConditionHandler implements ITaskConditionHandler<AnyCondition> 
     @Override
     public int getCurrentValue(AnyCondition condition, IConditionContext context) {
         return this.test(condition, context) ? 1 : 0;
+    }
+
+    @Override
+    public EvalResult evaluate(AnyCondition condition, IConditionContext context) {
+        for (var sub : condition.subConditions()) {
+            if (this.dispatcher.evaluate(sub, context).met()) return new EvalResult(1, true);
+        }
+        return new EvalResult(0, false);
     }
 }

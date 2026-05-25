@@ -36,4 +36,14 @@ public interface ITaskConditionHandler<T extends ITaskCondition> {
      * Для бинарных условий — 0 или 1. Для градуальных — значение от 0 до target.
      */
     int getCurrentValue(T condition, IConditionContext context);
+
+    /**
+     * Оценивает условие за один проход: возвращает и текущее значение, и факт
+     * выполнения. Default — два независимых вызова {@code getCurrentValue} и
+     * {@code test}; конкретные хэндлеры переопределяют, чтобы избежать
+     * дублирующих вычислений (например, второго вызова predicate).
+     */
+    default EvalResult evaluate(T condition, IConditionContext context) {
+        return new EvalResult(getCurrentValue(condition, context), test(condition, context));
+    }
 }

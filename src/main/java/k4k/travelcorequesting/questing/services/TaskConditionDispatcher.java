@@ -1,6 +1,7 @@
 package k4k.travelcorequesting.questing.services;
 
 import k4k.travelcorequesting.domain.abstractions.ITaskCondition;
+import k4k.travelcorequesting.questing.abstractions.EvalResult;
 import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 import org.apache.commons.lang3.NotImplementedException;
@@ -18,6 +19,8 @@ import java.util.Map;
  * точка входа для проверки любого условия.
  */
 public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondition> {
+    private static final EvalResult EMPTY_RESULT = new EvalResult(0, false);
+
     private final Map<Class<?>, RegistryEntry> registry = new HashMap<>();
 
     /**
@@ -32,7 +35,8 @@ public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondi
                 (condition, context) -> handler.load(type.cast(condition), context),
                 (condition, context) -> handler.tick(type.cast(condition), context),
                 (condition, context) -> handler.test(type.cast(condition), context),
-                (condition, context) -> handler.getCurrentValue(type.cast(condition), context)
+                (condition, context) -> handler.getCurrentValue(type.cast(condition), context),
+                (condition, context) -> handler.evaluate(type.cast(condition), context)
         ));
         return this;
     }
@@ -68,6 +72,12 @@ public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondi
         return this.getRegistryEntry(condition).getCurrentValue.get(condition, context);
     }
 
+    @Override
+    public EvalResult evaluate(@Nullable ITaskCondition condition, IConditionContext context) {
+        if (condition == null) return EMPTY_RESULT;
+        return this.getRegistryEntry(condition).evaluate.evaluate(condition, context);
+    }
+
     @FunctionalInterface private interface ConditionConsumer {
         void accept(ITaskCondition condition, IConditionContext context);
     }
@@ -80,10 +90,15 @@ public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondi
         int get(ITaskCondition condition, IConditionContext context);
     }
 
+    @FunctionalInterface private interface ConditionEvaluateFn {
+        EvalResult evaluate(ITaskCondition condition, IConditionContext context);
+    }
+
     private record RegistryEntry(
         ConditionConsumer load,
         ConditionConsumer tick,
         ConditionTestFn test,
-        ConditionValueFn getCurrentValue
+        ConditionValueFn getCurrentValue,
+        ConditionEvaluateFn evaluate
     ) {}
 }

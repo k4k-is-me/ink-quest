@@ -1,6 +1,7 @@
 package k4k.travelcorequesting.questing.services.taskConditionTesters;
 
 import k4k.travelcorequesting.domain.models.taskConditions.ScoreCondition;
+import k4k.travelcorequesting.questing.abstractions.EvalResult;
 import k4k.travelcorequesting.questing.abstractions.IConditionContext;
 import k4k.travelcorequesting.questing.abstractions.ITaskConditionHandler;
 
@@ -30,5 +31,13 @@ public class ScoreConditionHandler implements ITaskConditionHandler<ScoreConditi
     @Override
     public int getCurrentValue(ScoreCondition condition, IConditionContext context) {
         return context.getScore(condition.objective(), condition.player());
+    }
+
+    @Override
+    public EvalResult evaluate(ScoreCondition condition, IConditionContext context) {
+        int value = context.getScore(condition.objective(), condition.player());
+        boolean descending = condition.initial() != null && condition.initial() > condition.target();
+        boolean met = descending ? value <= condition.target() : value >= condition.target();
+        return new EvalResult(value, met);
     }
 }
