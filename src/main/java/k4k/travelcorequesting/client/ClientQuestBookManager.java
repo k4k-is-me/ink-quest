@@ -49,11 +49,14 @@ public class ClientQuestBookManager {
     /**
      * Добавляет квест в список.
      * Вызывается при событии {@code QUEST_GIVEN} ({@code QuestBookQuestListItemAddedS2CPacket}).
+     * Сбрасывает кэш деталей: при повторной выдаче repeatable-квеста старый кэш
+     * мог пережить дроп, и следующий fetch должен уйти на сервер для смены viewed.
      *
      * @param quest данные нового квеста
      */
     public void onQuestAdded(QuestBookQuestListItem quest) {
         this.quests.put(quest.questId(), quest);
+        this.detailsCache.remove(quest.questId());
     }
 
     /**
@@ -80,7 +83,7 @@ public class ClientQuestBookManager {
 
         this.quests.put(questId, new QuestBookQuestListItem(
                 old.questId(), old.title(), old.description(),
-                old.icon(), completionStatus, old.index(), old.isPinned()
+                old.icon(), completionStatus, old.index(), old.isPinned(), old.viewed()
         ));
         // Инвалидируем кэш: задачи завершённого квеста изменили статус
         this.detailsCache.remove(questId);
@@ -110,7 +113,7 @@ public class ClientQuestBookManager {
 
         this.quests.put(questId, new QuestBookQuestListItem(
                 old.questId(), old.title(), old.description(),
-                old.icon(), old.completionStatus(), old.index(), isPinned
+                old.icon(), old.completionStatus(), old.index(), isPinned, old.viewed()
         ));
     }
 
@@ -167,10 +170,16 @@ public class ClientQuestBookManager {
      * Возвращает детали квеста, используя кэш.
      * При отсутствии или устаревании кэша отправляет C2S-запрос на сервер.
      *
+     * <p>Перед запросом оптимистично помечает квест просмотренным:
+     * при cache hit сервер уже пометил viewed ранее, при cache miss — пометит
+     * при обработке запроса деталей.
+     *
      * @param questId идентификатор квеста
      * @return future, который завершится данными квеста или {@code null}, если квест не найден
      */
     public CompletableFuture<@Nullable QuestBookQuest> fetchQuestDetails(Identifier questId) {
+        markViewedOptimistically(questId);
+
         var cached = this.detailsCache.get(questId);
         if (cached != null && !cached.isExpired()) {
             return CompletableFuture.completedFuture(cached.value());
@@ -182,6 +191,21 @@ public class ClientQuestBookManager {
             }
             return response.data();
         });
+    }
+
+    /**
+     * Оптимистично помечает квест просмотренным в клиентском списке.
+     * Индикатор непросмотренного квеста исчезает мгновенно, не дожидаясь ответа сервера.
+     *
+     * @param questId идентификатор квеста
+     */
+    private void markViewedOptimistically(Identifier questId) {
+        var old = this.quests.get(questId);
+        if (old == null || old.viewed()) return;
+        this.quests.put(questId, new QuestBookQuestListItem(
+                old.questId(), old.title(), old.description(),
+                old.icon(), old.completionStatus(), old.index(), old.isPinned(), true
+        ));
     }
 
     /**

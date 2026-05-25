@@ -566,7 +566,7 @@ class QuestProgressTrackerTest {
         var questId = id("q");
         setupSingleStageQuest(questId, "t1");
 
-        var state = new QuestTrackerState(1, null, Map.of(), Map.of(), Set.of());
+        var state = new QuestTrackerState(1, null, Map.of(), Map.of(), Set.of(), false);
         var tracker = QuestProgressTracker.create(questId, repo, state);
 
         assertEquals(1, tracker.getActiveStage().orElseThrow());
@@ -577,7 +577,7 @@ class QuestProgressTrackerTest {
         var questId = id("q");
         setupSingleStageQuest(questId, "t1");
 
-        var state = new QuestTrackerState(null, null, Map.of("t1", CompletionStatus.FAILURE), Map.of(), Set.of());
+        var state = new QuestTrackerState(null, null, Map.of("t1", CompletionStatus.FAILURE), Map.of(), Set.of(), false);
         var tracker = QuestProgressTracker.create(questId, repo, state);
 
         assertTrue(tracker.isComplete("t1", CompletionStatus.FAILURE));
@@ -589,7 +589,7 @@ class QuestProgressTrackerTest {
         setupSingleStageQuest(questId, "t1");
 
         var taskState = new TaskTrackerState(7, 3);
-        var state = new QuestTrackerState(0, null, Map.of(), Map.of("t1", taskState), Set.of());
+        var state = new QuestTrackerState(0, null, Map.of(), Map.of("t1", taskState), Set.of(), false);
         var tracker = QuestProgressTracker.create(questId, repo, state);
 
         assertTrue(tracker.isActive("t1"));

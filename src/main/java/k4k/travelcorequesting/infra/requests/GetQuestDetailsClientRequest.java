@@ -163,6 +163,8 @@ public class GetQuestDetailsClientRequest {
         var quest = resolver.getQuest(request.questId());
         if (quest == null) return new GetQuestDetailResponse(null);
 
+        questManager.markQuestViewed(request.questId(), player);
+
         var stageOpt = questManager.getActiveStage(request.questId(), player);
 
         // Нет активного этапа (квест завершён или ещё не начат) — задачи не отправляем

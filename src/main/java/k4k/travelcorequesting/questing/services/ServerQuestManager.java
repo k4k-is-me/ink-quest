@@ -483,6 +483,34 @@ public class ServerQuestManager {
         return this.isQuestComplete(questId, player, CompletionStatus.SKIPPED);
     }
 
+    /** Открывал ли игрок детали квеста в книге. {@code false} для завершённых и не выданных квестов. */
+    public boolean isQuestViewed(Identifier questId, ServerPlayerEntity player) {
+        Objects.requireNonNull(questId);
+        Objects.requireNonNull(player);
+
+        return this.getQuestTracker(player, questId)
+                .map(QuestProgressTracker::isViewed)
+                .orElse(false);
+    }
+
+    /**
+     * Помечает квест как просмотренный.
+     * Вызывается при обработке запроса деталей квеста; не файрит событий —
+     * клиент уже применил изменение оптимистично, авторитетное значение
+     * придёт на следующем JOIN-ресинке.
+     */
+    public void markQuestViewed(Identifier questId, ServerPlayerEntity player) {
+        Objects.requireNonNull(questId);
+        Objects.requireNonNull(player);
+
+        this.getQuestTracker(player, questId).ifPresent(t -> {
+            if (!t.isViewed()) {
+                t.markViewed();
+                this.isDirty = true;
+            }
+        });
+    }
+
     /** Закреплён ли квест (имеет pinned задачу). */
     public boolean isQuestPinned(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);

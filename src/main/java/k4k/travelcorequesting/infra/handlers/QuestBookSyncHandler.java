@@ -112,6 +112,7 @@ public class QuestBookSyncHandler {
         var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
         var completionStatus = questManager.getQuestCompletionStatus(entry.questId(), player).orElse(null);
         var isPinned = questManager.isQuestPinned(entry.questId(), player);
+        var viewed = questManager.isQuestViewed(entry.questId(), player);
 
         return new QuestBookQuestListItem(
                 entry.questId(),
@@ -120,7 +121,8 @@ public class QuestBookSyncHandler {
                 entry.quest().icon(),
                 completionStatus,
                 entry.quest().index(),
-                isPinned
+                isPinned,
+                viewed
         );
     }
 }

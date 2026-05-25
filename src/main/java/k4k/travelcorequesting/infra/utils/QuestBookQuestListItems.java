@@ -27,6 +27,7 @@ public class QuestBookQuestListItems {
 
         buf.writeInt(data.index());
         buf.writeBoolean(data.isPinned());
+        buf.writeBoolean(data.viewed());
     }
 
     /**
@@ -43,7 +44,8 @@ public class QuestBookQuestListItems {
         var completionStatus = buf.readBoolean() ? buf.readEnumConstant(CompletionStatus.class) : null;
         var index = buf.readInt();
         var isPinned = buf.readBoolean();
+        var viewed = buf.readBoolean();
 
-        return new QuestBookQuestListItem(questId, title, description, icon, completionStatus, index, isPinned);
+        return new QuestBookQuestListItem(questId, title, description, icon, completionStatus, index, isPinned, viewed);
     }
 }

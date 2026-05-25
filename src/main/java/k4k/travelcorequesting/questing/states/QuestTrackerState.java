@@ -11,6 +11,7 @@ public record QuestTrackerState (
         @Nullable String pinnedTaskId,
         Map<String, CompletionStatus> completeTasks,
         Map<String, TaskTrackerState> activeTasksTrackers,
-        Set<String> loadedTasks
+        Set<String> loadedTasks,
+        boolean viewed
 ) {}
 

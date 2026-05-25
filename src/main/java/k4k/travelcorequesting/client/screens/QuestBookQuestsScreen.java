@@ -12,6 +12,7 @@ import k4k.travelcorequesting.questing.models.QuestBookTask;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.sound.SoundEvents;
@@ -386,6 +387,12 @@ public class QuestBookQuestsScreen extends Screen {
         // Иконка квеста из атласа квеста; u зависит от статуса, v=24 (required row + book offset)
         var iconTex = quest.icon().withPath(path -> "textures/icons/" + path + ".png");
         context.drawTexture(iconTex, px + 2, y, iconU(quest.completionStatus()), 24, ITEM_ICON, ITEM_ICON);
+
+        if (quest.completionStatus() == null && !quest.viewed()) {
+            RenderSystem.enableBlend();
+            context.drawTexture(BACKGROUND_TEXTURE, px, y - 2, 72, 192, 4, 4);
+            RenderSystem.disableBlend();
+        }
 
         // Заголовок квеста (жирный, чёрный по умолчанию; сохраняет стиль текста)
         int textX = px + 2 + ITEM_ICON + ITEM_ICON_GAP;

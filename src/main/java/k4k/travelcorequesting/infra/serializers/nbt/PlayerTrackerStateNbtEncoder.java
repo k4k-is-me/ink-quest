@@ -63,6 +63,7 @@ public class PlayerTrackerStateNbtEncoder implements NbtEncoder<PlayerTrackerSta
         nbt.put("ActiveTasks", activeNbt);
         nbt.put("CompleteTasks", completeNbt);
         nbt.put("LoadedTasks", loadedTasksNbt);
+        nbt.putBoolean("Viewed", state.viewed());
 
         return nbt;
     }
@@ -109,6 +110,8 @@ public class PlayerTrackerStateNbtEncoder implements NbtEncoder<PlayerTrackerSta
             for (var i = 0; i < loadedNbt.size(); i++) loadedTasks.add(loadedNbt.getString(i));
         }
 
-        return new QuestTrackerState(activeStage, pinnedTaskId, completeTasks, activeTasksTrackers, loadedTasks);
+        var viewed = nbt.contains("Viewed") && nbt.getBoolean("Viewed");
+
+        return new QuestTrackerState(activeStage, pinnedTaskId, completeTasks, activeTasksTrackers, loadedTasks, viewed);
     }
 }

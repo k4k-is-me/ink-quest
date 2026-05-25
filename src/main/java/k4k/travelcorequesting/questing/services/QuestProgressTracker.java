@@ -32,6 +32,9 @@ public final class QuestProgressTracker {
     /// Закреплённая задача квеста
     private @Nullable String pinnedTaskId = null;
 
+    /// Открывал ли игрок детали этого квеста в книге
+    private boolean viewed = false;
+
 
     public QuestProgressTracker(Identifier questId, QuestResolver resolver) {
         this.resolver = resolver;
@@ -50,6 +53,7 @@ public final class QuestProgressTracker {
         tracker.activeStage = state.activeStage();
         tracker.pinnedTaskId = state.pinnedTaskId();
         tracker.loadedTasks.addAll(state.loadedTasks());
+        tracker.viewed = state.viewed();
 
         return tracker;
     }
@@ -63,7 +67,8 @@ public final class QuestProgressTracker {
                         Map.Entry::getKey,
                         entry -> entry.getValue().saveState()
                 ))),
-                Collections.unmodifiableSet(this.loadedTasks)
+                Collections.unmodifiableSet(this.loadedTasks),
+                this.viewed
         );
     }
 
@@ -145,6 +150,16 @@ public final class QuestProgressTracker {
      */
     public boolean isComplete(String taskId, CompletionStatus status) {
         return this.completeTasks.containsKey(taskId) && this.completeTasks.get(taskId) == status;
+    }
+
+    /** Открывал ли игрок детали квеста в книге. */
+    public boolean isViewed() {
+        return this.viewed;
+    }
+
+    /** Помечает квест как просмотренный. Необратимо до сброса трекера. */
+    public void markViewed() {
+        this.viewed = true;
     }
 
     /**

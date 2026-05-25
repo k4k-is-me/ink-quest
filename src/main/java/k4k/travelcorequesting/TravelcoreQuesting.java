@@ -37,6 +37,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+// TODO: Не вставляется score в тест (и не должен), удалить тесты проверяющие это
+// TODO: Когда в задаче есть и кнопка и условие - условие не проверяется (предположительно)
+// TODO: При повторной выдаче repeatable квеста, не показывается маркер нового квеста
+// TODO: При reload проигрывается анимация появления для задач в HUD
+// TODO: При закреплении необязательной задачи она визуально оказывается сверху всех остальных, но порядок в навигации по стрелкам не изменяется
+// TODO: Избавиться от понятия gradual-условия в задачах и добавить во все виды условий параметр "display": "none" | "progressbar" | "numbers" - default определяется конкретным типом условия
+// TODO: Переименовать namespace-ы мода из "travelcorequesting" в "inkquest". Название пакета можно не менять
+
+
 public class TravelcoreQuesting implements ModInitializer {
 	public static final String MOD_ID = "travelcorequesting";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
