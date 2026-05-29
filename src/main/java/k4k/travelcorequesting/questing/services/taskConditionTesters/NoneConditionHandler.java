@@ -15,6 +15,13 @@ public class NoneConditionHandler implements ITaskConditionHandler<NoneCondition
     }
 
     @Override
+    public void load(NoneCondition condition, IConditionContext context) {
+        condition.subConditions().forEach(
+                subCondition -> this.dispatcher.load(subCondition, context)
+        );
+    }
+
+    @Override
     public boolean test(NoneCondition condition, IConditionContext context) {
         return condition.subConditions().stream()
                 .noneMatch(subCondition -> this.dispatcher.test(subCondition, context));

@@ -18,6 +18,13 @@ public class AllConditionHandler implements ITaskConditionHandler<AllCondition> 
     }
 
     @Override
+    public void load(AllCondition condition, IConditionContext context) {
+        condition.subConditions().forEach(
+                subCondition -> this.dispatcher.load(subCondition, context)
+        );
+    }
+
+    @Override
     public boolean test(AllCondition condition, IConditionContext context) {
         return condition.subConditions().stream()
                 .allMatch(subCondition -> this.dispatcher.test(subCondition, context));
@@ -34,8 +41,10 @@ public class AllConditionHandler implements ITaskConditionHandler<AllCondition> 
     public EvalResult evaluate(AllCondition condition, IConditionContext context) {
         int satisfied = 0;
         for (var sub : condition.subConditions()) {
-            if (this.dispatcher.evaluate(sub, context).met()) satisfied++;
+            if (!this.dispatcher.evaluate(sub, context).met())
+                return new EvalResult(satisfied, false);
+            satisfied++;
         }
-        return new EvalResult(satisfied, satisfied == condition.subConditions().size());
+        return new EvalResult(satisfied, true);
     }
 }

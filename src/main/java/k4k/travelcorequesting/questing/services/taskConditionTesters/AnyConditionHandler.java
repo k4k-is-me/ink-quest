@@ -15,6 +15,13 @@ public class AnyConditionHandler implements ITaskConditionHandler<AnyCondition> 
     }
 
     @Override
+    public void load(AnyCondition condition, IConditionContext context) {
+        condition.subConditions().forEach(
+                subCondition -> this.dispatcher.load(subCondition, context)
+        );
+    }
+
+    @Override
     public boolean test(AnyCondition condition, IConditionContext context) {
         return condition.subConditions().stream()
                 .anyMatch(subCondition -> this.dispatcher.test(subCondition, context));
