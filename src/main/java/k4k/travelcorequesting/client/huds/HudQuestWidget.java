@@ -12,6 +12,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,6 +41,7 @@ public class HudQuestWidget {
     private final MinecraftClient client = MinecraftClient.getInstance();
 
     private HudQuest display;
+    private Identifier iconTexture;
     private final LinkedHashMap<String, HudTaskWidget> taskWidgets = new LinkedHashMap<>();
     private final Animator animator = new Animator(Util::getMeasuringTimeMs);
     private @Nullable LinkedHashMap<String, HudTaskWidget> outgoingTasks = null;
@@ -48,6 +50,7 @@ public class HudQuestWidget {
 
     public HudQuestWidget(HudQuest display, Map<String, HudTask> tasks) {
         this.display = display;
+        this.iconTexture = resolveIconTexture(display);
         populateTasks(tasks);
         if (display.pinnedTaskId() != null) setTaskPin(display.pinnedTaskId());
     }
@@ -72,6 +75,7 @@ public class HudQuestWidget {
         outgoingTasks.values().forEach(HudTaskWidget::playSwitchOutAnimation);
 
         this.display = display;
+        this.iconTexture = resolveIconTexture(display);
         taskWidgets.clear();
         pinnedTaskId = null;
         populateTasks(tasks);
@@ -88,7 +92,7 @@ public class HudQuestWidget {
     public void addTask(String taskId, HudTask task) {
         if (taskWidgets.containsKey(taskId)) return;
         boolean isRequired = taskWidgets.isEmpty();
-        var widget = new HudTaskWidget(task, isRequired);
+        var widget = new HudTaskWidget(task, isRequired, iconTexture);
         widget.playInAnimation();
         taskWidgets.put(taskId, widget);
     }
@@ -240,10 +244,15 @@ public class HudQuestWidget {
         for (var taskId : taskOrder) {
             var taskDisplay = tasks.get(taskId);
             if (taskDisplay != null) {
-                taskWidgets.put(taskId, new HudTaskWidget(taskDisplay, index == 0));
+                taskWidgets.put(taskId, new HudTaskWidget(taskDisplay, index == 0, iconTexture));
             }
             index++;
         }
+    }
+
+    /** Резолвит путь к файлу текстуры атласа иконок квеста из его {@code icon} идентификатора. */
+    private static Identifier resolveIconTexture(HudQuest display) {
+        return display.icon().withPath(path -> "textures/icons/" + path + ".png");
     }
 
     private int getTaskAvailableWidth(boolean isRequired, int hudWidth) {

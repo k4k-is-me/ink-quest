@@ -1,7 +1,6 @@
 package k4k.travelcorequesting.client.huds;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.client.animation.Animation;
 import k4k.travelcorequesting.client.animation.Animator;
 import k4k.travelcorequesting.client.animation.ParameterKey;
@@ -13,8 +12,6 @@ import net.minecraft.util.math.MathHelper;
 import java.util.function.Function;
 
 public class HudProgressBarWidget {
-    private static final Identifier PROGRESS_BAR_TEXTURE = Identifier.of(TravelcoreQuesting.MOD_ID, "textures/icons/default.png");
-
     private static final int BAR_HEIGHT = 1;
     public static final int BAR_WIDTH = 32;
     public static final int BG_V = 32;
@@ -27,10 +24,16 @@ public class HudProgressBarWidget {
             .addParameter(FILL, slideTo(target), 0, 300)
             .build();
 
+    private final Identifier texture;
     private final int textureV;
     private final Animator animator = new Animator(Util::getMeasuringTimeMs);
 
-    public HudProgressBarWidget(int textureV) {
+    /**
+     * @param texture  текстура атласа иконок квеста
+     * @param textureV V-координата строки заполнения в атласе ({@link #SUCCESS_V} или {@link #FAILURE_V})
+     */
+    public HudProgressBarWidget(Identifier texture, int textureV) {
+        this.texture = texture;
         this.textureV = textureV;
     }
 
@@ -65,14 +68,14 @@ public class HudProgressBarWidget {
         RenderSystem.defaultBlendFunc();
 
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        context.drawTexture(PROGRESS_BAR_TEXTURE, x, y, 0, BG_V, width, BAR_HEIGHT);
+        context.drawTexture(texture, x, y, 0, BG_V, width, BAR_HEIGHT);
 
         if (fillWidth > 0) {
             RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1f);
-            context.drawTexture(PROGRESS_BAR_TEXTURE, x + 1, y + 1, 0, textureV, fillWidth, BAR_HEIGHT);
+            context.drawTexture(texture, x + 1, y + 1, 0, textureV, fillWidth, BAR_HEIGHT);
 
             RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-            context.drawTexture(PROGRESS_BAR_TEXTURE, x, y, 0, textureV, fillWidth, BAR_HEIGHT);
+            context.drawTexture(texture, x, y, 0, textureV, fillWidth, BAR_HEIGHT);
         }
 
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);

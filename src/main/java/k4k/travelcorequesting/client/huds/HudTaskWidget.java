@@ -1,7 +1,6 @@
 package k4k.travelcorequesting.client.huds;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import k4k.travelcorequesting.TravelcoreQuesting;
 import k4k.travelcorequesting.client.utils.DrawContexts;
 import k4k.travelcorequesting.client.animation.Animation;
 import k4k.travelcorequesting.client.animation.Animator;
@@ -18,7 +17,6 @@ import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 public class HudTaskWidget {
-    private static final Identifier TASK_ICONS_TEXTURE = Identifier.of(TravelcoreQuesting.MOD_ID, "textures/icons/default.png");
 
     private static final int ICON_SIZE = 8;
     private static final int ICON_GAP = 2;
@@ -85,6 +83,7 @@ public class HudTaskWidget {
 
     private final HudTask display;
     private final boolean isRequired;
+    private final Identifier iconTexture;
     private final Animator animator = new Animator(Util::getMeasuringTimeMs);
 
     private final @Nullable HudProgressBarWidget successBar;
@@ -93,14 +92,20 @@ public class HudTaskWidget {
     private final int failureTarget;
     private @Nullable CompletionStatus completionStatus = null;
 
-    public HudTaskWidget(HudTask display, boolean isRequired) {
+    /**
+     * @param display      данные задачи
+     * @param isRequired   {@code true} если задача обязательная (первая в этапе)
+     * @param iconTexture  резолвнутая текстура атласа иконок квеста
+     */
+    public HudTaskWidget(HudTask display, boolean isRequired, Identifier iconTexture) {
         this.display = display;
         this.isRequired = isRequired;
+        this.iconTexture = iconTexture;
         Integer st = display.successTarget();
         Integer ft = display.failureTarget();
-        this.successBar = st != null ? new HudProgressBarWidget(HudProgressBarWidget.SUCCESS_V) : null;
+        this.successBar = st != null ? new HudProgressBarWidget(iconTexture, HudProgressBarWidget.SUCCESS_V) : null;
         this.successTarget = st != null ? st : 0;
-        this.failureBar = ft != null ? new HudProgressBarWidget(HudProgressBarWidget.FAILURE_V) : null;
+        this.failureBar = ft != null ? new HudProgressBarWidget(iconTexture, HudProgressBarWidget.FAILURE_V) : null;
         this.failureTarget = ft != null ? ft : 0;
 
         // Применяем начальное tracking-состояние при инициализации (join/resync).
@@ -204,11 +209,11 @@ public class HudTaskWidget {
         RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, opacity);
         int iconU = animator.getParameter(ICON_U);
         int iconV = isRequired ? ICON_SIZE : 0;
-        context.drawTexture(TASK_ICONS_TEXTURE, drawX + 1, y + 1, iconU, iconV, ICON_SIZE, ICON_SIZE);
+        context.drawTexture(iconTexture, drawX + 1, y + 1, iconU, iconV, ICON_SIZE, ICON_SIZE);
 
         // Иконка
         RenderSystem.setShaderColor(1, 1, 1, opacity);
-        context.drawTexture(TASK_ICONS_TEXTURE, drawX, y, iconU, iconV, ICON_SIZE, ICON_SIZE);
+        context.drawTexture(iconTexture, drawX, y, iconU, iconV, ICON_SIZE, ICON_SIZE);
 
         // Текст
         var text = animator.getParameter(STRIKETHROUGH)

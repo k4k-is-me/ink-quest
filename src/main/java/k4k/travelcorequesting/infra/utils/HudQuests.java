@@ -23,6 +23,8 @@ public class HudQuests {
         buf.writeBoolean(quest.description() != null);
         if (quest.description() != null) buf.writeText(quest.description());
 
+        buf.writeIdentifier(quest.icon());
+
         buf.writeInt(quest.sortIndex());
 
         buf.writeInt(quest.tasks().size());
@@ -43,6 +45,8 @@ public class HudQuests {
 
         var description = buf.readBoolean() ? buf.readText() : null;
 
+        var icon = buf.readIdentifier();
+
         var sortIndex = buf.readInt();
 
         var taskCount = buf.readInt();
@@ -52,7 +56,7 @@ public class HudQuests {
 
         var pinnedTaskId = buf.readBoolean() ? buf.readString() : null;
 
-        return new HudQuest(title, description, sortIndex, tasks, pinnedTaskId);
+        return new HudQuest(title, description, icon, sortIndex, tasks, pinnedTaskId);
     }
 
     /**
@@ -68,6 +72,7 @@ public class HudQuests {
         return new HudQuest(
                 quest.title(),
                 quest.description(),
+                quest.icon(),
                 quest.index(),
                 stage != null
                         ? quest.getStage(stage)
