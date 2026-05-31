@@ -15,6 +15,7 @@ import k4k.inkquest.domain.models.taskConditions.AllCondition;
 import k4k.inkquest.domain.models.taskConditions.AnyCondition;
 import k4k.inkquest.domain.models.taskConditions.NoneCondition;
 import k4k.inkquest.domain.models.taskConditions.PredicateCondition;
+import k4k.inkquest.domain.models.taskConditions.GlobalScoreCondition;
 import k4k.inkquest.domain.models.taskConditions.ScoreCondition;
 import k4k.inkquest.domain.models.taskConditions.TasksCondition;
 import net.minecraft.nbt.NbtCompound;
@@ -137,9 +138,16 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
             nbt.putString("type", "score");
             nbt.putString("objective", scoreCondition.objective());
             nbt.putString("criterion", scoreCondition.criterion().getName());
-            if (scoreCondition.player() != null) nbt.putString("player", scoreCondition.player());
-            if (scoreCondition.initial() != null) nbt.putInt("initial", scoreCondition.initial());
-            nbt.putInt("target", scoreCondition.target());
+            nbt.putInt("from", scoreCondition.initial());
+            nbt.putInt("to", scoreCondition.target());
+            nbt.putBoolean("reset", scoreCondition.reset());
+        }
+        else if (condition instanceof GlobalScoreCondition gsCondition) {
+            nbt.putString("type", "global_score");
+            nbt.putString("objective", gsCondition.objective());
+            nbt.putString("player", gsCondition.player());
+            nbt.putInt("from", gsCondition.initial());
+            nbt.putInt("to", gsCondition.target());
         }
         else if (condition instanceof AllCondition allCondition) {
             nbt.putString("type", "all");
@@ -302,11 +310,20 @@ public class QuestNbtEncoder implements NbtEncoder<Quest, NbtCompound> {
                 var objective = nbt.getString("objective");
                 var criterion = ScoreboardCriterion.getOrCreateStatCriterion(nbt.getString("criterion"))
                         .orElseThrow();
-                var player = nbt.contains("player") ? nbt.getString("player") : null;
-                var initial = nbt.contains("initial") ? nbt.getInt("initial") : null;
-                var target = nbt.getInt("target");
+                var from = nbt.getInt("from");
+                var to = nbt.getInt("to");
+                // reset отсутствует в старых NBT-сейвах — по умолчанию true
+                var reset = !nbt.contains("reset") || nbt.getBoolean("reset");
 
-                return new ScoreCondition(objective, criterion, player, initial, target);
+                return new ScoreCondition(objective, criterion, from, to, reset);
+
+            case "global_score":
+                var gsObjective = nbt.getString("objective");
+                var gsPlayer = nbt.getString("player");
+                var gsFrom = nbt.getInt("from");
+                var gsTo = nbt.getInt("to");
+
+                return new GlobalScoreCondition(gsObjective, gsPlayer, gsFrom, gsTo);
             case "all":
                 var conditionsNbt = nbt.getList("conditions", NbtElement.COMPOUND_TYPE);
                 var subConditions = IntStream.range(0, conditionsNbt.size())

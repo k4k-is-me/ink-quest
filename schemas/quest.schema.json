@@ -179,6 +179,7 @@
       "oneOf": [
         { "$ref": "#/$defs/conditionPredicate" },
         { "$ref": "#/$defs/conditionScore" },
+        { "$ref": "#/$defs/conditionGlobalScore" },
         { "$ref": "#/$defs/conditionAll" },
         { "$ref": "#/$defs/conditionAny" },
         { "$ref": "#/$defs/conditionNone" },
@@ -196,15 +197,27 @@
     },
     "conditionScore": {
       "type": "object",
-      "required": ["type", "objective", "target"],
+      "required": ["type", "objective", "to"],
       "additionalProperties": false,
       "properties": {
         "type":      { "type": "string", "const": "score" },
         "objective": { "type": "string", "description": "Scoreboard objective name. Created automatically if it does not exist." },
         "criterion": { "type": "string", "description": "Objective criterion (e.g. 'dummy', 'minecraft.mined:minecraft.dirt'). Default: dummy" },
-        "player":    { "type": "string", "description": "Player or fake-player name. Default: the tracked player." },
-        "initial":   { "type": "integer", "description": "Starting value. If initial > target the condition counts down (score <= target)." },
-        "target":    { "type": "integer", "description": "Target value. Ascending: score >= target. Descending: score <= target (when initial > target)." }
+        "from":      { "type": "integer", "description": "Starting value. Default: 0. If from > to the condition counts down (score <= to). Sets the progress bar baseline." },
+        "to":        { "type": "integer", "description": "Target value. Ascending: score >= to. Descending: score <= to (when from > to)." },
+        "reset":     { "type": "boolean", "description": "If true (default), sets the player's score to 'from' when the task loads. Set to false to track an existing score without resetting it." }
+      }
+    },
+    "conditionGlobalScore": {
+      "type": "object",
+      "required": ["type", "objective", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "type":      { "type": "string", "const": "global_score" },
+        "objective": { "type": "string", "description": "Scoreboard objective name (criterion always dummy). Created automatically if it does not exist." },
+        "player":    { "type": "string", "description": "Holder name (fake-player). Default: '#GLOBAL'." },
+        "from":      { "type": "integer", "description": "Starting value for direction and progress baseline. Default: 0." },
+        "to":        { "type": "integer", "description": "Target value. Ascending: score >= to. Descending: score <= to (when from > to)." }
       }
     },
     "conditionAll": {

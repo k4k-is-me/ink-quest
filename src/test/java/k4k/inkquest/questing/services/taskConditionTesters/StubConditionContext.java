@@ -13,6 +13,10 @@ import java.util.Map;
 /**
  * Тестовый стаб {@link IConditionContext}. Не требует запущенного Minecraft-сервера.
  * Позволяет задавать ответы на все запросы контекста через fluent API.
+ *
+ * <p>Score хранится по составному ключу {@code "objective|holder"}, где для
+ * контекстного игрока (playerOverride=null) holder — пустая строка.
+ * Это позволяет проверять holder-маршрутизацию в тестах {@link GlobalScoreConditionHandler}.
  */
 class StubConditionContext implements IConditionContext {
     private final Map<String, Integer> scores = new HashMap<>();
@@ -20,9 +24,15 @@ class StubConditionContext implements IConditionContext {
     private final Map<String, CompletionStatus> taskStatuses = new HashMap<>();
     private List<String> activeStageTaskIds = List.of();
 
-    /** Задаёт значение score для objective. */
+    /** Задаёт значение score для контекстного игрока (playerOverride=null). */
     StubConditionContext withScore(String objectiveName, int value) {
-        scores.put(objectiveName, value);
+        scores.put(scoreKey(objectiveName, null), value);
+        return this;
+    }
+
+    /** Задаёт значение score для конкретного holder'а. */
+    StubConditionContext withScoreForHolder(String objectiveName, String holder, int value) {
+        scores.put(scoreKey(objectiveName, holder), value);
         return this;
     }
 
@@ -51,12 +61,12 @@ class StubConditionContext implements IConditionContext {
 
     @Override
     public int getScore(String objectiveName, @Nullable String playerOverride) {
-        return scores.getOrDefault(objectiveName, 0);
+        return scores.getOrDefault(scoreKey(objectiveName, playerOverride), 0);
     }
 
     @Override
     public void setScore(String objectiveName, @Nullable String playerOverride, int value) {
-        scores.put(objectiveName, value);
+        scores.put(scoreKey(objectiveName, playerOverride), value);
     }
 
     @Override
@@ -77,5 +87,13 @@ class StubConditionContext implements IConditionContext {
     @Override
     public List<String> getActiveStageTaskIds() {
         return activeStageTaskIds;
+    }
+
+    /**
+     * Составной ключ score-хранилища.
+     * Для контекстного игрока (playerOverride=null) holder — пустая строка.
+     */
+    private static String scoreKey(String objectiveName, @Nullable String playerOverride) {
+        return objectiveName + "|" + (playerOverride != null ? playerOverride : "");
     }
 }

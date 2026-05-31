@@ -6,38 +6,39 @@ import k4k.inkquest.questing.abstractions.IConditionContext;
 import k4k.inkquest.questing.abstractions.ITaskConditionHandler;
 
 /**
- * Обработчик {@link ScoreCondition}: проверяет значение scoreboard objective.
+ * Обработчик {@link ScoreCondition}: проверяет значение scoreboard objective
+ * контекстного игрока.
  *
- * <p>Поддерживает восходящие (score &gt;= target) и нисходящие (score &lt;= target,
- * если initial &gt; target) условия.
+ * <p>При {@code reset=true} записывает {@code initial} в scoreboard при загрузке.
+ * Прогресс считается относительно {@code initial}: пройденный путь в направлении,
+ * зажатый в [{@code 0}, {@code |target - initial|}]. Делегирует математику в
+ * {@link ScoreEval}.
  */
 public class ScoreConditionHandler implements ITaskConditionHandler<ScoreCondition> {
 
     @Override
     public void load(ScoreCondition condition, IConditionContext context) {
         context.ensureScoreboardObjective(condition.objective(), condition.criterion());
-        if (condition.initial() != null) {
-            context.setScore(condition.objective(), condition.player(), condition.initial());
+        if (condition.reset()) {
+            context.setScore(condition.objective(), null, condition.initial());
         }
     }
 
     @Override
     public boolean test(ScoreCondition condition, IConditionContext context) {
-        if (condition.initial() != null && condition.initial() > condition.target())
-            return this.getCurrentValue(condition, context) <= condition.target();
-        return this.getCurrentValue(condition, context) >= condition.target();
+        int value = context.getScore(condition.objective(), null);
+        return ScoreEval.met(value, condition.initial(), condition.target());
     }
 
     @Override
     public int getCurrentValue(ScoreCondition condition, IConditionContext context) {
-        return context.getScore(condition.objective(), condition.player());
+        int value = context.getScore(condition.objective(), null);
+        return ScoreEval.progress(value, condition.initial(), condition.target());
     }
 
     @Override
     public EvalResult evaluate(ScoreCondition condition, IConditionContext context) {
-        int value = context.getScore(condition.objective(), condition.player());
-        boolean descending = condition.initial() != null && condition.initial() > condition.target();
-        boolean met = descending ? value <= condition.target() : value >= condition.target();
-        return new EvalResult(value, met);
+        int value = context.getScore(condition.objective(), null);
+        return ScoreEval.evaluate(value, condition.initial(), condition.target());
     }
 }

@@ -16,6 +16,7 @@ import k4k.inkquest.domain.models.taskConditions.AllCondition;
 import k4k.inkquest.domain.models.taskConditions.AnyCondition;
 import k4k.inkquest.domain.models.taskConditions.NoneCondition;
 import k4k.inkquest.domain.models.taskConditions.PredicateCondition;
+import k4k.inkquest.domain.models.taskConditions.GlobalScoreCondition;
 import k4k.inkquest.domain.models.taskConditions.ScoreCondition;
 import k4k.inkquest.domain.models.taskConditions.TasksCondition;
 import k4k.inkquest.questing.exceptions.IncompatibleQuestVersionException;
@@ -262,26 +263,27 @@ public class QuestJsonSerializer {
                     return new PredicateCondition(predicate);
 
                 case "score":
-                    warnUnknownKeys(json, "condition (score)", Set.of("type", "objective", "criterion", "player", "initial", "target"));
+                    warnUnknownKeys(json, "condition (score)", Set.of("type", "objective", "criterion", "from", "to", "reset"));
                     var objective = JUtil.getRequiredMember(json, "objective", JsonElement::getAsString);
 
                     var criterionString = JUtil.getMemberWithDefault(json, "criterion", JsonElement::getAsString, "dummy");
                     var criterion = ScoreboardCriterion.getOrCreateStatCriterion(criterionString).orElseThrow(() ->
                             new JsonParseException("Unknown criterion '%s'".formatted(criterionString)));
 
-                    var player = JUtil.getOptionalMember(json, "player", JsonElement::getAsString);
+                    var from = JUtil.getMemberWithDefault(json, "from", JsonElement::getAsInt, 0);
+                    var to = JUtil.getRequiredMember(json, "to", JsonElement::getAsInt);
+                    var reset = JUtil.getMemberWithDefault(json, "reset", JsonElement::getAsBoolean, true);
 
-                    var initial = JUtil.getOptionalMember(json, "initial", JsonElement::getAsInt);
+                    return new ScoreCondition(objective, criterion, from, to, reset);
 
-                    var target = JUtil.getRequiredMember(json, "target", JsonElement::getAsInt);
+                case "global_score":
+                    warnUnknownKeys(json, "condition (global_score)", Set.of("type", "objective", "player", "from", "to"));
+                    var gsObjective = JUtil.getRequiredMember(json, "objective", JsonElement::getAsString);
+                    var gsPlayer = JUtil.getMemberWithDefault(json, "player", JsonElement::getAsString, "#GLOBAL");
+                    var gsFrom = JUtil.getMemberWithDefault(json, "from", JsonElement::getAsInt, 0);
+                    var gsTo = JUtil.getRequiredMember(json, "to", JsonElement::getAsInt);
 
-                    return new ScoreCondition(
-                            objective,
-                            criterion,
-                            player.orElse(null),
-                            initial.orElse(null),
-                            target
-                    );
+                    return new GlobalScoreCondition(gsObjective, gsPlayer, gsFrom, gsTo);
 
                 case "all":
                     warnUnknownKeys(json, "condition (all)", Set.of("type", "conditions"));
