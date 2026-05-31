@@ -1,0 +1,38 @@
+package k4k.inkquest.domain.abstractions;
+
+import k4k.inkquest.domain.enums.QuestPinMode;
+import k4k.inkquest.domain.models.QuestRequirement;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+public interface Quest {
+    Text title();
+    @Nullable Text description();
+    Identifier icon();
+    int index();
+    boolean repeatable();
+    QuestPinMode getPinMode();
+    @Nullable QuestRequirement getRequire();
+
+    // Methods to work with collections that do not require copying
+
+    int getDependencyGroupsCount();
+    List<Identifier> getDependencyGroup(int group);
+
+    Set<String> getTasks();
+    @Nullable Task getTask(String taskId);
+    boolean containsTask(String taskId);
+    boolean containsTask(String taskId, int stage);
+    int getTaskCount();
+
+    int getStageCount();
+    List<String> getStage(int stage);
+    Optional<String> getRequiredTask(int stage);
+
+    Set<String> getUnusedTasks();
+}

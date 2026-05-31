@@ -1,0 +1,10 @@
+{
+  "item.quest_scroll.unfurl": {
+    "subtitle": "subtitles.inkquest.quest_scroll.unfurl",
+    "sounds": [
+      "inkquest:item/quest_scroll/unfurl1",
+      "inkquest:item/quest_scroll/unfurl2",
+      "inkquest:item/quest_scroll/unfurl3"
+    ]
+  }
+}

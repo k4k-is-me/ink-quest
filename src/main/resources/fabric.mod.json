@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"id": "travelcore-questing",
+	"id": "inkquest",
 	"version": "${version}",
 	"name": "InkQuest",
 	"description": "A narrative-driven quest system for Minecraft. Design and deliver rich quests through datapacks or in-game commands — with stages, conditions, lifecycle hooks, and a built-in quest book.",
@@ -8,19 +8,19 @@
 		"Kuchukov"
 	],
 	"license": "CC-BY-NC-3.0",
-	"icon": "assets/travelcorequesting/icon.png",
+	"icon": "assets/inkquest/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"k4k.travelcorequesting.TravelcoreQuesting"
+			"k4k.inkquest.TravelcoreQuesting"
 		],
 		"client": [
-			"k4k.travelcorequesting.TravelcoreQuestingClient"
+			"k4k.inkquest.TravelcoreQuestingClient"
 		]
 	},
 	"mixins": [
-		"travelcore-questing.mixins.json",
-		"travelcore-questing-client.mixins.json"
+		"inkquest.mixins.json",
+		"inkquest-client.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.16.14",
