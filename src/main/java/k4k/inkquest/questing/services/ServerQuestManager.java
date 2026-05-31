@@ -364,6 +364,7 @@ public class ServerQuestManager {
         return this.getPlayerTracker(player)
                 .map(tracker -> tracker.getTrackedQuests().stream()
                         .map(this.questRepository::getQuestEntry)
+                        .filter(Objects::nonNull)
                         .toList())
                 .orElseGet(ArrayList::new);
     }
