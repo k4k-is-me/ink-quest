@@ -44,17 +44,20 @@ public class QuestLifecycleFunctionExecutor {
     }
 
     /**
-     * Выполняет все функции и применяет все теги из набора действий события.
+     * Применяет все теги и выполняет все функции из набора действий события.
+     *
+     * <p>Теги применяются первыми, чтобы функции этого же хука уже видели их
+     * при выполнении.
      *
      * @param actions набор действий события
      * @param player  игрок, чей {@code CommandSource} будет executor-ом функций
      */
     private static void executeActions(TaskEventActions actions, ServerPlayerEntity player) {
-        for (var id : actions.functions()) {
-            executeFunction(id, player);
-        }
         for (var tag : actions.tags()) {
             player.addCommandTag(tag);
+        }
+        for (var id : actions.functions()) {
+            executeFunction(id, player);
         }
     }
 
