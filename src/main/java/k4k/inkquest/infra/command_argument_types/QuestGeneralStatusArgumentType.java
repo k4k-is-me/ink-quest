@@ -32,7 +32,6 @@ public class QuestGeneralStatusArgumentType extends EnumArgumentType<QuestGenera
         COMPLETE("complete"),
         SUCCEEDED("succeeded"),
         FAILED("failed"),
-        SKIPPED("skipped"),
         PINNED("pinned");
 
         final String name;
@@ -52,7 +51,6 @@ public class QuestGeneralStatusArgumentType extends EnumArgumentType<QuestGenera
                 case COMPLETE -> QuestGeneralStatus.COMPLETE;
                 case SUCCEEDED -> QuestGeneralStatus.SUCCEEDED;
                 case FAILED -> QuestGeneralStatus.FAILED;
-                case SKIPPED -> QuestGeneralStatus.SKIPPED;
                 case PINNED -> QuestGeneralStatus.PINNED;
             };
         }

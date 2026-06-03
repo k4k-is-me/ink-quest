@@ -476,14 +476,6 @@ public class ServerQuestManager {
         return this.isQuestComplete(questId, player, CompletionStatus.FAILURE);
     }
 
-    /** Завершён ли квест пропуском. */
-    public boolean isQuestSkipped(Identifier questId, ServerPlayerEntity player) {
-        Objects.requireNonNull(questId);
-        Objects.requireNonNull(player);
-
-        return this.isQuestComplete(questId, player, CompletionStatus.SKIPPED);
-    }
-
     /** Открывал ли игрок детали квеста в книге. {@code false} для завершённых и не выданных квестов. */
     public boolean isQuestViewed(Identifier questId, ServerPlayerEntity player) {
         Objects.requireNonNull(questId);

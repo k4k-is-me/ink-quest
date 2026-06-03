@@ -160,7 +160,6 @@ public class TestSubCommand {
             case COMPLETE -> ServerQuestManager::isQuestComplete;
             case SUCCEEDED -> ServerQuestManager::isQuestSucceeded;
             case FAILED -> ServerQuestManager::isQuestFailed;
-            case SKIPPED -> ServerQuestManager::isQuestSkipped;
             case PINNED -> ServerQuestManager::isQuestPinned;
         };
     }
@@ -171,7 +170,6 @@ public class TestSubCommand {
             case COMPLETE -> "quest.command.test.quest.complete";
             case SUCCEEDED -> "quest.command.test.quest.succeeded";
             case FAILED -> "quest.command.test.quest.failed";
-            case SKIPPED -> "quest.command.test.quest.skipped";
             case PINNED -> "quest.command.test.quest.pinned";
         };
     }
@@ -182,7 +180,6 @@ public class TestSubCommand {
             case COMPLETE -> "quest.command.test.quest.not.complete";
             case SUCCEEDED -> "quest.command.test.quest.not.succeeded";
             case FAILED -> "quest.command.test.quest.not.failed";
-            case SKIPPED -> "quest.command.test.quest.not.skipped";
             case PINNED -> "quest.command.test.quest.not.pinned";
         };
     }

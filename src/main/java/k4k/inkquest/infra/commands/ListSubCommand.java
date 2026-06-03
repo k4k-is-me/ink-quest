@@ -205,7 +205,6 @@ public class ListSubCommand {
             case COMPLETE -> "quest.command.list.tracked.complete";
             case SUCCEEDED -> "quest.command.list.tracked.succeeded";
             case FAILED -> "quest.command.list.tracked.failed";
-            case SKIPPED -> "quest.command.list.tracked.skipped";
             case PINNED -> "quest.command.list.tracked.pinned";
         };
 
@@ -214,7 +213,6 @@ public class ListSubCommand {
             case COMPLETE -> ServerQuestManager::isQuestComplete;
             case SUCCEEDED -> ServerQuestManager::isQuestSucceeded;
             case FAILED -> ServerQuestManager::isQuestFailed;
-            case SKIPPED -> ServerQuestManager::isQuestSkipped;
             case PINNED -> ServerQuestManager::isQuestPinned;
         };
 

@@ -270,10 +270,10 @@ class PlayerProgressTrackerTest {
         var tracker = tracker();
 
         var questTracker = tracker.startTracking(questId).orElseThrow();
-        questTracker.complete("t1", CompletionStatus.SKIPPED);
+        questTracker.complete("t1", CompletionStatus.SUCCESS);
         tracker.checkCompletion(questId, status -> {});
 
-        assertEquals(CompletionStatus.SKIPPED, tracker.getCompletionStatus(questId).orElseThrow());
+        assertEquals(CompletionStatus.SUCCESS, tracker.getCompletionStatus(questId).orElseThrow());
     }
 
     @Test
@@ -375,7 +375,7 @@ class PlayerProgressTrackerTest {
     }
 
     @Test
-    void checkCompletion_allRequiredSkipped_handlerCalledWithSkipped() {
+    void checkCompletion_allRequiredSkipped_handlerCalledWithSuccess() {
         var questId = id("q");
         setupSingleStageQuest(questId, "t1");
         var tracker = tracker();
@@ -386,7 +386,7 @@ class PlayerProgressTrackerTest {
         var received = new CompletionStatus[]{null};
         tracker.checkCompletion(questId, status -> received[0] = status);
 
-        assertEquals(CompletionStatus.SKIPPED, received[0]);
+        assertEquals(CompletionStatus.SUCCESS, received[0]);
     }
 
     @Test

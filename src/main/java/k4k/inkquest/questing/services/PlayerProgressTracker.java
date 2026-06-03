@@ -174,9 +174,9 @@ public class PlayerProgressTracker {
 
     /**
      * Рассчитывает статус выполнения активного квеста.
-     * - Квест считается выполненным успешно, если ВСЕ его обязательные и не пропущенные задачи выполнены успешно;
+     * - Квест считается выполненным успешно, если все его обязательные задачи завершены (успешно или пропущены);
      * - Квест считается проваленным, если ХОТЯБЫ ОДНА его обязательная задача была провалена;
-     * - Квест считается пропущенным, если все его обязательные задачи были пропущены;
+     * - Квест никогда не завершается со статусом «пропущен» — это статус задачи, а не квеста;
      * - Для квестов не содержащих этапов всегда будет возвращаться null.
      * @param questId Идентификатор квеста
      * @return Статус квеста
@@ -191,8 +191,6 @@ public class PlayerProgressTracker {
         if (quest.getStageCount() == 0)
             return null;
 
-        var allSkipped = true;
-
         for (var stageIndex = 0; stageIndex < quest.getStageCount(); stageIndex++) {
             var requiredTaskId = quest.getRequiredTask(stageIndex).orElse(null);
             if (requiredTaskId == null) continue;
@@ -204,20 +202,12 @@ public class PlayerProgressTracker {
                 return CompletionStatus.FAILURE;
             }
 
-            if (Objects.equals(status, CompletionStatus.SUCCESS)) {
-                allSkipped = false;
-                continue;
-            }
-
-            if (Objects.equals(status, CompletionStatus.SKIPPED)) {
+            if (Objects.equals(status, CompletionStatus.SUCCESS) || Objects.equals(status, CompletionStatus.SKIPPED)) {
                 continue;
             }
 
             return null;  // Quest is not completed yet
         }
-
-        if (allSkipped)
-            return CompletionStatus.SKIPPED;
 
         return CompletionStatus.SUCCESS;
     }

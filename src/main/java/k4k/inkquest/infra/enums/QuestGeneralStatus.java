@@ -5,6 +5,5 @@ public enum QuestGeneralStatus {
     COMPLETE,
     SUCCEEDED,
     FAILED,
-    SKIPPED,
     PINNED
 }
