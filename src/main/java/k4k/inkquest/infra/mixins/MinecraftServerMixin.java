@@ -23,7 +23,7 @@ public abstract class MinecraftServerMixin implements ServerQuestManagerContaine
                 .register(ScoreCondition.class, new ScoreConditionHandler())
                 .register(GlobalScoreCondition.class, new GlobalScoreConditionHandler())
                 .register(PredicateCondition.class, new PredicateConditionHandler())
-                .register(TasksCondition.class, new TasksConditionHandler())
+                .register(OptionalsCondition.class, new OptionalsConditionHandler())
                 .register(AllCondition.class, new AllConditionHandler(dispatcher))
                 .register(AnyCondition.class, new AnyConditionHandler(dispatcher))
                 .register(NoneCondition.class, new NoneConditionHandler(dispatcher));

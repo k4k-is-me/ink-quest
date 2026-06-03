@@ -22,7 +22,7 @@ class StubConditionContext implements IConditionContext {
     private final Map<String, Integer> scores = new HashMap<>();
     private final Map<Identifier, Boolean> predicates = new HashMap<>();
     private final Map<String, CompletionStatus> taskStatuses = new HashMap<>();
-    private List<String> activeStageTaskIds = List.of();
+    private List<String> activeStageOptionalTaskIds = List.of();
 
     /** Задаёт значение score для контекстного игрока (playerOverride=null). */
     StubConditionContext withScore(String objectiveName, int value) {
@@ -48,9 +48,9 @@ class StubConditionContext implements IConditionContext {
         return this;
     }
 
-    /** Задаёт список задач активного этапа (без текущей задачи контекста). */
-    StubConditionContext withActiveStageTaskIds(String... taskIds) {
-        this.activeStageTaskIds = List.of(taskIds);
+    /** Задаёт список optional-задач активного этапа (без required и без текущей задачи контекста). */
+    StubConditionContext withActiveStageOptionalTaskIds(String... taskIds) {
+        this.activeStageOptionalTaskIds = List.of(taskIds);
         return this;
     }
 
@@ -85,8 +85,8 @@ class StubConditionContext implements IConditionContext {
     }
 
     @Override
-    public List<String> getActiveStageTaskIds() {
-        return activeStageTaskIds;
+    public List<String> getActiveStageOptionalTaskIds() {
+        return activeStageOptionalTaskIds;
     }
 
     /**

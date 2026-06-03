@@ -18,7 +18,7 @@ import k4k.inkquest.domain.models.taskConditions.NoneCondition;
 import k4k.inkquest.domain.models.taskConditions.PredicateCondition;
 import k4k.inkquest.domain.models.taskConditions.GlobalScoreCondition;
 import k4k.inkquest.domain.models.taskConditions.ScoreCondition;
-import k4k.inkquest.domain.models.taskConditions.TasksCondition;
+import k4k.inkquest.domain.models.taskConditions.OptionalsCondition;
 import k4k.inkquest.questing.exceptions.IncompatibleQuestVersionException;
 import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.text.Style;
@@ -303,18 +303,12 @@ public class QuestJsonSerializer {
                             element -> deserializeTaskCondition(element, context));
                     return new NoneCondition(noneSubConditions);
 
-                case "tasks":
-                    warnUnknownKeys(json, "condition (tasks)", Set.of("type", "tasks", "status", "count"));
-                    var tasksStatus = JUtil.getOptionalMember(json, "status",
+                case "optionals":
+                    warnUnknownKeys(json, "condition (optionals)", Set.of("type", "status", "min"));
+                    var optStatus = JUtil.getOptionalMember(json, "status",
                             e -> CompletionStatus.valueOf(e.getAsString().toUpperCase()));
-                    var tasksCount = JUtil.getOptionalMember(json, "count", JsonElement::getAsInt);
-                    var tasksList = JUtil.getOptionalMember(json, "tasks",
-                            e -> JUtil.readArray(e, JsonElement::getAsString));
-                    return new TasksCondition(
-                            tasksStatus.orElse(null),
-                            tasksCount.orElse(null),
-                            tasksList.orElse(null)
-                    );
+                    var optMin = JUtil.getOptionalMember(json, "min", JsonElement::getAsInt);
+                    return new OptionalsCondition(optStatus.orElse(null), optMin.orElse(null));
 
                 default:
                     throw new JsonParseException(

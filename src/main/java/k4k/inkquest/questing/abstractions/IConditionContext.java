@@ -82,9 +82,10 @@ public interface IConditionContext {
     boolean isTaskComplete(String taskId, CompletionStatus expected);
 
     /**
-     * Возвращает список task ID активного этапа текущего квеста,
-     * исключая task ID самого контекста (чтобы избежать само-ссылки).
+     * Возвращает список task ID optional-задач активного этапа текущего квеста,
+     * исключая required-задачу этапа и task ID самого контекста.
      * Пустой список если нет активного этапа или квест не найден.
+     * Пустой список трактуется как «условие выполнено» (вакуумная истина).
      */
-    List<String> getActiveStageTaskIds();
+    List<String> getActiveStageOptionalTaskIds();
 }

@@ -183,7 +183,7 @@
         { "$ref": "#/$defs/conditionAll" },
         { "$ref": "#/$defs/conditionAny" },
         { "$ref": "#/$defs/conditionNone" },
-        { "$ref": "#/$defs/conditionTasks" }
+        { "$ref": "#/$defs/conditionOptionals" }
       ]
     },
     "conditionPredicate": {
@@ -247,26 +247,21 @@
         "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "description": "No sub-condition must be met." }
       }
     },
-    "conditionTasks": {
+    "conditionOptionals": {
       "type": "object",
       "required": ["type"],
       "additionalProperties": false,
       "properties": {
-        "type":   { "type": "string", "const": "tasks" },
-        "tasks":  {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Task IDs to check. Omit to use all tasks in the active stage."
-        },
+        "type":   { "type": "string", "const": "optionals" },
         "status": {
           "type": "string",
           "enum": ["SUCCESS", "FAILURE", "SKIPPED"],
-          "description": "Expected completion status of the tasks. Omit to accept any terminal status."
+          "description": "Expected completion status of the optional tasks. Omit to accept any terminal status."
         },
-        "count":  {
+        "min": {
           "type": "integer",
           "minimum": 1,
-          "description": "Minimum number of matching tasks. Omit to require all tasks in the pool."
+          "description": "Minimum number of matching optional tasks. Omit to require all optional tasks in the stage."
         }
       }
     }

@@ -23,7 +23,7 @@ import java.util.Objects;
  *
  * <p>Делегирует вызовы в Scoreboard и LootManager через {@link ServerPlayerEntity}.
  * Для проверки статуса задач использует {@link QuestProgressTracker},
- * а для списка задач активного этапа — {@link QuestResolver}.
+ * а для списка optional-задач активного этапа — {@link QuestResolver}.
  *
  * <p>Конструктор намеренно совпадает с сигнатурой {@link k4k.inkquest.questing.abstractions.IConditionContextFactory#create},
  * что позволяет передавать {@code MinecraftConditionContext::new} как лямбду-фабрику.
@@ -99,13 +99,15 @@ public class MinecraftConditionContext implements IConditionContext {
     }
 
     @Override
-    public List<String> getActiveStageTaskIds() {
+    public List<String> getActiveStageOptionalTaskIds() {
         if (questTracker == null) return List.of();
         var activeStage = questTracker.getActiveStage().orElse(null);
         if (activeStage == null) return List.of();
         var quest = questResolver.getQuest(questId);
         if (quest == null) return List.of();
+        var required = quest.getRequiredTask(activeStage).orElse(null);
         return quest.getStage(activeStage).stream()
+                .filter(tid -> !Objects.equals(tid, required))
                 .filter(tid -> !Objects.equals(tid, this.taskId))
                 .toList();
     }
