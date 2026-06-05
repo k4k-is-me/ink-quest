@@ -79,6 +79,7 @@ public class QuestCommand {
     private static final String MSG_QUEST_MODIFY_PIN_MODE = "quest.command.modify.pin_mode";
     private static final String MSG_QUEST_MODIFY_TASK_ADD = "quest.command.modify.task.add";
     private static final String MSG_QUEST_MODIFY_TASK_REMOVE = "quest.command.modify.task.remove";
+    private static final String MSG_QUEST_MODIFY_TASK_DESCRIPTION = "quest.command.modify.task.description";
     private static final String MSG_QUEST_GIVE = "quest.command.give";
     private static final String MSG_QUEST_DROP = "quest.command.drop";
     private static final String MSG_QUEST_PIN_ADD_QUEST = "quest.command.pin.add.quest";
@@ -108,14 +109,13 @@ public class QuestCommand {
         );
     }
 
-    /// quest new <questId: Identifier>[ <title: Text>[ <description: Text>]]
+    /// quest new <questId: Identifier>[ <title: Text>]
     private static ArgumentBuilder<ServerCommandSource, ?> addNewSubCommand() {
         return literal("new")
                 .then(argument(ARG_QUEST_ID, identifier())
                         .executes(context -> newQuest(
                                 context,
                                 getIdentifier(context, ARG_QUEST_ID),
-                                null,
                                 null
                         ))
 
@@ -123,18 +123,8 @@ public class QuestCommand {
                                 .executes(context -> newQuest(
                                         context,
                                         getIdentifier(context, ARG_QUEST_ID),
-                                        getTextArgument(context, ARG_TITLE),
-                                        null
+                                        getTextArgument(context, ARG_TITLE)
                                 ))
-
-                                .then(argument(ARG_DESCRIPTION, text())
-                                        .executes(context -> newQuest(
-                                                context,
-                                                getIdentifier(context, ARG_QUEST_ID),
-                                                getTextArgument(context, ARG_TITLE),
-                                                getTextArgument(context, ARG_DESCRIPTION)
-                                        ))
-                                )
                         )
                 );
     }
@@ -228,39 +218,30 @@ public class QuestCommand {
                                 )
                         )
 
-                        // ... tasks add required|optional <taskId: word>[ <title: Text>[ <description: Text>]]
+                        // ... tasks add required|optional <taskId: word>[ <title: Text>]
                         // ... tasks remove <taskId: word>
+                        // ... tasks <taskId: word> description <description: Text>
                         .then(literal("tasks")
                                 .then(literal("add")
                                         .then(literal("required")
                                                 .then(argument(ARG_TASK_ID, word())
                                                         .executes(ctx -> modifyQuestAddTask(ctx,
-                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), true, null, null))
+                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), true, null))
                                                         .then(argument(ARG_TITLE, text())
                                                                 .executes(ctx -> modifyQuestAddTask(ctx,
                                                                         getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), true,
-                                                                        getTextArgument(ctx, ARG_TITLE), null))
-                                                                .then(argument(ARG_DESCRIPTION, text())
-                                                                        .executes(ctx -> modifyQuestAddTask(ctx,
-                                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), true,
-                                                                                getTextArgument(ctx, ARG_TITLE), getTextArgument(ctx, ARG_DESCRIPTION)))
-                                                                )
+                                                                        getTextArgument(ctx, ARG_TITLE)))
                                                         )
                                                 )
                                         )
                                         .then(literal("optional")
                                                 .then(argument(ARG_TASK_ID, word())
                                                         .executes(ctx -> modifyQuestAddTask(ctx,
-                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), false, null, null))
+                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), false, null))
                                                         .then(argument(ARG_TITLE, text())
                                                                 .executes(ctx -> modifyQuestAddTask(ctx,
                                                                         getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), false,
-                                                                        getTextArgument(ctx, ARG_TITLE), null))
-                                                                .then(argument(ARG_DESCRIPTION, text())
-                                                                        .executes(ctx -> modifyQuestAddTask(ctx,
-                                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID), false,
-                                                                                getTextArgument(ctx, ARG_TITLE), getTextArgument(ctx, ARG_DESCRIPTION)))
-                                                                )
+                                                                        getTextArgument(ctx, ARG_TITLE)))
                                                         )
                                                 )
                                         )
@@ -270,6 +251,15 @@ public class QuestCommand {
                                                 .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID))
                                                 .executes(ctx -> modifyQuestRemoveTask(ctx,
                                                         getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID)))
+                                        )
+                                )
+                                .then(argument(ARG_TASK_ID, word())
+                                        .suggests(new QuestTaskSuggestionProvider(ARG_QUEST_ID))
+                                        .then(literal("description")
+                                                .then(argument(ARG_DESCRIPTION, text())
+                                                        .executes(ctx -> modifyQuestTaskDescription(ctx,
+                                                                getIdentifier(ctx, ARG_QUEST_ID), getString(ctx, ARG_TASK_ID)))
+                                                )
                                         )
                                 )
                         )
@@ -485,7 +475,7 @@ public class QuestCommand {
 
     // ---
 
-    public static int newQuest(CommandContext<ServerCommandSource> context, Identifier questId, @Nullable Text title, @Nullable Text description) {
+    public static int newQuest(CommandContext<ServerCommandSource> context, Identifier questId, @Nullable Text title) {
         var questManager = ServerQuestManagerContainer.getQuestManager(context.getSource().getServer());
 
         if (questManager.isQuestExists(questId)) {
@@ -497,9 +487,6 @@ public class QuestCommand {
         questManager.modifyQuest(questId, quest -> {
             if (title != null)
                 quest.setTitle(title);
-
-            if (description != null)
-                quest.setDescription(description);
         });
 
         context.getSource().sendFeedback(() -> Text.translatable(MSG_QUEST_NEW), true);
@@ -566,7 +553,7 @@ public class QuestCommand {
 
     private static int modifyQuestAddTask(CommandContext<ServerCommandSource> context,
             Identifier questId, String taskId, boolean required,
-            @Nullable Text title, @Nullable Text description) {
+            @Nullable Text title) {
         return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
             var quest = entry.quest();
 
@@ -585,7 +572,6 @@ public class QuestCommand {
                 else modifier.addTaskOptional(taskId);
 
                 if (title != null) modifier.setTaskTitle(taskId, title);
-                if (description != null) modifier.setTaskDescription(taskId, description);
             });
 
             source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_TASK_ADD), true);
@@ -611,6 +597,21 @@ public class QuestCommand {
             questManager.modifyQuest(questId, modifier -> modifier.removeTask(taskId));
 
             source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_TASK_REMOVE), true);
+            return 1;
+        });
+    }
+
+    private static int modifyQuestTaskDescription(CommandContext<ServerCommandSource> context,
+            Identifier questId, String taskId) {
+        return modifyQuestInternal(context, questId, (questManager, source, entry) -> {
+            if (!entry.quest().containsTask(taskId)) {
+                source.sendError(Text.translatable(ERR_TASK_MISSING));
+                return 0;
+            }
+
+            var description = getTextArgument(context, ARG_DESCRIPTION);
+            questManager.modifyQuest(questId, modifier -> modifier.setTaskDescription(taskId, description));
+            source.sendFeedback(() -> Text.translatable(MSG_QUEST_MODIFY_TASK_DESCRIPTION), true);
             return 1;
         });
     }

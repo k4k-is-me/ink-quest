@@ -35,6 +35,7 @@
   "quest.command.modify.pin_mode": "Quest pin mode updated",
   "quest.command.modify.task.add": "Task added",
   "quest.command.modify.task.remove": "Task removed",
+  "quest.command.modify.task.description": "Task description updated",
   "quest.command.give": "Given quest %s to %s",
   "quest.command.drop": "Quest dropped",
   "quest.command.list.empty": "No quests found",
