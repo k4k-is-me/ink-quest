@@ -24,7 +24,6 @@ import net.minecraft.world.World;
 public class QuestScrollItem extends Item {
 
     private static final String NBT_QUEST_KEY = "Quest";
-    private static final int USE_COOLDOWN_TICKS = 20;
 
     /** @param settings стандартные настройки предмета */
     public QuestScrollItem(Settings settings) {
@@ -34,7 +33,7 @@ public class QuestScrollItem extends Item {
     /**
      * Выдаёт игроку квест, указанный в NBT-поле {@value #NBT_QUEST_KEY}.
      * Если квест уже активен или завершён — показывает сообщение на action-bar и не расходует свиток.
-     * Если квест успешно выдан — уменьшает стак на 1 (кроме creative) и устанавливает cooldown.
+     * Если квест успешно выдан — уменьшает стак на 1 (кроме creative).
      */
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
@@ -90,7 +89,6 @@ public class QuestScrollItem extends Item {
         world.playSound(null, user.getX(), user.getY(), user.getZ(),
                 ModSounds.QUEST_SCROLL_UNFURL, SoundCategory.PLAYERS, 1.0f, 1.0f);
         if (!user.getAbilities().creativeMode) stack.decrement(1);
-        user.getItemCooldownManager().set(this, USE_COOLDOWN_TICKS);
         return TypedActionResult.success(stack, false);
     }
 }

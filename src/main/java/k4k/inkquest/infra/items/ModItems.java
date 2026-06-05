@@ -15,8 +15,8 @@ public final class ModItems {
     /** Книга квестов — открывает экран квестов по ПКМ. */
     public static final Item QUEST_BOOK = new QuestBookItem(new FabricItemSettings().maxCount(1));
 
-    /** Свиток квеста — выдаёт квест из NBT-поля Quest по ПКМ; стакается до 16. */
-    public static final Item QUEST_SCROLL = new QuestScrollItem(new FabricItemSettings().maxCount(16));
+    /** Свиток квеста — выдаёт квест из NBT-поля Quest по ПКМ; не стакается. */
+    public static final Item QUEST_SCROLL = new QuestScrollItem(new FabricItemSettings().maxCount(1));
 
     private ModItems() {}
 
