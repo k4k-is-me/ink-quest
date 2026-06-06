@@ -24,6 +24,12 @@ public class AllConditionHandler implements ITaskConditionHandler<AllCondition> 
         );
     }
 
+    /** Возвращает число подусловий — цель для прогресс-бара. */
+    @Override
+    public int getTargetValue(AllCondition condition, IConditionContext context) {
+        return condition.subConditions().size();
+    }
+
     @Override
     public boolean test(AllCondition condition, IConditionContext context) {
         return condition.subConditions().stream()

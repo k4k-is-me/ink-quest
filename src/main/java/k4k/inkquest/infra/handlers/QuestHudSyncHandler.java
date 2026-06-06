@@ -94,10 +94,19 @@ public class QuestHudSyncHandler {
             if (stageChanged) return;
             var questManager = ServerQuestManagerContainer.getQuestManager(player.getServer());
             if (!questManager.isQuestPinned(taskEntry.questId(), player)) return;
+            var task = taskEntry.task();
+            var questId = taskEntry.questId();
+            var taskId = taskEntry.taskId();
+            var successCond = task.successCondition();
+            var failureCond = task.failureCondition();
+            Integer successTarget = successCond != null && successCond.isGradual()
+                    ? questManager.getTaskSuccessTarget(questId, taskId, player) : null;
+            Integer failureTarget = failureCond != null && failureCond.isGradual()
+                    ? questManager.getTaskFailureTarget(questId, taskId, player) : null;
             ServerPlayNetworking.send(player, new HudTaskAddS2CPacket(
-                    taskEntry.questId(),
-                    taskEntry.taskId(),
-                    HudTasks.fromTask(taskEntry.task())
+                    questId,
+                    taskId,
+                    HudTasks.fromTask(task, successTarget, failureTarget, null, null, null)
             ));
         });
 
@@ -194,21 +203,27 @@ public class QuestHudSyncHandler {
 
             var completionStatus = questManager.getTaskCompletionStatus(questId, taskId, player).orElse(null);
 
+            Integer successTarget = null;
+            Integer failureTarget = null;
             Integer currentSuccessProgress = null;
             Integer currentFailureProgress = null;
 
-            if (completionStatus == null) {
-                var successCond = task.successCondition();
-                if (successCond != null && successCond.isGradual()) {
+            var successCond = task.successCondition();
+            if (successCond != null && successCond.isGradual()) {
+                successTarget = questManager.getTaskSuccessTarget(questId, taskId, player);
+                if (completionStatus == null) {
                     currentSuccessProgress = questManager.getTaskSuccessCompletion(questId, taskId, player);
                 }
-                var failureCond = task.failureCondition();
-                if (failureCond != null && failureCond.isGradual()) {
+            }
+            var failureCond = task.failureCondition();
+            if (failureCond != null && failureCond.isGradual()) {
+                failureTarget = questManager.getTaskFailureTarget(questId, taskId, player);
+                if (completionStatus == null) {
                     currentFailureProgress = questManager.getTaskFailureCompletion(questId, taskId, player);
                 }
             }
 
-            tasks.put(taskId, HudTasks.fromTask(task, currentSuccessProgress, currentFailureProgress, completionStatus));
+            tasks.put(taskId, HudTasks.fromTask(task, successTarget, failureTarget, currentSuccessProgress, currentFailureProgress, completionStatus));
         }
 
         var pinnedTaskId = questManager.getPinnedTaskId(questId, player).orElse(null);

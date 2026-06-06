@@ -32,6 +32,19 @@ public interface ITaskConditionHandler<T extends ITaskCondition> {
     boolean test(T condition, IConditionContext context);
 
     /**
+     * Возвращает целевое значение условия — знаменатель прогресс-бара.
+     *
+     * <p>Для бинарных условий ({@code isGradual() == false}) возвращает 1.
+     * Для градуальных — фактическую цель, которая может зависеть от {@code context}
+     * (например, для {@code optionals} — размер пула optional-задач этапа).
+     *
+     * <p>Default-реализация возвращает 1 (бинарные условия).
+     */
+    default int getTargetValue(T condition, IConditionContext context) {
+        return 1;
+    }
+
+    /**
      * Возвращает текущий прогресс выполнения условия.
      * Для бинарных условий — 0 или 1. Для градуальных — значение от 0 до target.
      */

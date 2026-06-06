@@ -660,12 +660,12 @@ public class ServerQuestManager {
     }
 
     /** Целевое значение условия успеха задачи. 1 если задача или условие не найдены. */
-    public int getTaskSuccessTarget(Identifier questId, String taskId) {
+    public int getTaskSuccessTarget(Identifier questId, String taskId, ServerPlayerEntity player) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 1;
         var condition = task.successCondition();
         if (condition == null) return 1;
-        return condition.getTargetValue();
+        return this.conditionDispatcher.getTargetValue(condition, this.createContext(player, questId, taskId));
     }
 
     /** Текущее значение прогресса условия провала задачи. 0 если задача не найдена. */
@@ -676,12 +676,12 @@ public class ServerQuestManager {
     }
 
     /** Целевое значение условия провала задачи. 1 если задача или условие не найдены. */
-    public int getTaskFailureTarget(Identifier questId, String taskId) {
+    public int getTaskFailureTarget(Identifier questId, String taskId, ServerPlayerEntity player) {
         var task = this.questRepository.getTask(questId, taskId);
         if (task == null) return 1;
         var condition = task.failureCondition();
         if (condition == null) return 1;
-        return condition.getTargetValue();
+        return this.conditionDispatcher.getTargetValue(condition, this.createContext(player, questId, taskId));
     }
 
     // </editor-fold>

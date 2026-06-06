@@ -20,21 +20,11 @@ public record OptionalsCondition(
 ) implements ITaskCondition {
 
     /**
-     * Возвращает {@code true} если статически известная цель больше 1.
-     * Когда {@code min} не задан, цель определяется хендлером динамически
-     * по размеру пула, поэтому статически считается 0 и условие неградуальное.
+     * Всегда {@code true} — условие градуальное независимо от значения {@code min}
+     * и размера пула. Реальная цель вычисляется хендлером через {@code IConditionContext}.
      */
     @Override
     public boolean isGradual() {
-        return getTargetValue() > 1;
-    }
-
-    /**
-     * Статически известная цель: {@code min}, иначе 0 (динамический пул).
-     * Фактическая цель при {@code min == null} равна размеру пула и вычисляется хендлером.
-     */
-    @Override
-    public int getTargetValue() {
-        return min != null ? min : 0;
+        return true;
     }
 }

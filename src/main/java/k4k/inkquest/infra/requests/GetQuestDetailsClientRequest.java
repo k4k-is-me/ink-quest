@@ -209,7 +209,7 @@ public class GetQuestDetailsClientRequest {
         float completionLevel;
         if (isGradual) {
             var current = questManager.getTaskSuccessCompletion(questId, taskId, player);
-            var target = questManager.getTaskSuccessTarget(questId, taskId);
+            var target = questManager.getTaskSuccessTarget(questId, taskId, player);
             completionLevel = target > 0 ? (float) current / target : 0f;
         } else {
             completionLevel = completionStatus != null ? 1f : 0f;

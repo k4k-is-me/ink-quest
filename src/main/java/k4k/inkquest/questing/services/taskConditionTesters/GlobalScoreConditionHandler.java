@@ -24,6 +24,12 @@ public class GlobalScoreConditionHandler implements ITaskConditionHandler<Global
         context.ensureScoreboardObjective(condition.objective(), ScoreboardCriterion.DUMMY);
     }
 
+    /** Возвращает размах диапазона {@code |target - initial|}. */
+    @Override
+    public int getTargetValue(GlobalScoreCondition condition, IConditionContext context) {
+        return ScoreEval.range(condition.initial(), condition.target());
+    }
+
     @Override
     public boolean test(GlobalScoreCondition condition, IConditionContext context) {
         int value = context.getScore(condition.objective(), condition.player());

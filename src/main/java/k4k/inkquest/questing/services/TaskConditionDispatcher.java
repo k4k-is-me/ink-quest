@@ -35,6 +35,7 @@ public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondi
                 (condition, context) -> handler.load(type.cast(condition), context),
                 (condition, context) -> handler.tick(type.cast(condition), context),
                 (condition, context) -> handler.test(type.cast(condition), context),
+                (condition, context) -> handler.getTargetValue(type.cast(condition), context),
                 (condition, context) -> handler.getCurrentValue(type.cast(condition), context),
                 (condition, context) -> handler.evaluate(type.cast(condition), context)
         ));
@@ -64,6 +65,12 @@ public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondi
     public boolean test(@Nullable ITaskCondition condition, IConditionContext context) {
         if (condition == null) return false;
         return this.getRegistryEntry(condition).test.test(condition, context);
+    }
+
+    @Override
+    public int getTargetValue(@Nullable ITaskCondition condition, IConditionContext context) {
+        if (condition == null) return 1;
+        return this.getRegistryEntry(condition).getTargetValue.get(condition, context);
     }
 
     @Override
@@ -98,6 +105,7 @@ public class TaskConditionDispatcher implements ITaskConditionHandler<ITaskCondi
         ConditionConsumer load,
         ConditionConsumer tick,
         ConditionTestFn test,
+        ConditionValueFn getTargetValue,
         ConditionValueFn getCurrentValue,
         ConditionEvaluateFn evaluate
     ) {}

@@ -131,6 +131,22 @@ class ScoreConditionHandlerTest {
         assertDoesNotThrow(() -> handler.load(score("kills", 5), context));
     }
 
+    // ── getTargetValue ─────────────────────────────────────────────────────────
+
+    @Test
+    void getTargetValue_ascending_returnsRange() {
+        // from=0, to=10 → range=10
+        var context = new StubConditionContext();
+        assertEquals(10, handler.getTargetValue(score("kills", 0, 10), context));
+    }
+
+    @Test
+    void getTargetValue_descending_returnsRange() {
+        // from=10, to=0 → range=10
+        var context = new StubConditionContext();
+        assertEquals(10, handler.getTargetValue(score("countdown", 10, 0), context));
+    }
+
     // ── evaluate ───────────────────────────────────────────────────────────────
 
     @Test

@@ -20,18 +20,22 @@ public class QuestRequirementChecker implements IQuestRequirementChecker {
             if (!commandTags.contains(tag)) return false;
         }
 
-        if (require.predicate() != null) {
-            var server = Objects.requireNonNull(player.getServer());
-            var predicate = server.getLootManager().getElement(LootDataType.PREDICATES, require.predicate());
-            if (predicate == null) return false;
-            var parameterSet = new LootContextParameterSet.Builder(player.getServerWorld())
-                    .add(LootContextParameters.THIS_ENTITY, player)
-                    .add(LootContextParameters.ORIGIN, player.getPos())
-                    .build(LootContextTypes.COMMAND);
-            var context = new LootContext.Builder(parameterSet).build(null);
-            if (!predicate.test(context)) return false;
-        }
+        if (require.predicate() == null)
+            return true;
 
-        return true;
+        var server = Objects.requireNonNull(player.getServer());
+
+        var predicate = server.getLootManager().getElement(LootDataType.PREDICATES, require.predicate());
+        if (predicate == null) return false;
+
+        var parameterSet = new LootContextParameterSet.Builder(player.getServerWorld())
+                .add(LootContextParameters.THIS_ENTITY, player)
+                .add(LootContextParameters.ORIGIN, player.getPos())
+                .build(LootContextTypes.COMMAND);
+
+        var context = new LootContext.Builder(parameterSet)
+                .build(null);
+
+        return predicate.test(context);
     }
 }

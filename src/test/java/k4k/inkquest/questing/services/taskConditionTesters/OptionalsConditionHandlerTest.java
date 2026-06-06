@@ -113,6 +113,35 @@ class OptionalsConditionHandlerTest {
         assertEquals(2, handler.getCurrentValue(condition, context));
     }
 
+    // ── getTargetValue ───────────────────────────────────────────────────────
+
+    @Test
+    void getTargetValue_minNull_returnsPoolSize() {
+        var condition = new OptionalsCondition(null, null);
+        var context = new StubConditionContext()
+                .withActiveStageOptionalTaskIds("o1", "o2", "o3");
+        // min == null → target = pool.size() = 3
+        assertEquals(3, handler.getTargetValue(condition, context));
+    }
+
+    @Test
+    void getTargetValue_minSet_returnsMin() {
+        var condition = new OptionalsCondition(null, 2);
+        var context = new StubConditionContext()
+                .withActiveStageOptionalTaskIds("o1", "o2", "o3");
+        // min задан → target = 2
+        assertEquals(2, handler.getTargetValue(condition, context));
+    }
+
+    @Test
+    void getTargetValue_emptyPool_returnsZero() {
+        var condition = new OptionalsCondition(null, null);
+        var context = new StubConditionContext()
+                .withActiveStageOptionalTaskIds();
+        // пул пуст, min == null → target = 0
+        assertEquals(0, handler.getTargetValue(condition, context));
+    }
+
     // ── EvalResult ───────────────────────────────────────────────────────────
 
     @Test

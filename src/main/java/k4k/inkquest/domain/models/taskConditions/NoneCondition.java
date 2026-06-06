@@ -12,9 +12,4 @@ public record NoneCondition(
     public boolean isGradual() {
         return false;
     }
-
-    @Override
-    public int getTargetValue() {
-        return 1;
-    }
 }

@@ -19,6 +19,14 @@ import java.util.List;
  */
 public class OptionalsConditionHandler implements ITaskConditionHandler<OptionalsCondition> {
 
+    /**
+     * Возвращает фактическую цель: {@code min} или размер пула optional-задач этапа.
+     */
+    @Override
+    public int getTargetValue(OptionalsCondition condition, IConditionContext context) {
+        return resolveTarget(condition, context.getActiveStageOptionalTaskIds());
+    }
+
     @Override
     public boolean test(OptionalsCondition condition, IConditionContext context) {
         var pool = context.getActiveStageOptionalTaskIds();

@@ -385,8 +385,8 @@ public class QuerySubCommand {
         }
 
         int target = success
-                ? questManager.getTaskSuccessTarget(questId, taskId)
-                : questManager.getTaskFailureTarget(questId, taskId);
+                ? questManager.getTaskSuccessTarget(questId, taskId, player)
+                : questManager.getTaskFailureTarget(questId, taskId, player);
         var key = success ? "quest.command.query.task.success.target" : "quest.command.query.task.failure.target";
         ctx.getSource().sendFeedback(() -> Text.translatable(key, player.getName(), target), false);
         return target;
@@ -408,8 +408,8 @@ public class QuerySubCommand {
                 ? questManager.getTaskSuccessCompletion(questId, taskId, player)
                 : questManager.getTaskFailureCompletion(questId, taskId, player);
         int target = success
-                ? questManager.getTaskSuccessTarget(questId, taskId)
-                : questManager.getTaskFailureTarget(questId, taskId);
+                ? questManager.getTaskSuccessTarget(questId, taskId, player)
+                : questManager.getTaskFailureTarget(questId, taskId, player);
         int result = percent(value, target);
         var key = success ? "quest.command.query.task.success.percent" : "quest.command.query.task.failure.percent";
         ctx.getSource().sendFeedback(() -> Text.translatable(key, player.getName(), result), false);

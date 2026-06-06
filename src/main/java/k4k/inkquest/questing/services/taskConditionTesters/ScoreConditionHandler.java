@@ -24,6 +24,12 @@ public class ScoreConditionHandler implements ITaskConditionHandler<ScoreConditi
         }
     }
 
+    /** Возвращает размах диапазона {@code |target - initial|}. */
+    @Override
+    public int getTargetValue(ScoreCondition condition, IConditionContext context) {
+        return ScoreEval.range(condition.initial(), condition.target());
+    }
+
     @Override
     public boolean test(ScoreCondition condition, IConditionContext context) {
         int value = context.getScore(condition.objective(), null);

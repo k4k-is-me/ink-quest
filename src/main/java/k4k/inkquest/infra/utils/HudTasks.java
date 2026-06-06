@@ -61,44 +61,38 @@ public class HudTasks {
     }
 
     /**
-     * Создаёт {@link HudTask} из доменной модели задачи без tracking-информации.
-     * Используется когда задача только что загрузилась и прогресса ещё нет
-     * (событие {@code TASK_LOADED}).
-     *
-     * @param task задача
-     * @return данные для HUD-виджета без tracking-полей
-     */
-    public static HudTask fromTask(Task task) {
-        return fromTask(task, null, null, null);
-    }
-
-    /**
      * Создаёт {@link HudTask} из доменной модели задачи с tracking-информацией.
-     * Используется при синхронизации HUD на join/resync, чтобы клиент сразу
-     * отобразил корректный прогресс и статус завершения.
+     *
+     * <p>{@code successTarget}/{@code failureTarget} передаются только если
+     * условие gradual ({@link k4k.inkquest.domain.abstractions.ITaskCondition#isGradual()}),
+     * иначе — {@code null}. Вычисляются вызывающим кодом через диспетчер условий,
+     * поскольку для некоторых типов условий цель зависит от контекста (например,
+     * {@code optionals} — размер пула optional-задач активного этапа).
      *
      * <p>{@code currentSuccess}/{@code currentFailure} передаются только если
-     * условие gradual и задача активна; для завершённых задач — {@code null}.
+     * задача активна; для завершённых — {@code null}.
      *
-     * @param task                 задача
-     * @param currentSuccess       текущее значение условия успеха; {@code null} если нет/неактивно
-     * @param currentFailure       текущее значение условия провала; {@code null} если нет/неактивно
-     * @param completionStatus     статус завершения; {@code null} если задача активна
+     * @param task             задача
+     * @param successTarget    цель условия успеха; {@code null} если условия нет или оно бинарное
+     * @param failureTarget    цель условия провала; {@code null} если условия нет или оно бинарное
+     * @param currentSuccess   текущее значение условия успеха; {@code null} если нет/неактивно
+     * @param currentFailure   текущее значение условия провала; {@code null} если нет/неактивно
+     * @param completionStatus статус завершения; {@code null} если задача активна
      * @return данные для HUD-виджета
      */
     public static HudTask fromTask(
             Task task,
+            @Nullable Integer successTarget,
+            @Nullable Integer failureTarget,
             @Nullable Integer currentSuccess,
             @Nullable Integer currentFailure,
             @Nullable CompletionStatus completionStatus
     ) {
-        var successCondition = task.successCondition();
-        var failureCondition = task.failureCondition();
         return new HudTask(
                 task.title(),
                 task.description(),
-                successCondition != null && successCondition.isGradual() ? successCondition.getTargetValue() : null,
-                failureCondition != null && failureCondition.isGradual() ? failureCondition.getTargetValue() : null,
+                successTarget,
+                failureTarget,
                 completionStatus == null ? currentSuccess : null,
                 completionStatus == null ? currentFailure : null,
                 completionStatus

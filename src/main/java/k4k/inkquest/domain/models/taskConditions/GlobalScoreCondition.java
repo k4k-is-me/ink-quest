@@ -26,10 +26,4 @@ public record GlobalScoreCondition(
     public boolean isGradual() {
         return true;
     }
-
-    /** Возвращает размах диапазона {@code |target - initial|}. */
-    @Override
-    public int getTargetValue() {
-        return Math.abs(target - initial);
-    }
 }

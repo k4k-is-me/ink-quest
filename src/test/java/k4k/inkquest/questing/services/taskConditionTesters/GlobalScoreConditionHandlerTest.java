@@ -117,6 +117,20 @@ class GlobalScoreConditionHandlerTest {
         assertEquals(7, handler.getCurrentValue(condition, context));
     }
 
+    // ── getTargetValue ─────────────────────────────────────────────────────────
+
+    @Test
+    void getTargetValue_ascending_returnsRange() {
+        // from=0, to=10 → range=10
+        assertEquals(10, handler.getTargetValue(gs("donations", 0, 10), new StubConditionContext()));
+    }
+
+    @Test
+    void getTargetValue_descending_returnsRange() {
+        // from=100, to=0 → range=100
+        assertEquals(100, handler.getTargetValue(gs("health", 100, 0), new StubConditionContext()));
+    }
+
     // ── evaluate ───────────────────────────────────────────────────────────────
 
     @Test
