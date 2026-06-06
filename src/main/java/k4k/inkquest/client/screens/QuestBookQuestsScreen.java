@@ -282,37 +282,47 @@ public class QuestBookQuestsScreen extends Screen {
         int y = py - leftScroll;
         int startY = y;
 
-        // Секция закреплённых (иконка вместо текста, только если есть закреплённые квесты)
+        // Разделитель между секциями рисуется перед секцией, если уже показана хотя бы одна,
+        // чтобы он никогда не висел «в воздухе» после пустой или последней секции.
+        boolean anySectionShown = false;
+
+        // Секция закреплённых (иконка вместо текста)
         if (!pinned.isEmpty()) {
             drawIconSectionHeader(context, px, y);
             y += SECTION_HEADER_FULL_HEIGHT;
             for (var q : pinned) {
                 y = drawQuestItem(context, px, py, y, q);
             }
-
-            // Разделитель секций (центрированный, 4px после последнего квеста)
-            context.drawTexture(BACKGROUND_TEXTURE, px + (LEFT_W - 32) / 2, y, 32, 192, 32, 2);
-            y += 2 + 4;
+            anySectionShown = true;
         }
 
         // Секция "ACTIVE"
-        var activeText = Text.literal("").append(Text.translatable("gui.quest_book.active")).formatted(Formatting.BOLD);
-        drawSectionHeader(context, px, y, activeText, color2);
-        y += SECTION_HEADER_FULL_HEIGHT;
-        for (var q : active) {
-            y = drawQuestItem(context, px, py, y, q);
+        if (!active.isEmpty()) {
+            if (anySectionShown) {
+                context.drawTexture(BACKGROUND_TEXTURE, px + (LEFT_W - 32) / 2, y, 32, 192, 32, 2);
+                y += 2 + 4;
+            }
+            var activeText = Text.literal("").append(Text.translatable("gui.quest_book.active")).formatted(Formatting.BOLD);
+            drawSectionHeader(context, px, y, activeText, color2);
+            y += SECTION_HEADER_FULL_HEIGHT;
+            for (var q : active) {
+                y = drawQuestItem(context, px, py, y, q);
+            }
+            anySectionShown = true;
         }
 
-        // Разделитель секций (центрированный, 4px после последнего квеста)
-        context.drawTexture(BACKGROUND_TEXTURE, px + (LEFT_W - 32) / 2, y, 32, 192, 32, 2);
-        y += 2 + 4;
-
         // Секция "COMPLETE"
-        var completeText = Text.literal("").append(Text.translatable("gui.quest_book.complete")).formatted(Formatting.BOLD);
-        drawSectionHeader(context, px, y, completeText, color1);
-        y += SECTION_HEADER_FULL_HEIGHT;
-        for (var q : complete) {
-            y = drawQuestItem(context, px, py, y, q);
+        if (!complete.isEmpty()) {
+            if (anySectionShown) {
+                context.drawTexture(BACKGROUND_TEXTURE, px + (LEFT_W - 32) / 2, y, 32, 192, 32, 2);
+                y += 2 + 4;
+            }
+            var completeText = Text.literal("").append(Text.translatable("gui.quest_book.complete")).formatted(Formatting.BOLD);
+            drawSectionHeader(context, px, y, completeText, color1);
+            y += SECTION_HEADER_FULL_HEIGHT;
+            for (var q : complete) {
+                y = drawQuestItem(context, px, py, y, q);
+            }
         }
 
         leftContentHeight = y - startY;
