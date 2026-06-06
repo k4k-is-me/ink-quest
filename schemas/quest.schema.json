@@ -31,7 +31,7 @@
     },
     "icon": {
       "$ref": "#/$defs/identifier",
-      "description": "Item or block identifier used as the quest icon. Default: travelcorequesting:default"
+      "description": "Item or block identifier used as the quest icon. Default: inkquest:default"
     },
     "index": {
       "type": "integer",
