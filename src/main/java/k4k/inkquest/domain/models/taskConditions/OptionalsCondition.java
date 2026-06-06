@@ -18,13 +18,4 @@ public record OptionalsCondition(
         @Nullable CompletionStatus status,
         @Nullable Integer min
 ) implements ITaskCondition {
-
-    /**
-     * Всегда {@code true} — условие градуальное независимо от значения {@code min}
-     * и размера пула. Реальная цель вычисляется хендлером через {@code IConditionContext}.
-     */
-    @Override
-    public boolean isGradual() {
-        return true;
-    }
 }

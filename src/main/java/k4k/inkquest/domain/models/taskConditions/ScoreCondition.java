@@ -21,9 +21,4 @@ public record ScoreCondition(
         int target,
         boolean reset
 ) implements ITaskCondition {
-
-    @Override
-    public boolean isGradual() {
-        return true;
-    }
 }

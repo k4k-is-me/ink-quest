@@ -21,9 +21,4 @@ public record GlobalScoreCondition(
         int initial,
         int target
 ) implements ITaskCondition {
-
-    @Override
-    public boolean isGradual() {
-        return true;
-    }
 }

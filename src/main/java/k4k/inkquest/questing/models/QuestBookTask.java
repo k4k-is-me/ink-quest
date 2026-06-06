@@ -13,8 +13,8 @@ import java.util.Set;
  * @param taskId           идентификатор задачи (нужен для команды закрепления из книги)
  * @param title            заголовок задачи
  * @param description      описание задачи (может отсутствовать)
- * @param isGradual        {@code true}, если условие постепенное (показывает прогресс-бар)
- * @param completionLevel  текущий прогресс от 0.0 до 1.0; значимо только при {@code isGradual == true}
+ * @param hasProgressBar   {@code true}, если условие имеет target > 1 и показывает прогресс-бар
+ * @param completionLevel  текущий прогресс от 0.0 до 1.0; значимо только при {@code hasProgressBar == true}
  * @param completionStatus статус завершения; {@code null}, если задача ещё не завершена
  * @param buttons          кнопки ручного завершения задачи; пустое множество — кнопок нет
  */
@@ -22,7 +22,7 @@ public record QuestBookTask(
         String taskId,
         Text title,
         @Nullable Text description,
-        boolean isGradual,
+        boolean hasProgressBar,
         float completionLevel,
         @Nullable CompletionStatus completionStatus,
         Set<TaskButton> buttons

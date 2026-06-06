@@ -79,7 +79,7 @@ public class GetQuestDetailsClientRequest {
                 buf.writeBoolean(task.description() != null);
                 if (task.description() != null) buf.writeText(task.description());
 
-                buf.writeBoolean(task.isGradual());
+                buf.writeBoolean(task.hasProgressBar());
                 buf.writeFloat(task.completionLevel());
                 buf.writeBoolean(task.completionStatus() != null);
                 if (task.completionStatus() != null) buf.writeByte(task.completionStatus().ordinal());
@@ -107,7 +107,7 @@ public class GetQuestDetailsClientRequest {
                 var taskId = buf.readString();
                 var taskTitle = buf.readText();
                 var taskDescription = buf.readBoolean() ? buf.readText() : null;
-                var isGradual = buf.readBoolean();
+                var hasProgressBar = buf.readBoolean();
                 var completionLevel = buf.readFloat();
                 var completionStatus = buf.readBoolean() ? CompletionStatus.values()[buf.readByte()] : null;
                 int buttonMask = buf.readByte() & 0xFF;
@@ -115,7 +115,7 @@ public class GetQuestDetailsClientRequest {
                 if ((buttonMask & 1) != 0) buttons.add(TaskButton.SUCCESS);
                 if ((buttonMask & 2) != 0) buttons.add(TaskButton.FAILURE);
                 if ((buttonMask & 4) != 0) buttons.add(TaskButton.SKIP);
-                tasks.add(new QuestBookTask(taskId, taskTitle, taskDescription, isGradual, completionLevel, completionStatus, buttons));
+                tasks.add(new QuestBookTask(taskId, taskTitle, taskDescription, hasProgressBar, completionLevel, completionStatus, buttons));
             }
 
             return new GetQuestDetailResponse(new QuestBookQuest(title, description, tasks, pinnedTaskId));
@@ -230,13 +230,14 @@ public class GetQuestDetailsClientRequest {
         CompletionStatus completionStatus = questManager.getTaskCompletionStatus(questId, taskId, player).orElse(null);
 
         var successCondition = task != null ? task.successCondition() : null;
-        var isGradual = successCondition != null && successCondition.isGradual();
+        int target = successCondition != null
+                ? questManager.getTaskSuccessTarget(questId, taskId, player) : 1;
+        boolean hasProgressBar = target > 1;
 
         float completionLevel;
-        if (isGradual) {
+        if (hasProgressBar) {
             var current = questManager.getTaskSuccessCompletion(questId, taskId, player);
-            var target = questManager.getTaskSuccessTarget(questId, taskId, player);
-            completionLevel = target > 0 ? (float) current / target : 0f;
+            completionLevel = (float) current / target;
         } else {
             completionLevel = completionStatus != null ? 1f : 0f;
         }
@@ -245,6 +246,6 @@ public class GetQuestDetailsClientRequest {
         var description = task != null ? task.description() : null;
         var buttons = task != null ? task.buttons() : EnumSet.noneOf(TaskButton.class);
 
-        return new QuestBookTask(taskId, title, description, isGradual, completionLevel, completionStatus, buttons);
+        return new QuestBookTask(taskId, title, description, hasProgressBar, completionLevel, completionStatus, buttons);
     }
 }

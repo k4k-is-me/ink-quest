@@ -64,7 +64,7 @@ public class HudTasks {
      * Создаёт {@link HudTask} из доменной модели задачи с tracking-информацией.
      *
      * <p>{@code successTarget}/{@code failureTarget} передаются только если
-     * условие gradual ({@link k4k.inkquest.domain.abstractions.ITaskCondition#isGradual()}),
+     * {@code getTargetValue(condition, context) > 1} (прогресс-бар показывается),
      * иначе — {@code null}. Вычисляются вызывающим кодом через диспетчер условий,
      * поскольку для некоторых типов условий цель зависит от контекста (например,
      * {@code optionals} — размер пула optional-задач активного этапа).

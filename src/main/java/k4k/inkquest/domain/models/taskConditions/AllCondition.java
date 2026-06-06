@@ -7,8 +7,4 @@ import java.util.List;
 public record AllCondition (
         List<ITaskCondition> subConditions
 ) implements ITaskCondition {
-    @Override
-    public boolean isGradual() {
-        return true;
-    }
 }

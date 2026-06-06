@@ -6,8 +6,4 @@ import net.minecraft.util.Identifier;
 public record PredicateCondition(
         Identifier predicateId
 ) implements ITaskCondition {
-    @Override
-    public boolean isGradual() {
-        return false;
-    }
 }

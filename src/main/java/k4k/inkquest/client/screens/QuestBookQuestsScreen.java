@@ -558,7 +558,7 @@ public class QuestBookQuestsScreen extends Screen {
         int descH = task.description() != null
                 ? textRenderer.wrapLines(task.description(), textW).size() * textRenderer.fontHeight
                 : 0;
-        int barH = (task.isGradual() && !task.isComplete()) ? 3 : 0; // 1px бар + 1px тень + 1px отступ
+        int barH = (task.hasProgressBar() && !task.isComplete()) ? 3 : 0; // 1px бар + 1px тень + 1px отступ
         int buttonsH = (task.buttons().isEmpty() || task.isComplete()) ? 0 : (BUTTONS_TOP_GAP + BUTTON_SIZE);
         int itemH = Math.max(ITEM_ICON, titleH) + (descH > 0 ? descH + 1 : 0) + barH + buttonsH;
 
@@ -597,7 +597,7 @@ public class QuestBookQuestsScreen extends Screen {
         }
 
         // Прогресс-бар для постепенных условий
-        if (task.isGradual() && !task.isComplete()) {
+        if (task.hasProgressBar() && !task.isComplete()) {
             int fillW = (int) (task.completionLevel() * BAR_WIDTH);
             context.drawTexture(ICONS_TEXTURE, textX, currentY + 1, 0, BAR_BG_V, BAR_WIDTH, 1);
             if (fillW > 0) {
@@ -836,7 +836,7 @@ public class QuestBookQuestsScreen extends Screen {
 
         var newTask = new QuestBookTask(
                 oldTask.taskId(), oldTask.title(), oldTask.description(),
-                oldTask.isGradual(), oldTask.completionLevel(),
+                oldTask.hasProgressBar(), oldTask.completionLevel(),
                 status, oldTask.buttons()
         );
         var newTasks = new ArrayList<>(oldTasks);

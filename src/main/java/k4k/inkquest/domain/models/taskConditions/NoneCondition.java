@@ -8,8 +8,4 @@ import java.util.List;
 public record NoneCondition(
         List<ITaskCondition> subConditions
 ) implements ITaskCondition {
-    @Override
-    public boolean isGradual() {
-        return false;
-    }
 }
