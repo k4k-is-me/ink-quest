@@ -29,13 +29,13 @@ public class HudQuestWidget {
     private static final ParameterKey<Float> OPACITY = new ParameterKey<>(Float.class, 0f);
 
     private static final Animation IN_ANIMATION = new Animation.Builder()
-            .addParameter(POSITION, slideIn(-10), 0, 5000)
-            .addParameter(OPACITY, fadeIn(), 0, 5000)
+            .addParameter(POSITION, slideIn(-10), 0, 300)
+            .addParameter(OPACITY, fadeIn(), 0, 300)
             .build();
 
     private static final Animation OUT_ANIMATION = new Animation.Builder()
-            .addParameter(POSITION, slideOut(-10), 0, 5000)
-            .addParameter(OPACITY, fadeOut(), 0, 5000)
+            .addParameter(POSITION, slideOut(-10), 0, 300)
+            .addParameter(OPACITY, fadeOut(), 0, 300)
             .build();
 
     private final MinecraftClient client = MinecraftClient.getInstance();

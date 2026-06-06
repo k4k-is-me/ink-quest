@@ -28,37 +28,37 @@ public class HudTaskWidget {
     private static final ParameterKey<Boolean> STRIKETHROUGH = new ParameterKey<>(Boolean.class, false);
 
     private static final Animation IN_ANIMATION = new Animation.Builder()
-            .addParameter(ICON_U, switchTo(0), 2500, 1)
-            .addParameter(OPACITY, fadeIn(), 0, 5000)
+            .addParameter(ICON_U, switchTo(0), 150, 1)
+            .addParameter(OPACITY, fadeIn(), 0, 300)
             .build();
 
     private static final Animation OUT_ANIMATION = new Animation.Builder()
-            .addParameter(OPACITY, fadeOut(), 0, 5000)
+            .addParameter(OPACITY, fadeOut(), 0, 300)
             .build();
 
     private static final Animation SWITCH_IN_ANIMATION = new Animation.Builder()
-            .addParameter(ICON_U, switchTo(0), 2500, 1)
-            .addParameter(OPACITY, fadeIn(), 0, 5000)
+            .addParameter(ICON_U, switchTo(0), 150, 1)
+            .addParameter(OPACITY, fadeIn(), 0, 300)
             .build();
 
     private static final Animation SWITCH_OUT_ANIMATION = new Animation.Builder()
-            .addParameter(OPACITY, fadeOut(), 0, 5000)
+            .addParameter(OPACITY, fadeOut(), 0, 300)
             .build();
 
     private static final Animation SUCCESS_ANIMATION = new Animation.Builder()
-            .addParameter(ICON_U, switchTo(16), 1000, 1)
-            .addParameter(POSITION, bop(2), 0, 2000)
+            .addParameter(ICON_U, switchTo(16), 100, 1)
+            .addParameter(POSITION, bop(2), 0, 200)
             .build();
 
     private static final Animation FAILED_ANIMATION = new Animation.Builder()
-            .addParameter(ICON_U, switchTo(24), 1000, 1)
-            .addParameter(POSITION, bop(2), 0, 2000)
-            .addParameter(STRIKETHROUGH, switchTo(true), 1, 1500)
+            .addParameter(ICON_U, switchTo(24), 100, 1)
+            .addParameter(POSITION, bop(2), 0, 200)
+            .addParameter(STRIKETHROUGH, switchTo(true), 1, 150)
             .build();
 
     private static final Animation SKIPPED_ANIMATION = new Animation.Builder()
-            .addParameter(ICON_U, switchTo(32), 1000, 1)
-            .addParameter(POSITION, bop(2), 0, 2000)
+            .addParameter(ICON_U, switchTo(32), 100, 1)
+            .addParameter(POSITION, bop(2), 0, 200)
             .build();
 
     // Мгновенные анимации для инициализации начального состояния на join (длительность 1 мс).
