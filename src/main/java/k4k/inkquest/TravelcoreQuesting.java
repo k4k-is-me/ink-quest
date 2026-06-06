@@ -56,6 +56,7 @@ public class TravelcoreQuesting implements ModInitializer {
 		QuestHudSyncHandler.register();
 		QuestLifecycleFunctionExecutor.register();
 		GetQuestDetailsClientRequest.INSTANCE.registerServer();
+		GetQuestDetailsClientRequest.registerServerCleanup();
 		ServerPlayNetworking.registerGlobalReceiver(QuestBookOpenRequestC2SPacket.TYPE, (packet, player, sender) -> {
 			if (ModGameRules.canPlayerOpenQuestBook(player)) {
 				ServerPlayNetworking.send(player, new QuestBookOpenAtQuestS2CPacket(null));

@@ -11,6 +11,7 @@ import k4k.inkquest.questing.abstractions.ServerQuestManagerContainer;
 import k4k.inkquest.questing.models.QuestBookQuest;
 import k4k.inkquest.questing.models.QuestBookTask;
 import k4k.inkquest.questing.services.ServerQuestManager;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -26,16 +27,22 @@ import java.util.concurrent.ConcurrentHashMap;
  * Инфраструктура C2S запроса деталей квеста.
  *
  * <p>Клиент отправляет {@link GetQuestDetailsRequest}, сервер отвечает {@link GetQuestDetailResponse}.
- * Сервер применяет rate limit {@value SERVER_RATE_LIMIT_MS} мс на игрока — защита от спама с
- * модифицированного клиента.
+ * Сервер применяет rate limit {@value SERVER_RATE_LIMIT_MS} мс per (игрок, квест) — разные квесты
+ * не конкурируют за один таймер. До rate-limit проверки выполняется проверка принадлежности квеста
+ * игроку — это исключает раздувание Map чередой несуществующих/чужих id.
+ *
+ * <p>Записи для игрока очищаются при его отключении — см. {@link #registerServerCleanup()}.
  */
 public class GetQuestDetailsClientRequest {
 
-    /** Минимальный интервал между запросами от одного игрока на сервере, мс. */
+    /** Минимальный интервал между запросами от одного игрока для одного квеста на сервере, мс. */
     public static final long SERVER_RATE_LIMIT_MS = 500L;
 
-    /** Последние временные метки запросов от каждого игрока. Используется для rate limiting. */
-    private static final Map<UUID, Long> lastRequestTimes = new ConcurrentHashMap<>();
+    /**
+     * Последние временные метки запросов per (игрок, квест). Внешний ключ — UUID игрока,
+     * внутренний — {@link Identifier} квеста. Очищается при отключении игрока.
+     */
+    private static final Map<UUID, Map<Identifier, Long>> lastRequestTimes = new ConcurrentHashMap<>();
 
     private static final IPacketEncoder<GetQuestDetailsRequest> REQUEST_ENCODER = new IPacketEncoder<>() {
         @Override
@@ -133,33 +140,52 @@ public class GetQuestDetailsClientRequest {
         ClientRequests.register(GetQuestDetailsRequest.class, INSTANCE);
     }
 
+    /**
+     * Регистрирует серверный хук отключения игрока — очищает его записи из {@link #lastRequestTimes}.
+     * Должен вызываться при серверной инициализации.
+     */
+    public static void registerServerCleanup() {
+        ServerPlayConnectionEvents.DISCONNECT.register(
+                (handler, server) -> lastRequestTimes.remove(handler.player.getUuid()));
+    }
+
     // -------------------------------------------------------------------------
     // Серверный обработчик
     // -------------------------------------------------------------------------
 
     /**
-     * Обрабатывает запрос на сервере: применяет rate limit, строит {@link QuestBookQuest}.
+     * Обрабатывает запрос на сервере: проверяет принадлежность квеста игроку, применяет
+     * per-quest rate limit, строит {@link QuestBookQuest}.
      *
      * @param server  сервер
      * @param player  игрок, отправивший запрос
      * @param request запрос
-     * @return ответ с данными или {@code null} внутри при rate limit / отсутствии квеста
+     * @return ответ с данными или {@code null} внутри при отказе rate limit / квест не выдан
      */
     private static GetQuestDetailResponse handle(
             net.minecraft.server.MinecraftServer server,
             net.minecraft.server.network.ServerPlayerEntity player,
             GetQuestDetailsRequest request
     ) {
+        var questManager = ServerQuestManagerContainer.getQuestManager(server);
+
+        // Квест должен быть выдан игроку (active или complete) — отсекает несуществующие/чужие id
+        // до любой записи в rate-limit Map, защищая от раздувания Map чередой невалидных запросов
+        if (!questManager.isQuestTracked(request.questId(), player)) {
+            return new GetQuestDetailResponse(null);
+        }
+
+        var playerMap = lastRequestTimes.computeIfAbsent(player.getUuid(), k -> new ConcurrentHashMap<>());
         var now = System.currentTimeMillis();
-        var last = lastRequestTimes.getOrDefault(player.getUuid(), 0L);
+        var last = playerMap.getOrDefault(request.questId(), 0L);
         if (now - last < SERVER_RATE_LIMIT_MS) {
             return new GetQuestDetailResponse(null);
         }
-        lastRequestTimes.put(player.getUuid(), now);
+        playerMap.put(request.questId(), now);
 
-        var questManager = ServerQuestManagerContainer.getQuestManager(server);
         var resolver = questManager.getQuestResolver();
 
+        // Страховка от рассинхрона датапака: квест выдан, но уже удалён из репозитория
         var quest = resolver.getQuest(request.questId());
         if (quest == null) return new GetQuestDetailResponse(null);
 
