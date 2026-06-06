@@ -36,9 +36,8 @@ InkQuest занимает нишу, которую не закрывают FTB Q
 Квест состоит из **этапов**, каждый этап содержит **одну обязательную задачу** и любое число **необязательных**. Этапы проходятся последовательно: следующий открывается только после завершения обязательной задачи текущего.
 
 **Исходы квеста:**
-- `success` — все обязательные задачи выполнены успешно или пропущены (но не все пропущены)
+- `success` — все обязательные задачи выполнены успешно или пропущены
 - `failure` — хотя бы одна обязательная задача провалена; квест завершается немедленно
-- `skipped` — все обязательные задачи пропущены
 
 Два типа квестов:
 - **Статические** — описаны в датапаке, загружаются вместе с миром
@@ -81,9 +80,10 @@ InkQuest занимает нишу, которую не закрывают FTB Q
 ### Создание квеста командами
 
 ```
-/quest new example:escape "Побег" "Здесь больше нельзя оставаться, но как же выбраться?"
-/quest modify example:escape tasks add required push_the_lever "Найти рычаг" "..."
-/quest modify example:escape tasks add optional look_for_survivors "Найти выживших" "..."
+/quest new example:escape "Побег"
+/quest modify example:escape tasks add required push_the_lever "Найти рычаг"
+/quest modify example:escape tasks add optional look_for_survivors "Найти выживших"
+/quest modify example:escape tasks push_the_lever description "Когда один из стражей выходил..."
 ```
 
 ### Выдача и управление
@@ -124,11 +124,33 @@ InkQuest занимает нишу, которую не закрывают FTB Q
     "type": "score",
     "objective": "oak_logs_mined",
     "criterion": "minecraft.mined:minecraft.oak_log",
-    "target": 5
+    "from": 0,
+    "to": 5
 }
 ```
 
-Отображает прогресс-бар в HUD. Поддерживает восходящие и нисходящие условия (если `initial > target` — нужно опуститься ниже `target`). Поле `initial` записывает указанное значение в scoreboard в момент загрузки задачи.
+Отображает прогресс-бар в HUD. Поля:
+- `objective` (обязательно) — имя scoreboard objective
+- `criterion` (опционально, default: `"dummy"`) — критерий для создания objective
+- `from` (опционально, default: `0`) — начальное значение; при `reset: true` записывается в scoreboard при загрузке задачи
+- `to` (обязательно) — целевое значение
+- `reset` (опционально, default: `true`) — записывать ли `from` в scoreboard при загрузке
+
+Направление: если `from > to` — нисходящее (`score <= to`), иначе восходящее (`score >= to`).
+
+### `global_score` — счётчик фиксированного holder'а
+
+```json
+{
+    "type": "global_score",
+    "objective": "quests_completed",
+    "player": "#GLOBAL",
+    "from": 0,
+    "to": 10
+}
+```
+
+То же, что `score`, но проверяет не счёт контекстного игрока, а счёт фиксированного holder'а (например виртуального игрока). Не пишет в scoreboard при загрузке — безопасно при одновременном отслеживании у нескольких игроков. Поле `player` опционально, default: `"#GLOBAL"`. Без поля `criterion` (всегда `dummy`) и без `reset`.
 
 ### `predicate` — предикат Minecraft
 
@@ -171,7 +193,7 @@ InkQuest занимает нишу, которую не закрывают FTB Q
 
 Пул — все optional-задачи активного этапа, кроме задачи, на которой висит условие. Required-задача в пул не входит.
 
-- `status` — ожидаемый статус (`"SUCCESS"`, `"FAILURE"`, `"SKIPPED"`). Если не указан — засчитывается любой терминальный статус.
+- `status` — ожидаемый статус (`"success"`, `"failure"`, `"skipped"`). Если не указан — засчитывается любой терминальный статус.
 - `min` — минимальное число задач с нужным статусом. Если не указан — должны совпасть все optional задачи пула.
 
 Если пул пуст — условие выполнено сразу. Если `min > 1` — отображается прогресс-бар.
@@ -297,17 +319,17 @@ AND внутри группы, OR между группами. Квест раз
 minecraft:book + minecraft:rotten_flesh + minecraft:string
 ```
 
-Открывается ПКМ или клавишей `J`. Рецепт можно переопределить или отключить через датапак (`data/travelcorequesting/recipes/quest_book.json`).
+Открывается ПКМ или клавишей `J`. Рецепт можно переопределить или отключить через датапак (`data/inkquest/recipes/quest_book.json`).
 
 ### Quest Scroll
 
-Расходуемый свиток, привязанный к конкретному квесту через NBT-поле `Quest`. При ПКМ выдаёт игроку квест и автоматически открывает книгу на нём. Кулдаун 1 с защищает от двойного срабатывания. Рецепта крафта нет — раздаётся через лут-таблицы, торговцев или команду:
+Расходуемый свиток, привязанный к конкретному квесту через NBT-поле `Quest`. При ПКМ выдаёт игроку квест и автоматически открывает книгу на нём. Рецепта крафта нет — раздаётся через лут-таблицы, торговцев или команду:
 
 ```
-/give @s travelcorequesting:quest_scroll{Quest:"story:rescue_blacksmith"}
+/give @s inkquest:quest_scroll{Quest:"story:rescue_blacksmith"}
 ```
 
-Стак до 16 штук; стаки с разными квестами не объединяются.
+Не стакается (`maxCount(1)`).
 
 ---
 
@@ -344,12 +366,13 @@ minecraft:book + minecraft:rotten_flesh + minecraft:string
 
 | Команда | Описание |
 |---------|----------|
-| `/quest new <id> [title] [desc]` | Создать квест |
+| `/quest new <id> [title]` | Создать квест |
 | `/quest remove <id>` | Удалить квест |
 | `/quest modify <id> title <text>` | Изменить название |
 | `/quest modify <id> description <text>` | Изменить описание |
-| `/quest modify <id> tasks add required <taskId> ...` | Добавить обязательную задачу |
-| `/quest modify <id> tasks add optional <taskId> ...` | Добавить необязательную задачу |
+| `/quest modify <id> tasks add required <taskId> [title]` | Добавить обязательную задачу |
+| `/quest modify <id> tasks add optional <taskId> [title]` | Добавить необязательную задачу |
+| `/quest modify <id> tasks <taskId> description <text>` | Изменить описание задачи |
 | `/quest modify <id> tasks remove <taskId>` | Удалить задачу |
 | `/quest modify <id> icon <item>` | Установить иконку |
 | `/quest modify <id> index <n>` | Установить порядок сортировки |
@@ -393,7 +416,7 @@ minecraft:book + minecraft:rotten_flesh + minecraft:string
 ### Структура
 
 ```
-src/main/java/k4k/travelcorequesting/
+src/main/java/k4k/inkquest/
 ├── domain/          # Доменные модели (Quest, Task, условия)
 ├── questing/        # Бизнес-логика (менеджер, трекеры, события)
 ├── infra/           # Инфраструктура (команды, сеть, сериализация)
